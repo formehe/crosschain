@@ -24,7 +24,6 @@ contract TopProve is ITopProve{
         merkleProof.proof = proof.proof;
         merkleProof.expectedValue = proof.reciptData; 
         bytes memory actualKey = RLPEncode.encodeUint(proof.reciptIndex);
-        console.logBytes(actualKey);
         uint j;
         for (uint i = 0; i < actualKey.length; i++) {
             if ((j + 1) == merkleProof.proof.length){

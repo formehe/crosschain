@@ -27,7 +27,6 @@ library MPT {
     ) view internal returns (bool)
     {
         bytes memory node = data.proof[data.proofIndex];
-        console.logBytes(node);
         RLPDecode.Iterator memory dec = RLPDecode.toRlpItem(node).iterator();
         if (data.keyIndex == 0) {
             require(keccak256(node) == data.expectedRoot, "verifyTrieProof root node hash invalid");

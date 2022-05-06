@@ -27,7 +27,6 @@ library EthProofDecoder {
         proof.proof = new bytes[](length);
         for (uint i = 0; i < length; i++) {
             proof.proof[i] = data.decodeBytes();
-            console.logBytes(proof.proof[i]);
         }
     }
 }
