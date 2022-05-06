@@ -53,7 +53,7 @@ library ProofDecoder {
 
     function decodeExecutionStatus(Borsh.Data memory data)
         internal
-        pure
+        view
         returns (ExecutionStatus memory executionStatus)
     {
         executionStatus.enumIndex = data.decodeU8();

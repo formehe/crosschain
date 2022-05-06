@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../external_lib/RLPEncode.sol";
 import "../external_lib/RLPDecode.sol";
-
+import "hardhat/console.sol";
 
 library EthereumDecoder {
     using RLPDecode for RLPDecode.RLPItem;
@@ -27,6 +27,7 @@ library EthereumDecoder {
         bytes32 mixHash;
         uint64 nonce;
         uint256 totalDifficulty;
+        uint256 baseFeePerGas;
     }
 
     struct Account {
@@ -98,6 +99,9 @@ library EthereumDecoder {
         list[12] = RLPEncode.encodeBytes(header.extraData);
         list[13] = RLPEncode.encodeBytes(abi.encodePacked(header.mixHash));
         list[14] = RLPEncode.encodeBytes(abi.encodePacked(header.nonce));
+        if (header.baseFeePerGas != 0) {
+            list[15] = RLPEncode.encodeUint(header.baseFeePerGas);
+        }
 
         data = RLPEncode.encodeList(list);
     }
@@ -123,6 +127,7 @@ library EthereumDecoder {
             else if ( idx == 12 ) header.extraData       = it.next().toBytes();
             else if ( idx == 13 ) header.mixHash         = bytes32(it.next().toUint());
             else if ( idx == 14 ) header.nonce           = uint64(it.next().toUint());
+            else if ( idx == 15 ) header.baseFeePerGas   = it.next().toUint();
             // else if ( idx == 13 ) header.nonce           = uint64(it.next().toUint());
             else it.next();
             idx++;
@@ -163,7 +168,7 @@ library EthereumDecoder {
         data = RLPEncode.encodeList(list);
     }
 
-    function toReceiptLog(bytes memory data) internal pure returns (Log memory log) {
+    function toReceiptLog(bytes memory data) internal view returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
 
         uint idx;
@@ -179,14 +184,26 @@ library EthereumDecoder {
                     log.topics[i] = topic;
                 }
             }
-            else if ( idx == 2 ) log.data = it.next().toBytes();
+            else if ( idx == 2 ) {
+                log.data = it.next().toBytes();
+            }
             else it.next();
             idx++;
         }
     }
 
-    function toReceipt(bytes memory data) internal pure returns (TransactionReceiptTrie memory receipt) {
-        RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
+    function toReceipt(bytes memory data) internal view returns (TransactionReceiptTrie memory receipt) {
+        uint byte0;
+        RLPDecode.Iterator memory it;        
+        assembly {
+            byte0 := byte(0, mload(data))
+        }
+
+        if (byte0 <= 0x7f) {
+            it = RLPDecode.toRlpItem(data, 1).iterator();
+        } else {
+            it = RLPDecode.toRlpItem(data).iterator();
+        }
 
         uint idx;
         while(it.hasNext()) {

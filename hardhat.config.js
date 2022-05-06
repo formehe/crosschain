@@ -10,7 +10,7 @@ require('hardhat-abi-exporter')
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async () => {
   const accounts = await ethers.getSigners();
-
+  console.log("==f=ad=fasdfasd")
   for (const account of accounts) {
     console.log(account.address);
   }

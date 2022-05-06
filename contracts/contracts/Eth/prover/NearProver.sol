@@ -61,7 +61,7 @@ contract NearProver is INearProver, AdminControlled {
         return true;
     }
 
-    function _computeRoot(bytes32 node, ProofDecoder.MerklePath memory proof) internal pure returns (bytes32 hash) {
+    function _computeRoot(bytes32 node, ProofDecoder.MerklePath memory proof) internal view returns (bytes32 hash) {
         hash = node;
         for (uint i = 0; i < proof.items.length; i++) {
             ProofDecoder.MerklePathItem memory item = proof.items[i];

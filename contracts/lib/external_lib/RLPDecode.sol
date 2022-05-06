@@ -51,6 +51,19 @@ library RLPDecode {
     /*
     * @param item RLP encoded bytes
     */
+    function toRlpItem(bytes memory item, uint skip) internal pure returns (RLPItem memory) {
+        uint memPtr;
+        assembly {
+            memPtr := add(item, add(0x20, skip))
+        }
+
+        return RLPItem(item.length, memPtr);
+    }
+
+
+    /*
+    * @param item RLP encoded bytes
+    */
     function toRlpItem(bytes memory item) internal pure returns (RLPItem memory) {
         uint memPtr;
         assembly {
@@ -311,11 +324,13 @@ library RLPDecode {
         }
 
         // left over bytes. Mask is used to remove unwanted bytes from the word
-        uint mask = 256 ** (WORD_SIZE - len) - 1;
-        assembly {
-            let srcpart := and(mload(src), not(mask)) // zero out src
-            let destpart := and(mload(dest), mask) // retrieve the bytes
-            mstore(dest, or(destpart, srcpart))
+        unchecked {
+            uint mask = 256 ** (WORD_SIZE - len) - 1;
+            assembly {
+                let srcpart := and(mload(src), not(mask)) // zero out src
+                let destpart := and(mload(dest), mask) // retrieve the bytes
+                mstore(dest, or(destpart, srcpart))
+            }
         }
     }
 }

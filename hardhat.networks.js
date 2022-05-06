@@ -10,10 +10,16 @@ const networks = {
     url: 'http://127.0.0.1:8545',
     allowUnlimitedContractSize: true,
     gasPrice: 'auto',
+    gas: 30_000_000,
+    blockGasLimit: 300_000_000,
     accounts: {
       mnemonic: "test test test test test test test test test test test junk"
     },
-    timeout: 1000 * 60
+    timeout: 1000 * 60,
+    hardfork:'istanbul',
+    forking: {
+      blockNumber: 0
+    }
   }
 }
 
