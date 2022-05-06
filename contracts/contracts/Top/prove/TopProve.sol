@@ -50,13 +50,13 @@ contract TopProve is ITopProve{
         merkleProof.key = key;
         valid = merkleProof.verifyTrieProof();
         require(valid, "Fail to verify");
-        // // 调用系统合约验证块头
-        // bytes memory payload = abi.encodeWithSignature("getHeaderIfHeightConfirmed(bytes, uint64)", proof.headerData, 2);
-        // (bool success, bytes memory returnData) = bridgeLight.call(payload);
-        // require(success, "Height is not confirmed");
+        // 调用系统合约验证块头
+        bytes memory payload = abi.encodeWithSignature("getHeaderIfHeightConfirmed(bytes, uint64)", proof.headerData, 2);
+        (bool success, bytes memory returnData) = bridgeLight.call(payload);
+        require(success, "Height is not confirmed");
 
-        // (success) = abi.decode(returnData, (bool));
-        // require(success, "fail to decode");
+        (success) = abi.decode(returnData, (bool));
+        require(success, "fail to decode");
         return (true, "");
     }
 }
