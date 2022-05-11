@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../common/AdminControlled.sol";
 import "./INearBridge.sol";
 import "./NearDecoder.sol";
 import "../../common/Ed25519.sol";
 
-contract NearBridge is INearBridge, AdminControlled {
+contract NearBridge is Initializable, INearBridge, AdminControlled {
     using Borsh for Borsh.Data;
     using NearDecoder for Borsh.Data;
 
@@ -24,7 +25,7 @@ contract NearBridge is INearBridge, AdminControlled {
     // Whether the contract was initialized.
     bool public initialized;
     uint256 public lockEthAmount;
-    Ed25519 immutable edwards;
+    Ed25519 private edwards;
     Epoch thisEpoch;
     address lastSubmitter;
     
@@ -34,15 +35,16 @@ contract NearBridge is INearBridge, AdminControlled {
     mapping(address => uint256) public override balanceOf;
 
     uint64 maxMainHeight;
-
-    constructor(
+    
+    function initialize(
         Ed25519 ed,
-        uint256 lockEthAmount_,
-        address admin_,
-        uint256 pausedFlags_
-    ) AdminControlled(admin_, pausedFlags_) {
+        uint256 _lockEthAmount,
+        address _admin,
+        uint256 _pausedFlags
+    ) external initializer {
         edwards = ed;
-        lockEthAmount = lockEthAmount_;
+        lockEthAmount = _lockEthAmount;
+        AdminControlled._AdminControlled_init(_admin, _pausedFlags);
     }
 
     uint constant UNPAUSE_ALL = 0;

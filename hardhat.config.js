@@ -25,7 +25,7 @@ module.exports = {
 
   networks,
   solidity: {
-    version: "0.8.1",
+    version: "0.8.3",
     settings: {
       optimizer: {
         enabled: true,

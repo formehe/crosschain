@@ -8,6 +8,7 @@ const networks = {
   localhost: {
     // chainId: 1,
     url: 'http://127.0.0.1:8545',
+    // url: 'http://192.168.30.32:8545',
     allowUnlimitedContractSize: true,
     gasPrice: 'auto',
     gas: 30_000_000,

@@ -1,25 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../common/AdminControlled.sol";
 import "../bridge/INearBridge.sol";
 import "../bridge/NearDecoder.sol";
 import "./ProofDecoder.sol";
 import "./INearProver.sol";
 
-contract NearProver is INearProver, AdminControlled {
+contract NearProver is Initializable, INearProver, AdminControlled {
     using Borsh for Borsh.Data;
     using NearDecoder for Borsh.Data;
     using ProofDecoder for Borsh.Data;
 
     INearBridge public bridge;
 
-    constructor(
+    function initialize(
         INearBridge _bridge,
         address _admin,
         uint _pausedFlags
-    ) AdminControlled(_admin, _pausedFlags) {
+    ) external initializer {
         bridge = _bridge;
+        AdminControlled._AdminControlled_init(_admin, _pausedFlags);
     }
 
     uint constant UNPAUSE_ALL = 0;

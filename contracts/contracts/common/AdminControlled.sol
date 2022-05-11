@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-contract AdminControlled {
-    address public admin;
-    uint public paused;
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-    constructor(address _admin, uint flags) {
+contract AdminControlled is Initializable {
+    address private admin;
+    uint private paused;
+    
+    function _AdminControlled_init(address _admin, uint flags) internal onlyInitializing {
         admin = _admin;
         paused = flags;
     }
-
+    
     modifier onlyAdmin {
         require(msg.sender == admin);
         _;
