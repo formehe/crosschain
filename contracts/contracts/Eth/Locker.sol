@@ -8,11 +8,9 @@ import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
 import "../common/Utils.sol";
 
-contract Bridge is Initializable{
+contract Locker is Initializable{
     using Borsh for Borsh.Data;
     using ProofDecoder for Borsh.Data;
-
-    event ConsumedProof(bytes32 indexed _receiptId);
 
     INearProver private prover;
     address private lockProxyHash;
@@ -22,16 +20,18 @@ contract Bridge is Initializable{
     uint64 private minBlockAcceptanceHeight;
     mapping(bytes32 => bool) private usedProofs;
 
-    function _Bridge_init(
+    event ConsumedProof(bytes32 indexed _receiptId);
+
+    function _locker_initialize(
         INearProver _prover,
         address _lockProxyHash,
         uint64 _minBlockAcceptanceHeight
-    ) internal onlyInitializing {
+    ) internal initializer {
         prover = _prover;
         lockProxyHash = _lockProxyHash;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
-    }
-
+    } 
+  
     struct LockEventData {
         address fromToken;
         uint64  fromChainId;
@@ -40,6 +40,12 @@ contract Bridge is Initializable{
 
         address sender;
         uint256 amount;
+        address recipient;
+    }
+
+    struct BurnResult {
+        uint128 amount;
+        address token;
         address recipient;
     }
 
@@ -90,4 +96,17 @@ contract Bridge is Initializable{
         lockEvent.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
         contractAddress = logInfo.contractAddress;
     }
+
+    function _decodeBurnResult(bytes memory data) internal pure returns(BurnResult memory result) {
+        Borsh.Data memory borshData = Borsh.from(data);
+        uint8 flag = borshData.decodeU8();
+        require(flag == 0, "ERR_NOT_WITHDRAW_RESULT");
+        result.amount = borshData.decodeU128();
+        bytes20 token = borshData.decodeBytes20();
+        result.token = address(uint160(token));
+        bytes20 recipient = borshData.decodeBytes20();
+        result.recipient = address(uint160(recipient));
+        borshData.done();
+    }
+
 }

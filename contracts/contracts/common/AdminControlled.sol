@@ -3,7 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract AdminControlled is Initializable {
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract AdminControlled is AccessControl,Initializable {
     address private admin;
     uint private paused;
     
@@ -22,6 +24,12 @@ contract AdminControlled is Initializable {
         _;
     }
 
+    modifier pausable1(uint flag,bytes32 role) {
+        require((paused & flag) == 0 || hasRole(role,msg.sender));
+        _;
+    }
+    
+    
     function adminPause(uint flags) public onlyAdmin {
         paused = flags;
     }

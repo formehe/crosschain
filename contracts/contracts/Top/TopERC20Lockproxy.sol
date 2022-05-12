@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../common/ILocker.sol";
 import "./prove/ITopProve.sol";
 import "./Locker.sol";
+import "../common/AdminControlled.sol";
 // import "hardhat/console.sol";
 
 contract TopERC20Lockproxy is ILocker, Locker, AdminControlled {
