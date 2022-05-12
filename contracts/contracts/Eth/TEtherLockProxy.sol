@@ -3,13 +3,12 @@ pragma solidity ^0.8.3;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./prover/ProofDecoder.sol";
-import "../common/AdminControlled.sol";
+import "../common/AdminControlledUpgradeable.sol";
 import "../common/Borsh.sol";
 import "./Bridge.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
-contract TEtherLockProxy is Initializable, Bridge, AdminControlled {
+contract TEtherLockProxy is Initializable, Bridge, AdminControlledUpgradeable {
     using Borsh for Borsh.Data;
     using SafeERC20 for IERC20;
 
@@ -70,7 +69,7 @@ contract TEtherLockProxy is Initializable, Bridge, AdminControlled {
     ) external initializer {
         chainId = _chainId;
         Bridge._Bridge_init(_prover, _peerLockProxyHash, _minBlockAcceptanceHeight);
-        AdminControlled._AdminControlled_init(_admin, _pausedFlags);
+        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_admin, _pausedFlags);
     }
 
     function lockToken(address fromAssetHash, uint64 toChainId, uint256 amount, address receiver)

@@ -1,41 +1,63 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../common/AdminControlled.sol";
+import "./verify/Verifier.sol";
 
-contract TRC20 is ERC20PausableUpgradeable, AccessControlUpgradeable, OwnableUpgradeable{
-    bytes32 public constant DEFAULT_OPERATION_ROLE = "0x01";
+contract TRC20 is ERC20, Verifier, AdminControlled {
+    address assetHash;
+    event Burned (
+        address indexed fromToken,
+        address indexed toToken,
+        address indexed sender,
+        uint256 amount,
+        address receiver
+    );
 
-    function intialize(string memory _name, string memory _symbol, address _admin) external initializer {
-        OwnableUpgradeable.__Ownable_init();
-        AccessControlUpgradeable._setupRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, _admin);
-        AccessControlUpgradeable._setupRole(DEFAULT_OPERATION_ROLE, _admin);
-        AccessControlUpgradeable._setRoleAdmin(DEFAULT_OPERATION_ROLE, AccessControlUpgradeable.DEFAULT_ADMIN_ROLE);
-        ERC20Upgradeable.__ERC20_init(_name, _symbol);
-        ERC20PausableUpgradeable.__ERC20Pausable_init();
+    event Minted (
+        bytes32 proofIndex,
+        uint256 amount,
+        address recipient
+    );
+
+    uint constant UNPAUSED_ALL = 0;
+    uint constant PAUSED_BURN = 1 << 0;
+    uint constant PAUSED_MINT = 1 << 1;
+
+    constructor (
+        ITopProve _prover,
+        address _peerProxyHash,
+        address _peerAssetHash,
+        uint64 _minBlockAcceptanceHeight,
+        address _admin,
+        uint _pausedFlags,
+        string memory _name, 
+        string memory _symbol
+    ) ERC20(_name, _symbol)
+      AdminControlled(_admin, _pausedFlags)
+      Verifier(_prover, _peerProxyHash, _minBlockAcceptanceHeight)
+    {
+        assetHash = _peerAssetHash;
     }
 
-    function mint(
-        address account, 
-        uint256 amount
-    ) external whenNotPaused onlyRole(DEFAULT_OPERATION_ROLE) {
-        super._mint(account, amount);
-    }
+    function mint(bytes memory proofData, uint64 proofBlockHeight)
+        external
+        pausable (PAUSED_MINT)
+    {
+        VerifiedReceipt memory _receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
+        require(assetHash == _receipt.data.fromToken, "invalid token to token");
+        _saveProof(_receipt.proofIndex);
 
-    function burn(
-        address account, 
-        uint256 amount
-    ) external whenNotPaused onlyRole(DEFAULT_OPERATION_ROLE) {
-        super._burn(account, amount);
-    }
-
-    function pause() external onlyRole(getRoleAdmin(DEFAULT_OPERATION_ROLE)) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(getRoleAdmin(DEFAULT_OPERATION_ROLE)) {
-        _unpause();
+        _mint(_receipt.data.receiver, _receipt.data.amount);
+        emit Minted(_receipt.proofIndex, _receipt.data.amount, _receipt.data.receiver);
+    }    
+    
+    function burn(uint256 amount, address receiver)
+        external
+        pausable (PAUSED_BURN)
+    {
+        _burn(msg.sender, amount);
+        emit Burned(address(this), assetHash, msg.sender, amount, receiver);
     }
 }

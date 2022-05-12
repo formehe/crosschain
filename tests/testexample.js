@@ -147,7 +147,7 @@ describe("AssetLockManagerContract", function () {
         console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
         
         //deploy contract
-        lockContractCon = await ethers.getContractFactory("TopERC20Lockproxy", deployer)
+        lockContractCon = await ethers.getContractFactory("ERC20MintProxy", deployer)
         // lockContractCon = await ethers.getContractFactory("ERC20Locker", {
         //     libraries: {
         //       Utils: utils.address,
@@ -159,11 +159,11 @@ describe("AssetLockManagerContract", function () {
         // await staking.switchOnContract(true)
 
         //deploy contract1
-        lockContractCon1 = await ethers.getContractFactory("TopERC20Lockproxy", deployer)
+        lockContractCon1 = await ethers.getContractFactory("ERC20MintProxy", deployer)
         lockContract1 = await lockContractCon1.deploy()
         
-        lockContract.initialize(topProveContract.address, lockContract1.address, 1000, admin.address, 1, 0)
-        lockContract1.initialize(topProveContract.address, lockContract.address, 1000, admin.address, 2, 0)
+        lockContract.initialize(topProveContract.address, lockContract1.address, 1000, admin.address, 0)
+        lockContract1.initialize(topProveContract.address, lockContract.address, 1000, admin.address, 0)
         console.log("+++++++++++++LockContract1+++++++++++++++ ", lockContract1.address)
 
         // //deploy Ed25519
@@ -174,18 +174,18 @@ describe("AssetLockManagerContract", function () {
     })
 
     it('bind hashasset must be admin', async () => {
-        await lockContract.bindAssetHash(erc20Sample.address, 2, address)
+        await lockContract.bindAssetHash(erc20Sample.address, address)
     })
 
     it('bind success uses admin', async () => {
         // amount cannot be zero
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, 1, address)
+        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, address)
     })
 
     it('amount cannot be zero', async () => {
         // amount cannot be zero
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, 1, address)
-        await lockContract.lockToken(erc20Sample.address, 0, 0, address)
+        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await lockContract.burn(erc20Sample.address, 0, address)
     })
 
     // it('amount must be less than ((1 << 128) -1)', async () => {
@@ -198,8 +198,8 @@ describe("AssetLockManagerContract", function () {
     it('erc20 contract must be binded', async () => {
         // amount cannot be zero
         // amount cannot be zero
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, 1, address)
-        await lockContract.lockToken(erc20Sample.address, 0, 1, address)
+        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await lockContract.burn(erc20Sample.address, 1, address)
     })
 
 
@@ -207,7 +207,7 @@ describe("AssetLockManagerContract", function () {
         // amount cannot be zero
         // amount cannot be zero
         await lockContract.connect(admin).bindAssetHash(erc20Sample.address, 1, address)
-        await lockContract.lockToken(erc20Sample.address, 1, 1, address)
+        await lockContract.burn(erc20Sample.address, 1, address)
     })
 
     
@@ -215,16 +215,16 @@ describe("AssetLockManagerContract", function () {
         // amount cannot be zero
         // amount cannot be zero
         await erc20Sample.approve(lockContract.address, 1000)
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, 1, address)
-        await lockContract.lockToken(erc20Sample.address, 1, 2000, address)
+        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await lockContract.burn(erc20Sample.address, 2000, address)
     })
 
     it('lock success', async () => {
         // amount cannot be zero
         await erc20Sample.approve(lockContract.address, 1000)
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, 1, user.address)
+        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, user.address)
         try {
-            const tx = await lockContract.lockToken(erc20Sample.address, 1, 1, user.address)
+            const tx = await lockContract.burn(erc20Sample.address, 1, user.address)
             // console.log(tx)
             const rc = await tx.wait()
             const event = rc.events.find(event=>event.event === "Locked")
