@@ -38,20 +38,19 @@ async function main() {
     console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
 
     //deploy ERC20Locker
-    lockContractCon = await ethers.getContractFactory("ERC20Locker", deployer)
-    lockContract = await lockContractCon.deploy(topProveContract.address, 1000, admin.address, 1, 0)
+    lockContractCon = await ethers.getContractFactory("TopERC20Lockproxy", deployer)
+    lockContract = await lockContractCon.deploy()
     await lockContract.deployed()
+    
+    //fork peer contract
+    peerContractaddress = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784b"
+    lockContract.initialize(topProveContract.address, peerContractaddress, 1000, admin.address, 1, 0)
     console.log("+++++++++++++LockContract+++++++++++++++ ", lockContract.address)
     
-
     //bind asset
     await lockContract.connect(admin).bindAssetHash(erc20Sample.address, 1, address)
     console.log("+++++++++++++bind my and peer asset contract+++++++++++++++ ", address)
-    //fork peer contract
-    peerContractaddress = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784b"
-    //bind peer contract
-    await lockContract.connect(admin).bindPeerContract(peerContractaddress)
-    console.log("+++++++++++++bind my and peer lock contract+++++++++++++++ ", peerContractaddress)
+
     //aprove
     await erc20Sample.connect(user).approve(lockContract.address, 1000)
     console.log("+++++++++++++aprove erc20 contract+++++++++++++++ ", lockContract)
