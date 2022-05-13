@@ -6,7 +6,7 @@ import "../common/AdminControlledUpgradeable.sol";
 import "../common/ERC20Mint.sol";
 import "./prove/ITopProve.sol";
 import "./verify/VerifierUpgradeable.sol";
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 contract ERC20MintProxy is VerifierUpgradeable, AdminControlledUpgradeable {
     event Burned (
@@ -52,11 +52,11 @@ contract ERC20MintProxy is VerifierUpgradeable, AdminControlledUpgradeable {
         ITopProve _prover,
         address _peerProxyHash,
         uint64 _minBlockAcceptanceHeight,
-        address _admin,
-        uint _pausedFlags
+        address _admin
     ) external initializer {
+        require(_peerProxyHash != address(0), "peer proxy can not be zero");
         VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight);
-        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_admin, _pausedFlags);
+        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_admin, UNPAUSED_ALL ^ 0xff);
     }
 
     function mint(bytes memory proofData, uint64 proofBlockHeight)

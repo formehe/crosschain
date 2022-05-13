@@ -111,7 +111,7 @@ class TxProof {
 //     })
 // })
 
-describe("AssetLockManagerContract", function () {
+describe("ERC20MintProxy", function () {
 
     beforeEach(async function () {
         //准备必要账户
@@ -123,14 +123,8 @@ describe("AssetLockManagerContract", function () {
         console.log("team account:", miner.address)
         console.log("user account:", user.address)
         console.log("redeemaccount account:", redeemaccount.address)
-        
-        // // //deploy library
-        // UtilsCon = await ethers.getContractFactory("Utils", deployer)
-        // utils = await UtilsCon.deploy();
-        // //utils = await UtilsCon.attach("0x8F4ec854Dd12F1fe79500a1f53D0cbB30f9b6134")
-        // await utils.deployed();
 
-        // console.log("+++++++++++++Utils+++++++++++++++ ", utils.address)
+        zeroAccount = "0x0000000000000000000000000000000000000000"
 
         //deploy ERC20
         erc20SampleCon = await ethers.getContractFactory("ERC20TokenSample", deployer)
@@ -139,106 +133,495 @@ describe("AssetLockManagerContract", function () {
         await erc20Sample.deployed()
         console.log("+++++++++++++Erc20Sample+++++++++++++++ ", erc20Sample.address)
 
+        //deploy ERC20 1
+        erc20SampleCon1 = await ethers.getContractFactory("ERC20TokenSample", deployer)
+        erc20Sample1 = await erc20SampleCon1.deploy()
+        //erc20Sample = await erc20SampleCon.attach("0xC66AB83418C20A65C3f8e83B3d11c8C3a6097b6F")
+        await erc20Sample1.deployed()
+        console.log("+++++++++++++Erc20Sample1+++++++++++++++ ", erc20Sample1.address)
+
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
         topProveContractCon = await ethers.getContractFactory("TopProve", deployer)
 
         topProveContract = await topProveContractCon.deploy(address)
         console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
+        await topProveContract.deployed()
+
+        //deploy mint contract
+        mintContractCon = await ethers.getContractFactory("ERC20MintProxy", deployer)
+        mintContract = await mintContractCon.deploy()
+        console.log("+++++++++++++mintContract+++++++++++++++ ", mintContract.address)
+        await mintContract.deployed()
+
+        //deploy mint contract1
+        mintContractCon1 = await ethers.getContractFactory("ERC20MintProxy", deployer)
+        mintContract1 = await mintContractCon1.deploy()
+        console.log("+++++++++++++MintContract1+++++++++++++++ ", mintContract1.address)
+        await mintContract1.deployed()
+
+        mintContractCon2 = await ethers.getContractFactory("ERC20MintProxy", deployer)
+        mintContract2 = await mintContractCon2.deploy()
+        console.log("+++++++++++++MintContract2+++++++++++++++ ", mintContract2.address)
+        await mintContract2.deployed()
+
+        await mintContract.initialize(topProveContract.address, mintContract1.address, 1000, admin.address)
+        await mintContract.connect(admin).adminPause(0)
+        await mintContract1.initialize(topProveContract.address, mintContract.address, 1000, admin.address)
+        await mintContract1.connect(admin).adminPause(0)
+        await mintContract2.initialize(topProveContract.address, mintContract1.address, 1000, admin.address)
+        await mintContract2.connect(admin).adminPause(0)
+    })
+
+    it('no admin user can not bind failed between local and peer asset', async () => {
         
-        //deploy contract
-        lockContractCon = await ethers.getContractFactory("ERC20MintProxy", deployer)
-        // lockContractCon = await ethers.getContractFactory("ERC20Locker", {
-        //     libraries: {
-        //       Utils: utils.address,
-        //     }
-        // }, deployer)
-        lockContract = await lockContractCon.deploy()
-        //lockContract = await lockContractCon.attach("0xeF31027350Be2c7439C1b0BE022d49421488b72C")
-        console.log("+++++++++++++LockContract+++++++++++++++ ", lockContract.address)
-        // await staking.switchOnContract(true)
-
-        //deploy contract1
-        lockContractCon1 = await ethers.getContractFactory("ERC20MintProxy", deployer)
-        lockContract1 = await lockContractCon1.deploy()
-        
-        lockContract.initialize(topProveContract.address, lockContract1.address, 1000, admin.address, 0)
-        lockContract1.initialize(topProveContract.address, lockContract.address, 1000, admin.address, 0)
-        console.log("+++++++++++++LockContract1+++++++++++++++ ", lockContract1.address)
-
-        // //deploy Ed25519
-        // ed25519Con = await ethers.getContractFactory("Ed25519", deployer)
-        // ed25519 = await ed25519Con.deploy()
-        // await ed25519.deployed()
-        // console.log("+++++++++++++ed25519+++++++++++++++ ", lockContract.address)
+        await expect(mintContract.connect(deployer).bindAssetHash(erc20Sample.address, address))
+            .to.be.revertedWith('Transaction reverted without a reason string')
     })
 
-    it('bind hashasset must be admin', async () => {
-        await lockContract.bindAssetHash(erc20Sample.address, address)
+    it('the local address can not be non-contract for binding', async () => {
+        await expect(mintContract.connect(admin).bindAssetHash(address, address))
+            .to.be.revertedWith('from proxy address are not to be contract address')
     })
 
-    it('bind success uses admin', async () => {
-        // amount cannot be zero
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+    it('the local address must be contract for binding', async () => {
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
     })
 
-    it('amount cannot be zero', async () => {
-        // amount cannot be zero
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await lockContract.burn(erc20Sample.address, 0, address)
+    it('the peer address can be zero', async () => {
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, zeroAccount)
     })
 
-    // it('amount must be less than ((1 << 128) -1)', async () => {
-    //     // amount cannot be zero
-    //     await lockContract.lockToken(erc20Sample.address, 0, (1<<128 + 1), address)
-
-    //     console.log(".....")
-    // })
-
-    it('erc20 contract must be binded', async () => {
-        // amount cannot be zero
-        // amount cannot be zero
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await lockContract.burn(erc20Sample.address, 1, address)
+    it('amount of burn cannot be zero', async () => {
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await expect(mintContract.burn(erc20Sample.address, 0, address))
+            .to.be.revertedWith('amount can not be 0')
     })
 
-
-    it('lock fail because of not allowance', async () => {
-        // amount cannot be zero
-        // amount cannot be zero
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, 1, address)
-        await lockContract.burn(erc20Sample.address, 1, address)
+    it('the asset contract of burn must be bound', async () => {
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await expect(mintContract.burn(erc20Sample1.address, 1, address))
+            .to.be.revertedWith('asset address must has been bound')
     })
 
-    
-    it('lock fail because of allowance is not enough', async () => {
-        // amount cannot be zero
-        // amount cannot be zero
-        await erc20Sample.approve(lockContract.address, 1000)
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await lockContract.burn(erc20Sample.address, 2000, address)
+    it('the receiver of burn can not be zero', async () => {
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await expect(mintContract.burn(erc20Sample1.address, 1, zeroAccount))
+            .to.be.revertedWith('Transaction reverted without a reason string')
     })
 
-    it('lock success', async () => {
-        // amount cannot be zero
-        await erc20Sample.approve(lockContract.address, 1000)
-        await lockContract.connect(admin).bindAssetHash(erc20Sample.address, user.address)
-        try {
-            const tx = await lockContract.burn(erc20Sample.address, 1, user.address)
-            // console.log(tx)
-            const rc = await tx.wait()
-            const event = rc.events.find(event=>event.event === "Locked")
-            // const latestBlock = await hre.ethers.provider.getBlock("latest")
-            // console.log(latestBlock)
-            const latestBlock = await hre.ethers.provider.getBlock(1)
+    it('the owner must grant to mintContract enough allowance', async () => {
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1)
+        await expect(mintContract.connect(deployer).burn(erc20Sample.address, 10, address))
+            .to.be.revertedWith('ERC20: insufficient allowance')
+    })
 
-            //await lockContract.parseLog(rc.logs[event.logIndex])
-        } catch (error) {
-            console.log(error)
-        }
+    it('burn of mintContract success', async () => {
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+    })
+
+    it('burn success, the mint asset must be bound', async () => {
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        const rc = await tx.wait()
+        const event = rc.events.find(event=>event.event === "Burned")
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await expect(mintContract1.connect(user).mint(buffer, 1))
+            .to.be.revertedWith('asset address must has been bound')
+    })
+
+    it('burn success, the mint proxy must be bound', async () => {
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        const rc = await tx.wait()
+        const event = rc.events.find(event=>event.event === "Burned")
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await expect(mintContract2.connect(user).mint(buffer, 1))
+            .to.be.revertedWith('proxy is not bound')
+    })
+
+    it('burn success, repeat mint', async () => {
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        const rc = await tx.wait()
+
+        const event = rc.events.find(event=>event.event === "Burned")
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await mintContract1.connect(admin).bindAssetHash(erc20Sample1.address, erc20Sample.address)
+        await mintContract1.connect(user).mint(buffer, 1)
+        await expect(mintContract1.connect(user).mint(buffer, 1))
+            .to.be.revertedWith('The burn event proof cannot be reused')
+    })
+
+    it('burn and mint success', async () => {
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        const rc = await tx.wait()
+        const event = rc.events.find(event=>event.event === "Burned")
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await mintContract1.connect(admin).bindAssetHash(erc20Sample1.address, erc20Sample.address)
+        await mintContract1.connect(user).mint(buffer, 1)
+
+        expect(await erc20Sample1.balanceOf(address))
+            .to.equal(10)
     })
 })
 
+describe("TRC20", function () {
+    beforeEach(async function () {
+        //准备必要账户
+        [deployer, admin, miner, user, user1, redeemaccount] = await hre.ethers.getSigners()
+        owner = deployer
+        console.log("deployer account:", deployer.address)
+        console.log("owner account:", owner.address)
+        console.log("admin account:", admin.address)
+        console.log("team account:", miner.address)
+        console.log("user account:", user.address)
+        console.log("redeemaccount account:", redeemaccount.address)
+
+        zeroAccount = "0x0000000000000000000000000000000000000000"
+
+        //deploy ERC20
+        erc20SampleCon = await ethers.getContractFactory("ERC20TokenSample", deployer)
+        erc20Sample = await erc20SampleCon.deploy()
+        //erc20Sample = await erc20SampleCon.attach("0xC66AB83418C20A65C3f8e83B3d11c8C3a6097b6F")
+        await erc20Sample.deployed()
+        console.log("+++++++++++++Erc20Sample+++++++++++++++ ", erc20Sample.address)
+
+        //deploy ERC20
+        erc20SampleCon1 = await ethers.getContractFactory("ERC20TokenSample", deployer)
+        erc20Sample1 = await erc20SampleCon1.deploy()
+        //erc20Sample = await erc20SampleCon.attach("0xC66AB83418C20A65C3f8e83B3d11c8C3a6097b6F")
+        await erc20Sample1.deployed()
+        console.log("+++++++++++++Erc20Sample+++++++++++++++ ", erc20Sample1.address)
+
+        //deploy prove
+		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
+        topProveContractCon = await ethers.getContractFactory("TopProve", deployer)
+
+        topProveContract = await topProveContractCon.deploy(address)
+        console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
+        await topProveContract.deployed()
+
+        //deploy mint contract
+        mintContractCon = await ethers.getContractFactory("ERC20MintProxy", deployer)
+        mintContract = await mintContractCon.deploy()
+        console.log("+++++++++++++mintContract+++++++++++++++ ", mintContract.address)
+        await mintContract.deployed()
+    })
+
+    it('burn success, the mint asset must be bound', async () => {
+        //deploy TRC20
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20", deployer)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample1.address, 1, admin.address, "hhh", "hhh")
+        await TRC20Contract1.deployed()
+        await TRC20Contract1.connect(admin).adminPause(0)
+
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address)
+        await mintContract.connect(admin).adminPause(0)
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+
+        //burn
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 1000, address)
+        const rc = await tx.wait()
+        const event = rc.events.find(event=>event.event === "Burned")
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await expect(TRC20Contract1.connect(user).mint(buffer, 1))
+            .to.be.revertedWith('asset address must has been bound')
+    })
+
+    it('burn success, the mint proxy must be bound', async () => {
+        //burn
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20", deployer)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, address, erc20Sample.address, 1, admin.address, "hhh", "hhh")
+        await TRC20Contract1.deployed()
+        await TRC20Contract1.connect(admin).adminPause(0)
+
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address)
+        await mintContract.connect(admin).adminPause(0)
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        const rc = await tx.wait()
+        const event = rc.events.find(event=>event.event === "Burned")
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await expect(TRC20Contract1.connect(user).mint(buffer, 1))
+            .to.be.revertedWith('proxy is not bound')
+    })
+
+    it('burn success, repeat mint', async () => {
+        //burn
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20", deployer)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, admin.address, "hhh", "hhh")
+        await TRC20Contract1.deployed()
+        await TRC20Contract1.connect(admin).adminPause(0)
+
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address)
+        await mintContract.connect(admin).adminPause(0)
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, user.address)
+        const rc = await tx.wait()
+
+        const event = rc.events.find(event=>event.event === "Burned")
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await TRC20Contract1.connect(user).mint(buffer, 1)
+        await expect(TRC20Contract1.connect(user).mint(buffer, 1))
+            .to.be.revertedWith('The burn event proof cannot be reused')
+    })
+
+    it('burn success, mint success', async () => {
+        //burn
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20", deployer)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, admin.address, "hhh", "hhh")
+        await TRC20Contract1.deployed()
+        await TRC20Contract1.connect(admin).adminPause(0)
+
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address)
+        await mintContract.connect(admin).adminPause(0)
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, user.address)
+        const rc = await tx.wait()
+
+        const event = rc.events.find(event=>event.event === "Burned")
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await TRC20Contract1.connect(user).mint(buffer, 1)
+        const ownerBalance = await TRC20Contract1.balanceOf(user.address);
+        expect(await TRC20Contract1.totalSupply())
+            .to.equal(ownerBalance)
+    })
+    
+    it('burn amount exceeds balance', async () => {
+        //burn
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20", deployer)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, admin.address, "hhh", "hhh")
+        console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)
+        await TRC20Contract1.deployed()
+        await TRC20Contract1.connect(admin).adminPause(0)
+
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address)
+        await mintContract.connect(admin).adminPause(0)
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, user.address)
+        const rc = await tx.wait()
+        const event = rc.events.find(event=>event.event === "Burned")
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await TRC20Contract1.connect(user).mint(buffer, 1)
+        await expect(TRC20Contract1.connect(deployer).burn(10000, user1.address))
+            .to.be.revertedWith('ERC20: burn amount exceeds balance')
+    })
+
+    it('burn success', async () => {
+        //burn
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20", deployer)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, admin.address, "hhh", "hhh")
+        console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)
+        await TRC20Contract1.deployed()
+        await TRC20Contract1.connect(admin).adminPause(0)
+
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address)
+        await mintContract.connect(admin).adminPause(0)
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 1000, user.address)
+        const rc = await tx.wait()
+        console.log(rc)
+        const event = rc.events.find(event=>event.event === "Burned")
+        console.log(event)
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await TRC20Contract1.connect(user).mint(buffer, 1)
+        await TRC20Contract1.connect(user).burn(100, user1.address)
+        const ownerBalance = await TRC20Contract1.balanceOf(user.address);
+        expect(await TRC20Contract1.totalSupply())
+            .to.equal(ownerBalance)
+    })
+})
 
 // describe("Native token to ERC20", function () {
 

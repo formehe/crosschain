@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 import "../codec/EthProofDecoder.sol";
 import "../../../lib/lib/EthereumDecoder.sol";
-//import "hardhat/console.sol";
+import "hardhat/console.sol";
 abstract contract VerifierCommon {
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
