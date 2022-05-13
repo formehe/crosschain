@@ -31,18 +31,7 @@ contract Locker is Initializable{
         lockProxyHash = _lockProxyHash;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
     } 
-  
-    struct LockEventData {
-        address fromToken;
-        uint64  fromChainId;
-        uint64  toChainId;   
-        address toToken;
-
-        address sender;
-        uint256 amount;
-        address recipient;
-    }
-
+    
     struct BurnResult {
         uint128 amount;
         address token;
@@ -80,21 +69,6 @@ contract Locker is Initializable{
         require(!result.unknown, "Cannot use unknown execution outcome for unlocking the tokens");
 
         emit ConsumedProof(receiptId);
-    }
-
-    function parseLog(bytes memory log)
-        private
-        view
-        returns (LockEventData memory lockEvent, address contractAddress)
-    {
-        EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
-        require(logInfo.topics.length == 4, "invalid the number of topics");
-        (lockEvent.fromChainId, lockEvent.toChainId, lockEvent.amount, lockEvent.recipient) = abi.decode(logInfo.data, (uint64, uint64, uint256, address));
-
-        lockEvent.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
-        lockEvent.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
-        lockEvent.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
-        contractAddress = logInfo.contractAddress;
     }
 
     function _decodeBurnResult(bytes memory data) internal pure returns(BurnResult memory result) {

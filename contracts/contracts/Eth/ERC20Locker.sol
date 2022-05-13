@@ -16,34 +16,33 @@ contract ERC20Locker is IRC20Locker,LockerProxy,Locker{
         INearProver _prover,
         address _lockProxyHash,
         uint64 _minBlockAcceptanceHeight,
-        uint256 _pausedFlags,
-        uint64  _chainId
+        uint256 _pausedFlags
     ) external initializer {
         Locker._locker_initialize(_prover, _lockProxyHash,_minBlockAcceptanceHeight);
-        LockerProxy._lockerProxy_initialize(_pausedFlags,_chainId);
+        LockerProxy._lockerProxy_initialize(_pausedFlags);
     }
     
-    function lockToken(address fromAssetHash, uint64 toChainId, uint256 amount, address receiver)
+    function lockToken(address fromAssetHash, uint256 amount, address receiver)
         public
         override
-        pausable1 (PAUSED_UNLOCK,LOCK_ADMIN_ROLE)
+        lockToken_pausable (msg.sender)
     {
         require((fromAssetHash != address(0)) && (receiver != address(0)));
         require(amount != 0, "amount can not be 0");
         require(
             (IERC20(fromAssetHash).balanceOf(address(this)) + amount) <= ((uint256(1) << 128) - 1),
             "Maximum tokens locked exceeded (< 2^128 - 1)");
-        address toAssetHash = assetHashMap[fromAssetHash][toChainId];
+        address toAssetHash = assetHashMap[fromAssetHash];
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         IERC20(fromAssetHash).safeTransferFrom(msg.sender, address(this), amount);
 
-        emit Locked(fromAssetHash, toAssetHash, chainId, toChainId, msg.sender, amount, receiver);
+        emit Locked(fromAssetHash, toAssetHash, msg.sender, amount, receiver);
     }
 
     function unlockToken(bytes memory proofData, uint64 proofBlockHeight)
         public
         override
-        pausable1 (PAUSED_UNLOCK,LOCK_ADMIN_ROLE)
+        unLock_pausable (msg.sender)
     {
         ProofDecoder.ExecutionStatus memory status = _parseAndConsumeProof(proofData, proofBlockHeight);
         BurnResult memory result = _decodeBurnResult(status.successValue);
@@ -59,5 +58,6 @@ contract ERC20Locker is IRC20Locker,LockerProxy,Locker{
     {
         token.safeTransfer(destination, amount);
     }
+
 
 }

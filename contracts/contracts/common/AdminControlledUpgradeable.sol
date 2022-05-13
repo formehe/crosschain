@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract AdminControlledUpgradeable is Initializable,AccessControl {
-    address private admin;
-    uint private paused;
+    address internal admin;
+    uint internal paused;
 
     function _AdminControlledUpgradeable_init(address _admin, uint flags) internal onlyInitializing {
         admin = _admin;

@@ -17,32 +17,31 @@ contract TokenLocker is ITokenLocker,LockerProxy,Locker{
         INearProver _prover,
         address _lockProxyHash,
         uint64 _minBlockAcceptanceHeight,
-        uint256 _pausedFlags,
-        uint64  _chainId
+        uint256 _pausedFlags
     ) external initializer {   
-        LockerProxy._lockerProxy_initialize(_pausedFlags,_chainId);
+        LockerProxy._lockerProxy_initialize(_pausedFlags);
         Locker._locker_initialize(_prover, _lockProxyHash,_minBlockAcceptanceHeight);
     }
     
-    function lockToken(address fromAssetHash, uint64 toChainId, uint256 amount, address receiver)
+    function lockToken(address fromAssetHash,uint256 amount, address receiver)
         public
         override
         payable
-        pausable1 (PAUSED_UNLOCK,LOCK_ADMIN_ROLE)
+        lockToken_pausable (msg.sender)
     {
-        address toAssetHash = assetHashMap[fromAssetHash][toChainId];
+        address toAssetHash = assetHashMap[fromAssetHash];
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         require(amount != 0, "amount cannot be zero");
         require(receiver != address(0), "receive address can not be zero");
         require(_transferToContract(fromAssetHash, amount));
-        emit Locked(fromAssetHash, toAssetHash, chainId, toChainId, msg.sender, amount, receiver);
+        emit Locked(fromAssetHash, toAssetHash ,msg.sender, amount, receiver);
     }
 
     function unlockToken(bytes memory proofData, uint64 proofBlockHeight)
         public
         override
         payable
-        pausable1 (PAUSED_UNLOCK,LOCK_ADMIN_ROLE)
+        unLock_pausable(msg.sender)
     {
         ProofDecoder.ExecutionStatus memory status = _parseAndConsumeProof(proofData, proofBlockHeight);
         BurnResult memory result = _decodeBurnResult(status.successValue);
