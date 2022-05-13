@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8;
 
-import "../common/AdminControlledUpgradeable.sol";
+import "../common/AdminControlledUpgradeable1.sol";
 import "../common/Borsh.sol";
 import "./prover/ProofDecoder.sol";
 import "./Locker.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract LockerProxy is AdminControlledUpgradeable{
+contract LockerProxy is AdminControlledUpgradeable1{
     
     mapping(address => address) internal assetHashMap;
     
@@ -23,7 +23,6 @@ contract LockerProxy is AdminControlledUpgradeable{
     bytes32 constant public OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 constant public ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    bytes32 constant public LOCK_ADMIN_ROLE = keccak256("LOCK_ADMIN_ROLE");
     bytes32 constant public BLACK_UN_LOCK_ADMIN_ROLE = keccak256("BLACK_UN_LOCK_ROLE");
     bytes32 constant public BLACK_LOCK_ADMIN_ROLE = keccak256("BLACK_LOCK_ROLE");
 
@@ -48,26 +47,32 @@ contract LockerProxy is AdminControlledUpgradeable{
     function _lockerProxy_initialize(
         uint256 _pausedFlags
     ) internal initializer {
-        AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, _pausedFlags);
-        _setRoleAdmin(LOCK_ADMIN_ROLE, OWNER_ROLE);
-        _grantRole(OWNER_ROLE, msg.sender);
-        _grantRole(LOCK_ADMIN_ROLE, msg.sender);
+        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_pausedFlags);
+
+        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ADMIN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_UN_LOCK_ADMIN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_LOCK_ADMIN_ROLE, OWNER_ROLE);
+
+        _grantRole(OWNER_ROLE, _msgSender());
+        _grantRole(ADMIN_ROLE, _msgSender());
     } 
 
-    function bindAssetHash(address fromAssetHash, address toAssetHash) external onlyAdmin returns (bool) {
+    function bindAssetHash(address fromAssetHash, address toAssetHash) external onlyRole(ADMIN_ROLE) returns (bool) {
         require((fromAssetHash != address(0)) && (toAssetHash != address(0)), "both asset addresses are not to be 0");
         assetHashMap[fromAssetHash] = toAssetHash;
         emit BindAsset(fromAssetHash, toAssetHash);
         return true;
     }
 
-    modifier lockToken_pausable(address _address){
-        require(!hasRole(BLACK_LOCK_ADMIN_ROLE,_address) && (paused & PAUSED_UNLOCK) == 0 || hasRole(LOCK_ADMIN_ROLE,_address));
+    modifier lockToken_pausable(){
+        require(!hasRole(BLACK_LOCK_ADMIN_ROLE,_msgSender()) && (paused & PAUSED_UNLOCK) == 0 || hasRole(ADMIN_ROLE,_msgSender()));
         _;
     }
 
-    modifier unLock_pausable(address _address){
-        require(!hasRole(BLACK_UN_LOCK_ADMIN_ROLE,_address)&& (paused & PAUSED_UNLOCK) == 0 || hasRole(LOCK_ADMIN_ROLE,_address));
+    modifier unLock_pausable(){
+        require(!hasRole(BLACK_UN_LOCK_ADMIN_ROLE,_msgSender())&& (paused & PAUSED_UNLOCK) == 0 || hasRole(ADMIN_ROLE,_msgSender()));
         _;
     }
 

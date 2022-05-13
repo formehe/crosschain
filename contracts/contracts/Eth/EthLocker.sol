@@ -27,7 +27,7 @@ contract TokenLocker is ITokenLocker,LockerProxy,Locker{
         public
         override
         payable
-        lockToken_pausable (msg.sender)
+        lockToken_pausable
     {
         address toAssetHash = assetHashMap[fromAssetHash];
         require(toAssetHash != address(0), "empty illegal toAssetHash");
@@ -41,7 +41,7 @@ contract TokenLocker is ITokenLocker,LockerProxy,Locker{
         public
         override
         payable
-        unLock_pausable(msg.sender)
+        unLock_pausable
     {
         ProofDecoder.ExecutionStatus memory status = _parseAndConsumeProof(proofData, proofBlockHeight);
         BurnResult memory result = _decodeBurnResult(status.successValue);
@@ -52,7 +52,7 @@ contract TokenLocker is ITokenLocker,LockerProxy,Locker{
 
     function adminTransfer(address destination, uint256 amount)
         public
-        onlyAdmin
+        onlyRole(ADMIN_ROLE)
     {
         payable(destination).transfer(amount);
     }

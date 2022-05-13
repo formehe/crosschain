@@ -25,7 +25,7 @@ contract ERC20Locker is IRC20Locker,LockerProxy,Locker{
     function lockToken(address fromAssetHash, uint256 amount, address receiver)
         public
         override
-        lockToken_pausable (msg.sender)
+        lockToken_pausable
     {
         require((fromAssetHash != address(0)) && (receiver != address(0)));
         require(amount != 0, "amount can not be 0");
@@ -42,8 +42,8 @@ contract ERC20Locker is IRC20Locker,LockerProxy,Locker{
     function unlockToken(bytes memory proofData, uint64 proofBlockHeight)
         public
         override
-        unLock_pausable (msg.sender)
-    {
+        unLock_pausable
+    {   
         ProofDecoder.ExecutionStatus memory status = _parseAndConsumeProof(proofData, proofBlockHeight);
         BurnResult memory result = _decodeBurnResult(status.successValue);
         IERC20(result.token).safeTransfer(result.recipient, result.amount);
@@ -54,7 +54,7 @@ contract ERC20Locker is IRC20Locker,LockerProxy,Locker{
 
     function adminTransfer(IERC20 token, address destination, uint256 amount)
         public
-        onlyAdmin
+        onlyRole(ADMIN_ROLE)
     {
         token.safeTransfer(destination, amount);
     }
