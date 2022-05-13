@@ -10,26 +10,23 @@ import "../common/ITokenLocker.sol";
 import "./LockerProxy.sol";
 import "./Locker.sol";
 
-contract TokenLocker is ITokenLocker,LockerProxy,Locker{
+contract TokenLocker is ITokenLocker,LockerProxy{
     using SafeERC20 for IERC20;
     
     function _TokenLock_initialize(
         INearProver _prover,
-        address _lockProxyHash,
-        uint64 _minBlockAcceptanceHeight,
-        uint256 _pausedFlags
+        uint64 _minBlockAcceptanceHeight
     ) external initializer {   
-        LockerProxy._lockerProxy_initialize(_pausedFlags);
-        Locker._locker_initialize(_prover, _lockProxyHash,_minBlockAcceptanceHeight);
+        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight);
     }
     
     function lockToken(address fromAssetHash,uint256 amount, address receiver)
         public
         override
         payable
-        lockToken_pausable
+        lockToken_pauseable
     {
-        address toAssetHash = assetHashMap[fromAssetHash];
+        address toAssetHash = assetHashMap[fromAssetHash].toAssetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         require(amount != 0, "amount cannot be zero");
         require(receiver != address(0), "receive address can not be zero");
@@ -41,10 +38,9 @@ contract TokenLocker is ITokenLocker,LockerProxy,Locker{
         public
         override
         payable
-        unLock_pausable
+        unLock_pauseable
     {
-        ProofDecoder.ExecutionStatus memory status = _parseAndConsumeProof(proofData, proofBlockHeight);
-        BurnResult memory result = _decodeBurnResult(status.successValue);
+        BurnResult memory result = _parseAndConsumeProof(proofData, proofBlockHeight);
         _transferFromContract(result.recipient, result.amount);
 
         emit Unlocked(result.amount, result.recipient);

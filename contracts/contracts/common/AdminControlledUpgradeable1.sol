@@ -6,15 +6,14 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract AdminControlledUpgradeable1 is Initializable,AccessControl {
     bytes32 constant public CONTROLLED_ADMIN_ROLE = keccak256("CONTROLLED_LOCK_ROLE");
-    uint internal paused;
+    uint public paused;
 
-    function _AdminControlledUpgradeable_init(uint flags) internal onlyInitializing {
-        paused = flags;
+    function _AdminControlledUpgradeable_init() internal onlyInitializing {
         _grantRole(CONTROLLED_ADMIN_ROLE, msg.sender);
     }
 
     modifier pausable(uint flag,bytes32 role) {
-        require((paused & flag) == 0 || hasRole(role,msg.sender));
+        require((paused & flag) == 0 || hasRole(role,msg.sender),"has been pause");
         _;
     }
 

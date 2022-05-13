@@ -8,14 +8,7 @@ import "./Locker.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract LockerProxy is AdminControlledUpgradeable1{
-    
-    mapping(address => address) internal assetHashMap;
-    
-    Locker internal locker;
-    address internal lockProxyHash;
-    uint64 internal minBlockAcceptanceHeight;
-
+contract LockerProxy is Locker,AdminControlledUpgradeable1{
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
@@ -41,14 +34,15 @@ contract LockerProxy is AdminControlledUpgradeable1{
 
     event BindAsset(
         address fromAssetHash,
-        address toAssetHash
+        address toAssetHash,
+        address peerLockProxyHash
     );
 
     function _lockerProxy_initialize(
-        uint256 _pausedFlags
-    ) internal initializer {
-        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_pausedFlags);
-
+        INearProver _prover,
+        uint64 _minBlockAcceptanceHeight
+    ) internal {
+        AdminControlledUpgradeable1._AdminControlledUpgradeable_init();
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ADMIN_ROLE, OWNER_ROLE);
@@ -57,22 +51,27 @@ contract LockerProxy is AdminControlledUpgradeable1{
 
         _grantRole(OWNER_ROLE, _msgSender());
         _grantRole(ADMIN_ROLE, _msgSender());
+
+        Locker._locker_initialize(_prover,_minBlockAcceptanceHeight);
     } 
 
-    function bindAssetHash(address fromAssetHash, address toAssetHash) external onlyRole(ADMIN_ROLE) returns (bool) {
-        require((fromAssetHash != address(0)) && (toAssetHash != address(0)), "both asset addresses are not to be 0");
-        assetHashMap[fromAssetHash] = toAssetHash;
-        emit BindAsset(fromAssetHash, toAssetHash);
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash ) external onlyRole(ADMIN_ROLE) returns (bool) {
+        require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
+        assetHashMap[_fromAssetHash] = ToAddressHash({
+            toAssetHash:_toAssetHash,
+            peerLockProxyHash:_peerLockProxyHash
+        });
+        emit BindAsset(_fromAssetHash, _toAssetHash,_peerLockProxyHash);
         return true;
     }
 
-    modifier lockToken_pausable(){
-        require(!hasRole(BLACK_LOCK_ADMIN_ROLE,_msgSender()) && (paused & PAUSED_UNLOCK) == 0 || hasRole(ADMIN_ROLE,_msgSender()));
+    modifier lockToken_pauseable(){
+        require(!hasRole(BLACK_LOCK_ADMIN_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0 || hasRole(ADMIN_ROLE,_msgSender())),"has been pause");
         _;
     }
 
-    modifier unLock_pausable(){
-        require(!hasRole(BLACK_UN_LOCK_ADMIN_ROLE,_msgSender())&& (paused & PAUSED_UNLOCK) == 0 || hasRole(ADMIN_ROLE,_msgSender()));
+    modifier unLock_pauseable(){
+        require(!hasRole(BLACK_UN_LOCK_ADMIN_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(ADMIN_ROLE,_msgSender())),"has been pause");
         _;
     }
 
