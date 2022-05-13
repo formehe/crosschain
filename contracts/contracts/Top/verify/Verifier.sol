@@ -34,7 +34,7 @@ contract Verifier is VerifierCommon {
         EthereumDecoder.BlockHeader memory _header
     ) internal override {
         require(_proxyHash == lockProxyHash,
-                "Can only unlock tokens from the linked proof producer on Top blockchain");
+                "proxy is not bound");
         require(!usedProofs[_proofIndex], "The burn event proof cannot be reused");
         (bool success,) = prover.verify(_proof, _receipt, _header);
         require(success, "Proof should be valid");

@@ -3,10 +3,11 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+// import "hardhat/console.sol";
 
 contract AdminControlledUpgradeable is Initializable,AccessControl {
-    address internal admin;
-    uint internal paused;
+    address private admin;
+    uint private paused;
 
     function _AdminControlledUpgradeable_init(address _admin, uint flags) internal onlyInitializing {
         admin = _admin;

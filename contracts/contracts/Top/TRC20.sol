@@ -6,7 +6,7 @@ import "../common/AdminControlled.sol";
 import "./verify/Verifier.sol";
 
 contract TRC20 is ERC20, Verifier, AdminControlled {
-    address assetHash;
+    address private assetHash;
     event Burned (
         address indexed fromToken,
         address indexed toToken,
@@ -31,13 +31,14 @@ contract TRC20 is ERC20, Verifier, AdminControlled {
         address _peerAssetHash,
         uint64 _minBlockAcceptanceHeight,
         address _admin,
-        uint _pausedFlags,
         string memory _name, 
         string memory _symbol
     ) ERC20(_name, _symbol)
-      AdminControlled(_admin, _pausedFlags)
+      AdminControlled(_admin, UNPAUSED_ALL ^ 0xff)
       Verifier(_prover, _peerProxyHash, _minBlockAcceptanceHeight)
     {
+        require(_peerProxyHash != address(0), "peer proxy can not be zero");
+        require(_peerAssetHash != address(0), "peer asset can not be zero");
         assetHash = _peerAssetHash;
     }
 
@@ -46,17 +47,19 @@ contract TRC20 is ERC20, Verifier, AdminControlled {
         pausable (PAUSED_MINT)
     {
         VerifiedReceipt memory _receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
-        require(assetHash == _receipt.data.fromToken, "invalid token to token");
+        require(assetHash == _receipt.data.fromToken, "asset address must has been bound");
         _saveProof(_receipt.proofIndex);
 
         _mint(_receipt.data.receiver, _receipt.data.amount);
         emit Minted(_receipt.proofIndex, _receipt.data.amount, _receipt.data.receiver);
-    }    
+    }
     
     function burn(uint256 amount, address receiver)
         external
         pausable (PAUSED_BURN)
     {
+        require(receiver != address(0));
+        require(amount != 0, "amount can not be 0");
         _burn(msg.sender, amount);
         emit Burned(address(this), assetHash, msg.sender, amount, receiver);
     }
