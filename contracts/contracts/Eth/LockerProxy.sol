@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8;
 
-import "../common/AdminControlled.sol";
+import "../common/AdminControlledUpgradeable.sol";
 import "../common/Borsh.sol";
 import "./prover/ProofDecoder.sol";
 import "./Locker.sol";
 
-
-
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract LockerProxy is AdminControlled{
+contract LockerProxy is AdminControlledUpgradeable{
     
     mapping(address => mapping(uint64 => address)) internal assetHashMap;
     
@@ -53,7 +51,7 @@ contract LockerProxy is AdminControlled{
         uint256 _pausedFlags,
         uint64  _chainId
     ) internal initializer {
-        AdminControlled._AdminControlled_init(msg.sender, _pausedFlags);
+        AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, _pausedFlags);
         _setRoleAdmin(LOCK_ADMIN_ROLE, OWNER_ROLE);
         _grantRole(OWNER_ROLE, msg.sender);
         _grantRole(LOCK_ADMIN_ROLE, msg.sender);

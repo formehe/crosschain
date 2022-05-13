@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract AdminControlledUpgradeable is Initializable {
+contract AdminControlledUpgradeable is Initializable,AccessControl {
     address private admin;
     uint private paused;
 
@@ -19,6 +20,12 @@ contract AdminControlledUpgradeable is Initializable {
 
     modifier pausable(uint flag) {
         require((paused & flag) == 0 || msg.sender == admin);
+        _;
+    }
+
+    
+    modifier pausable1(uint flag,bytes32 role) {
+        require((paused & flag) == 0 || hasRole(role,msg.sender));
         _;
     }
 
