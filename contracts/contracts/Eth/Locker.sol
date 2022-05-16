@@ -8,7 +8,7 @@ import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
 import "../common/Utils.sol";
 
-contract Locker {
+contract Locker is Initializable{
     using Borsh for Borsh.Data;
     using ProofDecoder for Borsh.Data;
 
@@ -31,7 +31,7 @@ contract Locker {
     function _locker_initialize(
         INearProver _prover,
         uint64 _minBlockAcceptanceHeight
-    ) internal {
+    ) internal onlyInitializing{
         prover = _prover;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
     } 

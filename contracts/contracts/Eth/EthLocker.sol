@@ -15,9 +15,10 @@ contract TokenLocker is ITokenLocker,LockerProxy{
     
     function _TokenLock_initialize(
         INearProver _prover,
-        uint64 _minBlockAcceptanceHeight
+        uint64 _minBlockAcceptanceHeight,
+        address _owner
     ) external initializer {   
-        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight);
+        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight,_owner);
     }
     
     function lockToken(address fromAssetHash,uint256 amount, address receiver)
@@ -46,13 +47,6 @@ contract TokenLocker is ITokenLocker,LockerProxy{
         emit Unlocked(result.amount, result.recipient);
     }
 
-    function adminTransfer(address destination, uint256 amount)
-        public
-        onlyRole(ADMIN_ROLE)
-    {
-        payable(destination).transfer(amount);
-    }
-    
     //The unit of amount is gwei
     function _transferToContract(address fromAssetHash, uint256 amount) private returns (bool) {
         require(fromAssetHash == address(0), "from asset address must be zero");

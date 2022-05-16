@@ -35,7 +35,7 @@ describe('ERC20Locker', () => {
     console.log("erc20Token2>>>> "  + erc20Token2.address)
     console.log("erc20Locker>>>> "  + erc20Locker.address)
 
-    await erc20Locker._ERC20Lock_initialize(AddressZero,12)
+    await erc20Locker._ERC20Lock_initialize(AddressZero,12,wallet.address)
 
   })
 
@@ -46,7 +46,7 @@ describe('ERC20Locker', () => {
     })
 
     it('It has no permissions', async () => {
-      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775'
+      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xb19546dff01e856fb3f010c267a7b1c60363cf8a4664e21cc89c26224620214e'
       await expect(erc20Locker.connect(wallet2).bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address)
       ).to.be.revertedWith(msg)
 
@@ -111,8 +111,8 @@ describe('ERC20Locker', () => {
       await erc20Locker.adminPause(1)
       expect(await erc20Locker.paused()).to.equal(1);
 
-      await erc20Locker.revokeRole('0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775',wallet.address)
-      expect(await erc20Locker.hasRole('0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775',wallet.address)).to.equal(false);
+      await erc20Locker.revokeRole('0x70abce2bdd78b412035b29f1d4506cb3c7e06e77bf2d4afa917be6ca9f6b41d4',wallet.address)
+      expect(await erc20Locker.hasRole('0x70abce2bdd78b412035b29f1d4506cb3c7e06e77bf2d4afa917be6ca9f6b41d4',wallet.address)).to.equal(false);
      
     
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('has been pause')
@@ -146,8 +146,8 @@ describe('ERC20Locker', () => {
       await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
     
-      await erc20Locker.revokeRole('0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775',wallet.address)
-      expect(await erc20Locker.hasRole('0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775',wallet.address)).to.equal(false);
+      await erc20Locker.revokeRole('0x70abce2bdd78b412035b29f1d4506cb3c7e06e77bf2d4afa917be6ca9f6b41d4',wallet.address)
+      expect(await erc20Locker.hasRole('0x70abce2bdd78b412035b29f1d4506cb3c7e06e77bf2d4afa917be6ca9f6b41d4',wallet.address)).to.equal(false);
      
       erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)
 

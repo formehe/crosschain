@@ -13,9 +13,10 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
 
     function _ERC20Lock_initialize(
         INearProver _prover,
-        uint64 _minBlockAcceptanceHeight
+        uint64 _minBlockAcceptanceHeight,
+        address _owner
     ) external initializer {
-        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight);
+        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight,_owner);
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)
@@ -46,13 +47,5 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
         emit Unlocked(result.amount, result.recipient);
      
     }
-
-    function adminTransfer(IERC20 token, address destination, uint256 amount)
-        public
-        onlyRole(ADMIN_ROLE)
-    {
-        token.safeTransfer(destination, amount);
-    }
-
 
 }

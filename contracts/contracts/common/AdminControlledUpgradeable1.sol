@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-contract AdminControlledUpgradeable1 is Initializable,AccessControl {
+contract AdminControlledUpgradeable1 is AccessControlUpgradeable{
     bytes32 constant public CONTROLLED_ADMIN_ROLE = keccak256("CONTROLLED_LOCK_ROLE");
     uint public paused;
 
-    function _AdminControlledUpgradeable_init() internal onlyInitializing {
-        _grantRole(CONTROLLED_ADMIN_ROLE, msg.sender);
+    function _AdminControlledUpgradeable_init(address _pauseAdmin) internal onlyInitializing {
+        _grantRole(CONTROLLED_ADMIN_ROLE, _pauseAdmin);
+        AccessControlUpgradeable.__AccessControl_init();
     }
 
     modifier pausable(uint flag,bytes32 role) {

@@ -40,22 +40,24 @@ contract LockerProxy is Locker,AdminControlledUpgradeable1{
 
     function _lockerProxy_initialize(
         INearProver _prover,
-        uint64 _minBlockAcceptanceHeight
-    ) internal {
-        AdminControlledUpgradeable1._AdminControlledUpgradeable_init();
+        uint64 _minBlockAcceptanceHeight,
+        address _owner
+    ) internal onlyInitializing{
+        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_owner);
+        Locker._locker_initialize(_prover,_minBlockAcceptanceHeight);
+
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
-        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ADMIN_ROLE, OWNER_ROLE);
+
         _setRoleAdmin(BLACK_UN_LOCK_ADMIN_ROLE, OWNER_ROLE);
         _setRoleAdmin(BLACK_LOCK_ADMIN_ROLE, OWNER_ROLE);
 
-        _grantRole(OWNER_ROLE, _msgSender());
-        _grantRole(ADMIN_ROLE, _msgSender());
+        _grantRole(OWNER_ROLE,_owner);
 
-        Locker._locker_initialize(_prover,_minBlockAcceptanceHeight);
+       
     } 
 
-    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash ) external onlyRole(ADMIN_ROLE) returns (bool) {
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash ) external onlyRole(OWNER_ROLE) returns (bool) {
         require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
         assetHashMap[_fromAssetHash] = ToAddressHash({
             toAssetHash:_toAssetHash,
@@ -66,12 +68,12 @@ contract LockerProxy is Locker,AdminControlledUpgradeable1{
     }
 
     modifier lockToken_pauseable(){
-        require(!hasRole(BLACK_LOCK_ADMIN_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0 || hasRole(ADMIN_ROLE,_msgSender())),"has been pause");
+        require(!hasRole(BLACK_LOCK_ADMIN_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0 || hasRole(CONTROLLED_ADMIN_ROLE,_msgSender())),"has been pause");
         _;
     }
 
     modifier unLock_pauseable(){
-        require(!hasRole(BLACK_UN_LOCK_ADMIN_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(ADMIN_ROLE,_msgSender())),"has been pause");
+        require(!hasRole(BLACK_UN_LOCK_ADMIN_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ADMIN_ROLE,_msgSender())),"has been pause");
         _;
     }
 
