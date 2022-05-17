@@ -60,4 +60,11 @@ contract TokenLocker is ITokenLocker,LockerProxy{
         payable(toAddress).transfer(amount);
         return true;
     }
+
+    function adminTransfer(address payable destination, uint amount)
+        public
+        onlyRole(WITHDRAWAL_ROLE)
+    {
+        destination.transfer(amount);
+    }
 }

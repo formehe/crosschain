@@ -2,17 +2,26 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../../common/AdminControlledUpgradeable.sol";
+import "../../common/AdminControlledUpgradeable1.sol";
 import "./INearBridge.sol";
 import "./NearDecoder.sol";
 import "../../common/Ed25519.sol";
 
-contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
+contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable1 {
     using Borsh for Borsh.Data;
     using NearDecoder for Borsh.Data;
 
     // Assumed to be even and to not exceed 256.
     uint constant MAX_BLOCK_PRODUCERS = 100;
+
+    uint constant UNPAUSE_ALL = 0;
+    uint constant PAUSED_DEPOSIT = 1;
+    uint constant PAUSED_WITHDRAW = 2;
+    uint constant PAUSED_ADD_BLOCK = 4;
+    uint constant PAUSED_CHALLENGE = 8;
+    uint constant PAUSED_VERIFY = 16;
+
+    bytes32 constant public ADDBLOCK_ROLE = keccak256("ADDBLOCK_ROLE");
 
     struct Epoch {
         bytes32 epochId;
@@ -39,35 +48,22 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
     function initialize(
         Ed25519 ed,
         uint256 _lockEthAmount,
-        address _admin,
-        uint256 _pausedFlags
+        address _owner
     ) external initializer {
+        require(_owner == address(0));
         edwards = ed;
         lockEthAmount = _lockEthAmount;
-        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_admin, _pausedFlags);
+        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_owner);
+
+        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _grantRole(OWNER_ROLE,_owner);
+
     }
 
-    uint constant UNPAUSE_ALL = 0;
-    uint constant PAUSED_DEPOSIT = 1;
-    uint constant PAUSED_WITHDRAW = 2;
-    uint constant PAUSED_ADD_BLOCK = 4;
-    uint constant PAUSED_CHALLENGE = 8;
-    uint constant PAUSED_VERIFY = 16;
 
-    function deposit() public payable override pausable(PAUSED_DEPOSIT) {
-        require(msg.value == lockEthAmount && balanceOf[msg.sender] == 0);
-        balanceOf[msg.sender] = msg.value;
-    }
 
-    function withdraw() public override pausable(PAUSED_WITHDRAW) {
-        require(msg.sender != lastSubmitter);
-        uint amount = balanceOf[msg.sender];
-        require(amount != 0);
-        balanceOf[msg.sender] = 0;
-        payable(msg.sender).transfer(amount);
-    }
-
-    function initWithBlock(bytes memory data) public override onlyAdmin {
+    function initWithBlock(bytes memory data) public override onlyRole(OWNER_ROLE) {
         require(!initialized, "Wrong initialization stage");
         initialized = true;
 
@@ -81,8 +77,20 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
         blockMerkleRoots_[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.hash] = topBlock.inner_lite.height;
         maxMainHeight = topBlock.inner_lite.height;
+    }   
+
+    function deposit() public payable override pausable(PAUSED_DEPOSIT,CONTROLLED_ROLE) {
+        require(msg.value == lockEthAmount && balanceOf[msg.sender] == 0);
+        balanceOf[msg.sender] = msg.value;
     }
 
+    function withdraw() public override pausable(PAUSED_WITHDRAW,CONTROLLED_ROLE) {
+        require(msg.sender != lastSubmitter);
+        uint amount = balanceOf[msg.sender];
+        require(amount != 0);
+        balanceOf[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
+    }
     struct BridgeState {
         uint currentHeight; // Height of the current confirmed block
         // If there is currently no unconfirmed block, the last three fields are zero.
@@ -95,7 +103,7 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
         res.numBlockProducers = thisEpoch.numBPs;
     }
 
-    function addLightClientBlock(bytes memory data) public override pausable(PAUSED_ADD_BLOCK) {
+    function addLightClientBlock(bytes memory data) public override addLightClientBlock_able {
         require(initialized, "Contract is not initialized");
         require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
 
@@ -174,19 +182,24 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
         }
     }
 
-    function blockHashes(uint64 height) public view override pausable(PAUSED_VERIFY) returns (bytes32 res) {
+    function blockHashes(uint64 height) public view override pausable(PAUSED_VERIFY,CONTROLLED_ROLE) returns (bytes32 res) {
         res = blockHashes_[height];
     }
 
-    function blockMerkleRoots(uint64 height) public view override pausable(PAUSED_VERIFY) returns (bytes32 res) {
+    function blockMerkleRoots(uint64 height) public view override pausable(PAUSED_VERIFY,CONTROLLED_ROLE) returns (bytes32 res) {
         res = blockMerkleRoots_[height];
     }
 
-    function getMaxHeight() public view override pausable(PAUSED_VERIFY) returns (uint64 height) {
+    function getMaxHeight() public view override pausable(PAUSED_VERIFY,CONTROLLED_ROLE) returns (uint64 height) {
         height = maxMainHeight;
     }
 
-    function getHeightByHash(bytes32 hashCode) public view override pausable(PAUSED_VERIFY) returns (uint64 height) {
+    function getHeightByHash(bytes32 hashCode) public view override pausable(PAUSED_VERIFY,CONTROLLED_ROLE) returns (uint64 height) {
         height = blockHeights[hashCode];
+    }
+
+    modifier addLightClientBlock_able(){
+        require(( isPause(PAUSED_ADD_BLOCK)|| hasRole(ADDBLOCK_ROLE,_msgSender())),"without permission");
+        _;
     }
 }

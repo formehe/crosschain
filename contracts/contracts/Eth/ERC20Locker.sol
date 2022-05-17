@@ -48,4 +48,11 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
      
     }
 
+    function adminTransfer(IERC20 token, address destination, uint256 amount)
+        public
+        onlyRole(WITHDRAWAL_ROLE)
+    {
+        token.safeTransfer(destination, amount);
+    }
+
 }

@@ -13,11 +13,8 @@ contract LockerProxy is Locker,AdminControlledUpgradeable1{
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
 
-    bytes32 constant public OWNER_ROLE = keccak256("OWNER_ROLE");
-    bytes32 constant public ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    bytes32 constant public BLACK_UN_LOCK_ADMIN_ROLE = keccak256("BLACK_UN_LOCK_ROLE");
-    bytes32 constant public BLACK_LOCK_ADMIN_ROLE = keccak256("BLACK_LOCK_ROLE");
+    bytes32 constant public BLACK_UN_LOCK_ROLE = keccak256("BLACK_UN_LOCK_ROLE");
+    bytes32 constant public BLACK_LOCK_ROLE = keccak256("BLACK_LOCK_ROLE");
 
     event Locked (
         address indexed fromToken,
@@ -43,21 +40,23 @@ contract LockerProxy is Locker,AdminControlledUpgradeable1{
         uint64 _minBlockAcceptanceHeight,
         address _owner
     ) internal onlyInitializing{
+        require(_owner == address(0));
         AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_owner);
         Locker._locker_initialize(_prover,_minBlockAcceptanceHeight);
 
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
-        _setRoleAdmin(CONTROLLED_ADMIN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
 
-        _setRoleAdmin(BLACK_UN_LOCK_ADMIN_ROLE, OWNER_ROLE);
-        _setRoleAdmin(BLACK_LOCK_ADMIN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_UN_LOCK_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_LOCK_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE,_owner);
+        _grantRole(WITHDRAWAL_ROLE,_owner);
 
        
     } 
 
-    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash ) external onlyRole(OWNER_ROLE) returns (bool) {
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) external onlyRole(OWNER_ROLE) returns (bool) {
         require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
         assetHashMap[_fromAssetHash] = ToAddressHash({
             toAssetHash:_toAssetHash,
@@ -68,12 +67,12 @@ contract LockerProxy is Locker,AdminControlledUpgradeable1{
     }
 
     modifier lockToken_pauseable(){
-        require(!hasRole(BLACK_LOCK_ADMIN_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0 || hasRole(CONTROLLED_ADMIN_ROLE,_msgSender())),"has been pause");
+        require(!hasRole(BLACK_LOCK_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
         _;
     }
 
     modifier unLock_pauseable(){
-        require(!hasRole(BLACK_UN_LOCK_ADMIN_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ADMIN_ROLE,_msgSender())),"has been pause");
+        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
         _;
     }
 
