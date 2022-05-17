@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../../common/AdminControlledUpgradeable.sol";
+import "../../common/AdminControlledUpgradeable1.sol";
 import "../bridge/INearBridge.sol";
 import "../bridge/NearDecoder.sol";
 import "./ProofDecoder.sol";
 import "./INearProver.sol";
 
-contract NearProver is Initializable, INearProver, AdminControlledUpgradeable {
+contract NearProver is Initializable, INearProver, AdminControlledUpgradeable1 {
     using Borsh for Borsh.Data;
     using NearDecoder for Borsh.Data;
     using ProofDecoder for Borsh.Data;
@@ -17,11 +17,14 @@ contract NearProver is Initializable, INearProver, AdminControlledUpgradeable {
 
     function initialize(
         INearBridge _bridge,
-        address _admin,
-        uint _pausedFlags
+        address _admin
     ) external initializer {
         bridge = _bridge;
-        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_admin, _pausedFlags);
+        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_admin);
+
+        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _grantRole(OWNER_ROLE,_admin);
     }
 
     uint constant UNPAUSE_ALL = 0;
@@ -31,7 +34,7 @@ contract NearProver is Initializable, INearProver, AdminControlledUpgradeable {
         public
         view
         override
-        pausable(PAUSED_VERIFY)
+        pausable(PAUSED_VERIFY,CONTROLLED_ROLE)
         returns (bool)
     {
         Borsh.Data memory borsh = Borsh.from(proofData);
