@@ -4,9 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 contract AdminControlledUpgradeable1 is AccessControlUpgradeable{
-
     uint public paused;
-
     bytes32 constant public CONTROLLED_ROLE = keccak256("CONTROLLED_ROLE");
     bytes32 constant public OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 constant public WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");

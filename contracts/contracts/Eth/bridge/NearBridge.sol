@@ -50,7 +50,7 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable1 {
         uint256 _lockEthAmount,
         address _owner
     ) external initializer {
-        require(_owner == address(0));
+        require(_owner != address(0));
         edwards = ed;
         lockEthAmount = _lockEthAmount;
         AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_owner);
@@ -60,8 +60,6 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable1 {
         _grantRole(OWNER_ROLE,_owner);
 
     }
-
-
 
     function initWithBlock(bytes memory data) public override onlyRole(OWNER_ROLE) {
         require(!initialized, "Wrong initialization stage");
