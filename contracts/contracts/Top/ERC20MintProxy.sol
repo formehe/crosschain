@@ -38,6 +38,8 @@ contract ERC20MintProxy is VerifierUpgradeable, AdminControlledUpgradeable {
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_BURN = 1 << 0;
     uint constant PAUSED_MINT = 1 << 1;
+    bytes32 constant public BLACK_BURN_ROLE = keccak256("BLACK.BURN.ROLE");
+    bytes32 constant public BLACK_MINT_ROLE = keccak256("BLACK.MINT.ROLE");
 
     function bindAssetHash(address localAssetHash, address peerAssetHash) external onlyAdmin returns (bool) {
         // peerAssetHash may be address(0), address(0) means the native token of source chain
@@ -51,12 +53,18 @@ contract ERC20MintProxy is VerifierUpgradeable, AdminControlledUpgradeable {
     function initialize(
         ITopProve _prover,
         address _peerProxyHash,
-        uint64 _minBlockAcceptanceHeight,
-        address _admin
+        uint64 _minBlockAcceptanceHeight
     ) external initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
         VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight);
-        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_admin, UNPAUSED_ALL ^ 0xff);
+        AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
+        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+
+        _setRoleAdmin(BLACK_BURN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_MINT_ROLE, OWNER_ROLE);
+
+        _grantRole(OWNER_ROLE,msg.sender);
     }
 
     function mint(bytes memory proofData, uint64 proofBlockHeight)

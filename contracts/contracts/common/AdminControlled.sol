@@ -9,12 +9,13 @@ contract AdminControlled is AccessControl {
     bytes32 constant public OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 constant public WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");
 
-    constructor(address _pauseAdmin) {
+    constructor(address _pauseAdmin, uint flags) {
        _grantRole(CONTROLLED_ROLE, _pauseAdmin);
+       paused = flags;
     }
 
-    modifier pausable(uint flag,bytes32 role) {
-        require(isPause(flag) || hasRole(role,msg.sender),"has been pause");
+    modifier pausable(uint flag) {
+        require(isPause(flag),"has been pause");
         _;
     }
 

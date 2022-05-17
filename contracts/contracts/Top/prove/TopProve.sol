@@ -24,27 +24,14 @@ contract TopProve is ITopProve{
         merkleProof.proof = proof.proof;
         merkleProof.expectedValue = proof.reciptData; 
         bytes memory actualKey = RLPEncode.encodeUint(proof.reciptIndex);
+
+        bytes memory key = new bytes(actualKey.length << 1);
         uint j;
         for (uint i = 0; i < actualKey.length; i++) {
-            if ((j + 1) == merkleProof.proof.length){
-                j += 1;
-            } else {
-                j += 2;
-            }
-        }
-
-        bytes memory key = new bytes(j);
-        j = 0;
-        for (uint i = 0; i < actualKey.length; i++) {
-            if ((j + 1) == merkleProof.proof.length){
-                key[j] = actualKey[i];
-                j += 1;
-            } else {
-                key[j] = actualKey[i] >> 4;
-                j += 1;
-                key[j] = actualKey[i] & 0x0f;
-                j += 1;
-            }
+            key[j] = actualKey[i] >> 4;
+            j += 1;
+            key[j] = actualKey[i] & 0x0f;
+            j += 1;
         }
         merkleProof.key = key;
         valid = merkleProof.verifyTrieProof();
