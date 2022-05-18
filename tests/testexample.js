@@ -11,6 +11,7 @@ const hre = require("hardhat");
 const { ethers, upgrades } = require("hardhat");
 const buffer = require('safe-buffer').Buffer;
 const rpc = require('isomorphic-rpc')
+const { RobustWeb3, JSONreplacer } = require('rainbow-bridge-utils')
 
 const { GetAndVerify, GetProof, VerifyProof } = require('eth-proof')
 const toWei = (val) => ethers.utils.parseEther('' + val)
@@ -176,7 +177,7 @@ describe("ERC20MintProxy", function () {
     it('no admin user can not bind failed between local and peer asset', async () => {
         
         await expect(mintContract.connect(deployer).bindAssetHash(erc20Sample.address, address))
-            .to.be.revertedWith('Transaction reverted without a reason string')
+            .to.be.revertedWith('is missing role')
     })
 
     it('the local address can not be non-contract for binding', async () => {

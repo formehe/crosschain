@@ -3,9 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../common/AdminControlled.sol";
-import "./verify/Verifier.sol";
+import "./verify/VerifierUpgradeable.sol";
 
-contract TRC20 is ERC20, Verifier, AdminControlled {
+contract TRC20 is ERC20, VerifierUpgradeable, AdminControlled {
     address private assetHash;
     event Burned (
         address indexed fromToken,
@@ -37,8 +37,16 @@ contract TRC20 is ERC20, Verifier, AdminControlled {
         string memory _symbol
     ) ERC20(_name, _symbol)
       AdminControlled(msg.sender, UNPAUSED_ALL ^ 0xff)
-      Verifier(_prover, _peerProxyHash, _minBlockAcceptanceHeight)
     {
+        __TRC20(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight);
+    }
+
+    function __TRC20 (
+        ITopProve _prover,
+        address _peerProxyHash,
+        address _peerAssetHash,
+        uint64 _minBlockAcceptanceHeight
+    ) private initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
         require(_peerAssetHash != address(0), "peer asset can not be zero");
         assetHash = _peerAssetHash;
@@ -49,6 +57,8 @@ contract TRC20 is ERC20, Verifier, AdminControlled {
         _setRoleAdmin(BLACK_MINT_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE,msg.sender);
+
+        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight);
     }
 
     function mint(bytes memory proofData, uint64 proofBlockHeight)
