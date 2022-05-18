@@ -8,6 +8,8 @@ contract AdminControlled is AccessControl {
     bytes32 constant public CONTROLLED_ROLE = keccak256("CONTROLLED_ROLE");
     bytes32 constant public OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 constant public WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");
+    bytes32 constant public BLACK_BURN_ROLE = keccak256("BLACK.BURN.ROLE");
+    bytes32 constant public BLACK_MINT_ROLE = keccak256("BLACK.MINT.ROLE");
 
     constructor(address _pauseAdmin, uint flags) {
        _grantRole(CONTROLLED_ROLE, _pauseAdmin);

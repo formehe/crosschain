@@ -25,9 +25,6 @@ contract TRC20 is ERC20, VerifierUpgradeable, AdminControlled {
     uint constant PAUSED_BURN = 1 << 0;
     uint constant PAUSED_MINT = 1 << 1;
 
-    bytes32 constant public BLACK_BURN_ROLE = keccak256("BLACK.BURN.ROLE");
-    bytes32 constant public BLACK_MINT_ROLE = keccak256("BLACK.MINT.ROLE");
-
     constructor (
         ITopProve _prover,
         address _peerProxyHash,
@@ -38,10 +35,10 @@ contract TRC20 is ERC20, VerifierUpgradeable, AdminControlled {
     ) ERC20(_name, _symbol)
       AdminControlled(msg.sender, UNPAUSED_ALL ^ 0xff)
     {
-        __TRC20(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight);
+        _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight);
     }
 
-    function __TRC20 (
+    function _TRC20_init (
         ITopProve _prover,
         address _peerProxyHash,
         address _peerAssetHash,
