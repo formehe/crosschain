@@ -38,10 +38,8 @@ contract ERC20MintProxy is VerifierUpgradeable, AdminControlledUpgradeable {
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_BURN = 1 << 0;
     uint constant PAUSED_MINT = 1 << 1;
-    bytes32 constant public BLACK_BURN_ROLE = keccak256("BLACK.BURN.ROLE");
-    bytes32 constant public BLACK_MINT_ROLE = keccak256("BLACK.MINT.ROLE");
 
-    function bindAssetHash(address localAssetHash, address peerAssetHash) external onlyAdmin returns (bool) {
+    function bindAssetHash(address localAssetHash, address peerAssetHash) external onlyRole(OWNER_ROLE) returns (bool) {
         // peerAssetHash may be address(0), address(0) means the native token of source chain
         require(Address.isContract(localAssetHash), "from proxy address are not to be contract address");
         assets[localAssetHash].assetHash = peerAssetHash;
