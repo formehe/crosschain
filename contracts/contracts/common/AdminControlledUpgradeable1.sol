@@ -10,8 +10,9 @@ contract AdminControlledUpgradeable1 is AccessControlUpgradeable{
     bytes32 constant public OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 constant public WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");
     
-    function _AdminControlledUpgradeable_init(address _pauseAdmin) internal onlyInitializing {
+    function _AdminControlledUpgradeable_init(address _pauseAdmin, uint flags) internal onlyInitializing {
         _grantRole(CONTROLLED_ROLE, _pauseAdmin);
+        paused = flags;
         AccessControlUpgradeable.__AccessControl_init();
     }
 

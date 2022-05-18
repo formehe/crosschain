@@ -35,7 +35,7 @@ describe('ERC20Locker', () => {
     console.log("erc20Token2>>>> "  + erc20Token2.address)
     console.log("erc20Locker>>>> "  + erc20Locker.address)
 
-    await erc20Locker._ERC20Lock_initialize(AddressZero,12,wallet.address)
+    await erc20Locker._ERC20Locker_initialize(AddressZero,12,wallet.address)
 
   })
 
@@ -69,8 +69,7 @@ describe('ERC20Locker', () => {
 
     })
 
-    it('have bind token and have balance but without approve', async () => {
-
+    it('without approve', async () => {
       await erc20Token.mint(wallet.address,toWei('200'))
       await erc20Token.mint(wallet3.address,toWei('200'))
 
@@ -80,26 +79,7 @@ describe('ERC20Locker', () => {
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('ERC20: insufficient allowance')
     })
 
-    it('have bind token and have balance and approve', async () => {
-
-      await erc20Token.mint(wallet.address,toWei('200'))
-      await erc20Token.mint(wallet3.address,toWei('200'))
-
-      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
-    
-      await erc20Token.approve(erc20Locker.address,toWei('200'))
-
-      await erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)
-
-      expect(await erc20Token.balanceOf(wallet.address)).to.equal(toWei('100'));
-      expect(await erc20Token.balanceOf(erc20Locker.address)).to.equal(toWei('100'));
-
-    })
-
-    it('have bind token and have balance and approve but has been pause by flags and role', async () => {
-
+    it('pause and have no permissions', async () => {
       await erc20Token.mint(wallet.address,toWei('200'))
       await erc20Token.mint(wallet3.address,toWei('200'))
 
@@ -111,16 +91,27 @@ describe('ERC20Locker', () => {
       await erc20Locker.adminPause(1)
       expect(await erc20Locker.paused()).to.equal(1);
 
-      await erc20Locker.revokeRole('0x70abce2bdd78b412035b29f1d4506cb3c7e06e77bf2d4afa917be6ca9f6b41d4',wallet.address)
-      expect(await erc20Locker.hasRole('0x70abce2bdd78b412035b29f1d4506cb3c7e06e77bf2d4afa917be6ca9f6b41d4',wallet.address)).to.equal(false);
+      await erc20Locker.revokeRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)
+      expect(await erc20Locker.hasRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)).to.equal(false);
      
-    
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('has been pause')
 
     })
 
+    it('no settings can pass and have permissions', async () => {
+      await erc20Token.mint(wallet.address,toWei('200'))
+      await erc20Token.mint(wallet3.address,toWei('200'))
 
-    it('have bind token and have balance and approve but has been pause by blacklist', async () => {
+      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
+
+      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+      await erc20Token.approve(erc20Locker.address,toWei('200'))
+
+      await erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)
+
+    })
+
+    it('set blacklist', async () => {
 
       await erc20Token.mint(wallet.address,toWei('200'))
       await erc20Token.mint(wallet3.address,toWei('200'))
@@ -136,8 +127,8 @@ describe('ERC20Locker', () => {
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('has been pause')
 
     })
-
-    it('have bind token and have balance and approve but has been pause by remove role', async () => {
+    
+    it('no settings can pass', async () => {
 
       await erc20Token.mint(wallet.address,toWei('200'))
       await erc20Token.mint(wallet3.address,toWei('200'))
@@ -146,24 +137,26 @@ describe('ERC20Locker', () => {
       await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
     
-      await erc20Locker.revokeRole('0x70abce2bdd78b412035b29f1d4506cb3c7e06e77bf2d4afa917be6ca9f6b41d4',wallet.address)
-      expect(await erc20Locker.hasRole('0x70abce2bdd78b412035b29f1d4506cb3c7e06e77bf2d4afa917be6ca9f6b41d4',wallet.address)).to.equal(false);
+      await erc20Locker.revokeRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)
+      expect(await erc20Locker.hasRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)).to.equal(false);
      
-      erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)
+      await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('has been pause')
 
     })
-
-    it('have bind token and have balance and approve and has role by set pause flags', async () => {
+    
+    it('settings can pass', async () => {
 
       await erc20Token.mint(wallet.address,toWei('200'))
       await erc20Token.mint(wallet3.address,toWei('200'))
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
       await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+
       await erc20Token.approve(erc20Locker.address,toWei('200'))
     
-      await erc20Locker.adminPause(1)
-      expect(await erc20Locker.paused()).to.equal(1);
+      await erc20Locker.adminPause(0)
+
+      expect(await erc20Locker.paused()).to.equal(0);
 
       erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)
 

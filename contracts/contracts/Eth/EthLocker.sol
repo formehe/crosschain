@@ -10,15 +10,15 @@ import "../common/ITokenLocker.sol";
 import "./LockerProxy.sol";
 import "./Locker.sol";
 
-contract TokenLocker is ITokenLocker,LockerProxy{
+contract EthLocker is ITokenLocker,LockerProxy{
     using SafeERC20 for IERC20;
     
-    function _TokenLock_initialize(
+    function _EthLocker_initialize(
         INearProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner
     ) external initializer {   
-        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight,_owner);
+        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight,_owner,true);
     }
     
     function lockToken(address fromAssetHash,uint256 amount, address receiver)
@@ -27,11 +27,12 @@ contract TokenLocker is ITokenLocker,LockerProxy{
         payable
         lockToken_pauseable
     {
+        require(fromAssetHash == address(0), "from asset address must be zero");
         address toAssetHash = assetHashMap[fromAssetHash].toAssetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         require(amount != 0, "amount cannot be zero");
         require(receiver != address(0), "receive address can not be zero");
-        require(_transferToContract(fromAssetHash, amount));
+        require(_transferToContract(amount));
         emit Locked(fromAssetHash, toAssetHash ,msg.sender, amount, receiver);
     }
 
@@ -48,8 +49,7 @@ contract TokenLocker is ITokenLocker,LockerProxy{
     }
 
     //The unit of amount is gwei
-    function _transferToContract(address fromAssetHash, uint256 amount) private returns (bool) {
-        require(fromAssetHash == address(0), "from asset address must be zero");
+    function _transferToContract(uint256 amount) private returns (bool) {
         require(msg.value != 0, "transferred ether cannot be zero!");
         require(msg.value == amount, "transferred ether is not equal to amount!");
         return true;

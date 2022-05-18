@@ -53,7 +53,7 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable1 {
         require(_owner != address(0));
         edwards = ed;
         lockEthAmount = _lockEthAmount;
-        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_owner);
+        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_owner,UNPAUSE_ALL ^ 0xff);
 
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);

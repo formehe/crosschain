@@ -13,22 +13,21 @@ contract NearProver is Initializable, INearProver, AdminControlledUpgradeable1 {
     using NearDecoder for Borsh.Data;
     using ProofDecoder for Borsh.Data;
 
+    uint constant UNPAUSE_ALL = 0;
+    uint constant PAUSED_VERIFY = 1;
+
     INearBridge public bridge;
 
     function initialize(
         INearBridge _bridge,
-        address _admin
+        address _owner
     ) external initializer {
         bridge = _bridge;
-        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_admin);
-
+        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_owner,UNPAUSE_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
-        _grantRole(OWNER_ROLE,_admin);
+        _grantRole(OWNER_ROLE,_owner);
     }
-
-    uint constant UNPAUSE_ALL = 0;
-    uint constant PAUSED_VERIFY = 1;
 
     function proveOutcome(bytes memory proofData, uint64 blockHeight)
         public

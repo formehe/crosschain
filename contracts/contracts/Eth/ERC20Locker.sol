@@ -8,15 +8,14 @@ import "../common/IRC20Locker.sol";
 import "./LockerProxy.sol";
 
 contract ERC20Locker is IRC20Locker,LockerProxy{
-
     using SafeERC20 for IERC20;
 
-    function _ERC20Lock_initialize(
+    function _ERC20Locker_initialize(
         INearProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner
     ) external initializer {
-        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight,_owner);
+        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight,_owner,false);
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)
