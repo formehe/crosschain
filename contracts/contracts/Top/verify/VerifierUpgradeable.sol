@@ -27,7 +27,7 @@ abstract contract VerifierUpgradeable is Initializable {
     ITopProve private prover;
     address private lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
-    mapping(bytes32 => bool) private usedProofs;
+    mapping(bytes32 => bool) public usedProofs;
 
     function _VerifierUpgradeable_init(
         ITopProve _prover,

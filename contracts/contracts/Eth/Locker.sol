@@ -24,7 +24,7 @@ contract Locker is Initializable{
     // Proofs from blocks that are below the acceptance height will be rejected.
     // If `minBlockAcceptanceHeight` value is zero - proofs from block with any height are accepted.
     uint64 private minBlockAcceptanceHeight;
-    mapping(bytes32 => bool) private usedProofs;
+    mapping(bytes32 => bool) public usedProofs;
 
     event ConsumedProof(bytes32 indexed _receiptId);
 
