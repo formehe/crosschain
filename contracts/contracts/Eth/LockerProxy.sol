@@ -3,12 +3,13 @@ pragma solidity ^0.8;
 
 import "../common/AdminControlledUpgradeable.sol";
 import "../common/Borsh.sol";
+import "../common/TransferedQuotas.sol";
 import "./prover/ProofDecoder.sol";
 import "./Locker.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract LockerProxy is Locker,AdminControlledUpgradeable{
+contract LockerProxy is Locker,TransferedQuotas{
     
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_LOCK = 1 << 0;

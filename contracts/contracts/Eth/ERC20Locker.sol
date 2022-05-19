@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./prover/INearProver.sol";
 import "../common/IRC20Locker.sol";
+
 import "./LockerProxy.sol";
 
 contract ERC20Locker is IRC20Locker,LockerProxy{
@@ -28,6 +29,7 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
         require(
             (IERC20(fromAssetHash).balanceOf(address(this)) + amount) <= ((uint256(1) << 128) - 1),
             "Maximum tokens locked exceeded (< 2^128 - 1)");
+        checkTransferedQuota(fromAssetHash,amount);    
         address toAssetHash = assetHashMap[fromAssetHash].toAssetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         IERC20(fromAssetHash).safeTransferFrom(msg.sender, address(this), amount);
