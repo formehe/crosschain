@@ -9,13 +9,14 @@ abstract contract Frozens is AdminControlledUpgradeable{
 
     function bindFrozen(
         uint _frozenDuration
-    ) public onlyRole(AdminControlledUpgradeable.CONTROLLED_ROLE){
+    ) public onlyRole(OWNER_ROLE){
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
         tokenFrozen = _frozenDuration;
     }
 
     function checkFrozen(
-    uint _timestamp) internal view {
+        uint _timestamp
+    ) internal view {
         require(block.timestamp >= (_timestamp + tokenFrozen), "the transaction is frozen");
     }
 }

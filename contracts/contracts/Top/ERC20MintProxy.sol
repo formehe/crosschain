@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Address.sol";
-import "../common/AdminControlledUpgradeable.sol";
+import "../common/TransferedQuotas.sol";
 import "../common/ERC20Mint.sol";
 import "./prove/ITopProve.sol";
 import "./verify/VerifierUpgradeable.sol";
 import "hardhat/console.sol";
 
-contract ERC20MintProxy is VerifierUpgradeable, AdminControlledUpgradeable {
+contract ERC20MintProxy is VerifierUpgradeable, TransferedQuotas {
     event Burned (
         address indexed fromToken,
         address indexed toToken,
@@ -69,6 +69,7 @@ contract ERC20MintProxy is VerifierUpgradeable, AdminControlledUpgradeable {
         public
         pausable (PAUSED_MINT)
     {
+        require(!hasRole(BLACK_MINT_ROLE, msg.sender));   
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
         ProxiedAsset memory asset = assets[receipt.data.toToken];
         require(asset.existed, "asset address must has been bound");
@@ -83,8 +84,10 @@ contract ERC20MintProxy is VerifierUpgradeable, AdminControlledUpgradeable {
         public
         pausable (PAUSED_BURN)
     {
+        require(!hasRole(BLACK_BURN_ROLE, msg.sender));
         require((Address.isContract(localAssetHash)) && (receiver != address(0)));
         require(amount != 0, "amount can not be 0");
+        checkTransferedQuota(localAssetHash, amount);
         ProxiedAsset memory peerAsset = assets[localAssetHash];
         require(peerAsset.existed, "asset address must has been bound");
         ERC20Mint(localAssetHash).burnFrom(msg.sender, amount);
