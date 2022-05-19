@@ -60,7 +60,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, AdminControlledUpgradeable {
 
     function mint(bytes memory proofData, uint64 proofBlockHeight)
         external
-        pausable (PAUSED_MINT,CONTROLLED_ROLE)
+        pausable (PAUSED_MINT)
     {
         require(!hasRole(BLACK_MINT_ROLE, msg.sender));
         VerifiedReceipt memory _receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
@@ -73,7 +73,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, AdminControlledUpgradeable {
     
     function burn(uint256 amount, address receiver)
         external
-        pausable (PAUSED_BURN,CONTROLLED_ROLE)
+        pausable (PAUSED_BURN)
     {
         require(!hasRole(BLACK_BURN_ROLE, msg.sender));
         require(receiver != address(0));

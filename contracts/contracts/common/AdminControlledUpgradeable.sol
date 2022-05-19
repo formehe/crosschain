@@ -8,8 +8,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 contract AdminControlledUpgradeable is Initializable,AccessControl {
     uint public paused;
 
-    bytes32 constant public CONTROLLED_ROLE = keccak256("CONTROLLED_ROLE");
     bytes32 constant public OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 constant public CONTROLLED_ROLE = keccak256("CONTROLLED_ROLE");
     bytes32 constant public WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");
     bytes32 constant public BLACK_BURN_ROLE = keccak256("BLACK.BURN.ROLE");
     bytes32 constant public BLACK_MINT_ROLE = keccak256("BLACK.MINT.ROLE");
@@ -19,8 +19,8 @@ contract AdminControlledUpgradeable is Initializable,AccessControl {
         paused = flags;
     }
 
-    modifier pausable(uint flag,bytes32 role) {
-        require(isPause(flag) || hasRole(role,msg.sender),"has been pause");
+    modifier pausable(uint flag) {
+        require(isPause(flag) || hasRole(CONTROLLED_ROLE,msg.sender),"has been pause");
         _;
     }
 
@@ -30,34 +30,5 @@ contract AdminControlledUpgradeable is Initializable,AccessControl {
     
     function adminPause(uint flags) public onlyRole(CONTROLLED_ROLE) {
         paused = flags;
-    }
-
-    function adminSstore(uint key, uint value) public onlyRole(CONTROLLED_ROLE) {
-        assembly {
-            sstore(key, value)
-        }
-    }
-
-    function adminSstoreWithMask(
-        uint key,
-        uint value,
-        uint mask
-    ) public onlyRole(CONTROLLED_ROLE) {
-        assembly {
-            let oldval := sload(key)
-            sstore(key, xor(and(xor(value, oldval), mask), oldval))
-        }
-    }
-
-    function adminSendEth(address payable destination, uint amount) public onlyRole(CONTROLLED_ROLE) {
-        destination.transfer(amount);
-    }
-
-    // function adminReceiveEth() public payable onlyAdmin {}
-
-    function adminDelegatecall(address target, bytes memory data) public payable onlyRole(CONTROLLED_ROLE) returns (bytes memory) {
-        (bool success, bytes memory rdata) = target.delegatecall(data);
-        require(success);
-        return rdata;
     }
 }

@@ -33,7 +33,7 @@ contract NearProver is Initializable, INearProver, AdminControlledUpgradeable {
         public
         view
         override
-        pausable(PAUSED_VERIFY,CONTROLLED_ROLE)
+        pausable(PAUSED_VERIFY)
         returns (bool)
     {
         Borsh.Data memory borsh = Borsh.from(proofData);

@@ -77,12 +77,12 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
         maxMainHeight = topBlock.inner_lite.height;
     }   
 
-    function deposit() public payable override pausable(PAUSED_DEPOSIT,CONTROLLED_ROLE) {
+    function deposit() public payable override pausable(PAUSED_DEPOSIT) {
         require(msg.value == lockEthAmount && balanceOf[msg.sender] == 0);
         balanceOf[msg.sender] = msg.value;
     }
 
-    function withdraw() public override pausable(PAUSED_WITHDRAW,CONTROLLED_ROLE) {
+    function withdraw() public override pausable(PAUSED_WITHDRAW) {
         require(msg.sender != lastSubmitter);
         uint amount = balanceOf[msg.sender];
         require(amount != 0);
@@ -180,19 +180,19 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
         }
     }
 
-    function blockHashes(uint64 height) public view override pausable(PAUSED_VERIFY,CONTROLLED_ROLE) returns (bytes32 res) {
+    function blockHashes(uint64 height) public view override pausable(PAUSED_VERIFY) returns (bytes32 res) {
         res = blockHashes_[height];
     }
 
-    function blockMerkleRoots(uint64 height) public view override pausable(PAUSED_VERIFY,CONTROLLED_ROLE) returns (bytes32 res) {
+    function blockMerkleRoots(uint64 height) public view override pausable(PAUSED_VERIFY) returns (bytes32 res) {
         res = blockMerkleRoots_[height];
     }
 
-    function getMaxHeight() public view override pausable(PAUSED_VERIFY,CONTROLLED_ROLE) returns (uint64 height) {
+    function getMaxHeight() public view override pausable(PAUSED_VERIFY) returns (uint64 height) {
         height = maxMainHeight;
     }
 
-    function getHeightByHash(bytes32 hashCode) public view override pausable(PAUSED_VERIFY,CONTROLLED_ROLE) returns (uint64 height) {
+    function getHeightByHash(bytes32 hashCode) public view override pausable(PAUSED_VERIFY) returns (uint64 height) {
         height = blockHeights[hashCode];
     }
 
