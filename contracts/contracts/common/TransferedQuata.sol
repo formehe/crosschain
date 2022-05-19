@@ -14,7 +14,7 @@ abstract contract TransferedQuotas is AdminControlledUpgradeable{
     function bindTransferedQuota(
         uint256 _minTransferedToken, 
         uint256 _maxTransferedToken
-    ) public onlyRole(AdminControlledUpgradeable.CONTROLLED_ROLE) {
+    ) public onlyRole(OWNER_ROLE) {
         require(_maxTransferedToken >= _minTransferedToken, "the max quantity of permitted transfer token is less than the min");
         tokenQuota.maxTransferedToken = _maxTransferedToken;
         tokenQuota.minTransferedToken = _minTransferedToken;
