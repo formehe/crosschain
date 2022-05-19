@@ -51,6 +51,21 @@ describe('EthLocker', () => {
 
   })
   
+  //bindTransferedQuota
+  describe('bindTransferedQuota', () => {
+    it('It has permissions', async () => {
+      await ethLocker.bindTransferedQuota(erc20Token.address,toWei('0.5'),toWei('4'))
+    })
+
+    it('It has no permissions', async () => {
+      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e'
+      await expect(ethLocker.connect(wallet2).bindTransferedQuota(erc20Token.address,toWei('0.5'),toWei('4'))
+      ).to.be.revertedWith(msg)
+
+    })
+
+  })
+  
   //lockToken
   describe('lockToken', () => {
     it('no have bind token', async () => {
@@ -59,6 +74,7 @@ describe('EthLocker', () => {
 
     it('Inconsistent quantity', async () => {
       await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
+      await ethLocker.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
       await expect(ethLocker.lockToken(AddressZero,toWei('2'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('transferred ether is not equal to amount!')
 
     })
@@ -73,12 +89,6 @@ describe('EthLocker', () => {
       
     })
 
-    it('have bind token but without balance', async () => {
-      await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
-      await ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})
-
-    })
-
     it('pause and have no permissions', async () => {
       await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
 
@@ -87,7 +97,6 @@ describe('EthLocker', () => {
 
       await ethLocker.revokeRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)
       expect(await ethLocker.hasRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)).to.equal(false);
-     
       await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('has been pause')
 
     })
@@ -96,12 +105,12 @@ describe('EthLocker', () => {
       await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
       await ethLocker.adminPause(1)
       expect(await ethLocker.paused()).to.equal(1);
+      await ethLocker.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
       await ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})
 
     })
 
     it('set blacklist', async () => {
-
       await ethLocker.grantRole('0x937b6710550da16fcb4641beeba857944a83f406360b6b9db3ed2e88646ce304',wallet.address)
       expect(await ethLocker.hasRole('0x937b6710550da16fcb4641beeba857944a83f406360b6b9db3ed2e88646ce304',wallet.address)).to.equal(true);
       await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('has been pause')
@@ -113,7 +122,41 @@ describe('EthLocker', () => {
   
       await ethLocker.adminPause(0)
       expect(await ethLocker.paused()).to.equal(0);
+      await ethLocker.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
       await ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})
+
+    })
+
+    it('There is no set lock amount limit', async () => {
+
+      await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
+  
+      await ethLocker.adminPause(0)
+      expect(await ethLocker.paused()).to.equal(0);
+      // await ethLocker.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
+      await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('the amount of transfered is overflow')
+
+    })
+
+    it('Minimum lock amount limit', async () => {
+
+      await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
+  
+      await ethLocker.adminPause(0)
+      expect(await ethLocker.paused()).to.equal(0);
+      await ethLocker.bindTransferedQuota(AddressZero,toWei('2'),toWei('4'))
+      await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('the amount of transfered is overflow')
+
+    })
+
+    it('Maximum lock amount limit', async () => {
+
+      await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
+  
+      await ethLocker.adminPause(0)
+      expect(await ethLocker.paused()).to.equal(0);
+      await ethLocker.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
+      await expect(ethLocker.lockToken(AddressZero,toWei('5'),wallet3.address,{value:toWei('5')})).to.be.revertedWith('the amount of transfered is overflow')
 
     })
 

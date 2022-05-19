@@ -53,10 +53,25 @@ describe('ERC20Locker', () => {
     })
 
   })
+
+  describe('bindTransferedQuota', () => {
+    it('It has permissions', async () => {
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
+    })
+
+    it('It has no permissions', async () => {
+      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e'
+      await expect(erc20Locker.connect(wallet2).bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
+      ).to.be.revertedWith(msg)
+
+    })
+
+  })
   
   //lockToken
   describe('lockToken', () => {
     it('no have bind token', async () => {
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
        await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('empty illegal toAssetHash')
     })
 
@@ -65,6 +80,7 @@ describe('ERC20Locker', () => {
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
       await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('ERC20: insufficient allowance')
 
     })
@@ -76,6 +92,7 @@ describe('ERC20Locker', () => {
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
 
       await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('ERC20: insufficient allowance')
     })
 
@@ -94,6 +111,7 @@ describe('ERC20Locker', () => {
       await erc20Locker.revokeRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)
       expect(await erc20Locker.hasRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)).to.equal(false);
      
+      //await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('has been pause')
 
     })
@@ -107,6 +125,7 @@ describe('ERC20Locker', () => {
       await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
 
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
       await erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)
 
     })
@@ -124,6 +143,7 @@ describe('ERC20Locker', () => {
 
       expect(await erc20Locker.hasRole('0x937b6710550da16fcb4641beeba857944a83f406360b6b9db3ed2e88646ce304',wallet.address)).to.equal(true);
 
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('has been pause')
 
     })
@@ -140,6 +160,7 @@ describe('ERC20Locker', () => {
       await erc20Locker.revokeRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)
       expect(await erc20Locker.hasRole('0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e',wallet.address)).to.equal(false);
      
+      //await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('has been pause')
 
     })
@@ -158,10 +179,68 @@ describe('ERC20Locker', () => {
 
       expect(await erc20Locker.paused()).to.equal(0);
 
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
       erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)
 
     })
 
+    it('There is no set lock amount limit', async () => {
+
+      await erc20Token.mint(wallet.address,toWei('200'))
+      await erc20Token.mint(wallet3.address,toWei('200'))
+
+      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
+      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+
+      await erc20Token.approve(erc20Locker.address,toWei('200'))
+    
+      await erc20Locker.adminPause(0)
+
+      expect(await erc20Locker.paused()).to.equal(0);
+
+      await expect(erc20Locker.lockToken(erc20Token.address,toWei('50'),wallet3.address)).to.be.revertedWith('the amount of transfered is overflow')
+
+    })
+
+    it('Minimum lock amount limit', async () => {
+
+      await erc20Token.mint(wallet.address,toWei('200'))
+      await erc20Token.mint(wallet3.address,toWei('200'))
+
+      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
+      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+
+      await erc20Token.approve(erc20Locker.address,toWei('200'))
+    
+      await erc20Locker.adminPause(0)
+
+      expect(await erc20Locker.paused()).to.equal(0);
+
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
+
+      await expect(erc20Locker.lockToken(erc20Token.address,toWei('50'),wallet3.address)).to.be.revertedWith('the amount of transfered is overflow')
+
+    })
+
+    it('Maximum lock amount limit', async () => {
+
+      await erc20Token.mint(wallet.address,toWei('200'))
+      await erc20Token.mint(wallet3.address,toWei('200'))
+
+      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
+      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+
+      await erc20Token.approve(erc20Locker.address,toWei('200'))
+    
+      await erc20Locker.adminPause(0)
+
+      expect(await erc20Locker.paused()).to.equal(0);
+
+      await erc20Locker.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('150'))
+
+      await expect(erc20Locker.lockToken(erc20Token.address,toWei('180'),wallet3.address)).to.be.revertedWith('the amount of transfered is overflow')
+
+    })
 
   })
 
