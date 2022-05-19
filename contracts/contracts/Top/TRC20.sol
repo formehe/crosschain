@@ -22,10 +22,6 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
         address recipient
     );
 
-    uint constant UNPAUSED_ALL = 0;
-    uint constant PAUSED_BURN = 1 << 0;
-    uint constant PAUSED_MINT = 1 << 1;
-
     constructor (
         ITopProve _prover,
         address _peerProxyHash,
@@ -33,8 +29,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
         uint64 _minBlockAcceptanceHeight,
         string memory _name, 
         string memory _symbol
-    ) ERC20(_name, _symbol)
-    {
+    ) ERC20(_name, _symbol) {
         _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight);
     }
 
@@ -53,16 +48,16 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
         _setRoleAdmin(BLACK_BURN_ROLE, OWNER_ROLE);
         _setRoleAdmin(BLACK_MINT_ROLE, OWNER_ROLE);
 
-        _grantRole(OWNER_ROLE,msg.sender);
+        _grantRole(OWNER_ROLE, msg.sender);
 
         VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
     }
 
-    function mint(bytes memory proofData, uint64 proofBlockHeight)
-        external
-        pausable (PAUSED_MINT)
-    {
+    function mint(
+        bytes memory proofData, 
+        uint64 proofBlockHeight
+    ) external pausable (PAUSED_MINT) {
         require(!hasRole(BLACK_MINT_ROLE, msg.sender));
         VerifiedReceipt memory _receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
         require(assetHash == _receipt.data.fromToken, "asset address must has been bound");
@@ -72,10 +67,10 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
         emit Minted(_receipt.proofIndex, _receipt.data.amount, _receipt.data.receiver);
     }
     
-    function burn(uint256 amount, address receiver)
-        external
-        pausable (PAUSED_BURN)
-    {
+    function burn(
+        uint256 amount, 
+        address receiver
+    ) external pausable (PAUSED_BURN) {
         require(!hasRole(BLACK_BURN_ROLE, msg.sender));
         require(receiver != address(0));
         require(amount != 0, "amount can not be 0");

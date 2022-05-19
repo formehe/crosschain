@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/utils/Address.sol";
+import "./AdminControlledUpgradeable.sol";
+
+abstract contract AssetPair is AdminControlledUpgradeable{
+    mapping(address => AssetProxy) public assets;
+    struct AssetProxy{
+        address peerAssetHash;
+        address peerProxyHash;
+    }
+
+    event AssetBound(
+        address fromAssetHash,
+        address toAssetHash
+    );
+
+    function bindAssetHash(
+        address _localAssetHash, 
+        address _peerAssetHash, 
+        address _peerProxyHash
+    ) public onlyRole(OWNER_ROLE) {
+        // peerAssetHash may be address(0), address(0) means the native token of source chain
+        require(Address.isContract(_localAssetHash), "from proxy address are not to be contract address");
+        assets[_localAssetHash].peerAssetHash = _peerAssetHash;
+        assets[_localAssetHash].peerProxyHash = _peerProxyHash;
+        emit AssetBound(_localAssetHash, _peerAssetHash);
+    }
+}

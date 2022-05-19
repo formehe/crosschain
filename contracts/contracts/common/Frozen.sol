@@ -3,7 +3,7 @@ pragma solidity ^0.8;
 
 import "./AdminControlledUpgradeable.sol";
 
-abstract contract Frozens is AdminControlledUpgradeable{
+abstract contract Frozen is AdminControlledUpgradeable{
     uint public tokenFrozen; // unit is seconds
     uint public constant MAX_FROZEN_TIME = 15_552_000; //180 days
 

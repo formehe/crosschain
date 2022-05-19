@@ -20,6 +20,10 @@ abstract contract VerifierUpgradeable is Initializable {
         VerifiedEvent data;
     }
 
+    uint constant UNPAUSED_ALL = 0;
+    uint constant PAUSED_BURN = 1 << 0;
+    uint constant PAUSED_MINT = 1 << 1;
+
     ITopProve private prover;
     address private lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
@@ -37,18 +41,18 @@ abstract contract VerifierUpgradeable is Initializable {
 
     /// Parses the provided proof and consumes it if it's not already used.
     /// The consumed event cannot be reused for future calls.
-    function _saveProof(bytes32 proofIndex)
-        internal
-    {
+    function _saveProof(
+        bytes32 proofIndex
+    ) internal {
         usedProofs[proofIndex] = true;
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
     /// The consumed event cannot be reused for future calls.
-    function _parseAndConsumeProof(bytes memory proofData, uint64 proofBlockHeight)
-        internal
-        returns (VerifiedReceipt memory _receipt)
-    {
+    function _parseAndConsumeProof(
+        bytes memory proofData, 
+        uint64 proofBlockHeight
+    ) internal returns (VerifiedReceipt memory _receipt) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         EthProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();
@@ -70,11 +74,9 @@ abstract contract VerifierUpgradeable is Initializable {
         _receipt.proofIndex = proofIndex;
     }
 
-    function _parseLog(bytes memory log)
-        private
-        view
-        returns (VerifiedEvent memory _receipt, address _contractAddress)
-    {
+    function _parseLog(
+        bytes memory log
+    ) private view returns (VerifiedEvent memory _receipt, address _contractAddress) {
         EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));

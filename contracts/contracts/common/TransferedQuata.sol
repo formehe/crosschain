@@ -3,7 +3,7 @@ pragma solidity ^0.8;
 
 import "./AdminControlledUpgradeable.sol";
 
-abstract contract TransferedQuotas is AdminControlledUpgradeable{
+abstract contract TransferedQuota is AdminControlledUpgradeable{
     struct Quota{
         uint256 maxTransferedToken;
         uint256 minTransferedToken;
