@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../common/AdminControlled.sol";
+import "../common/AdminControlledUpgradeable.sol";
 import "./verify/VerifierUpgradeable.sol";
 
-contract TRC20 is ERC20, VerifierUpgradeable, AdminControlled {
+contract TRC20 is ERC20, VerifierUpgradeable, AdminControlledUpgradeable {
     address private assetHash;
     event Burned (
         address indexed fromToken,
@@ -33,9 +33,9 @@ contract TRC20 is ERC20, VerifierUpgradeable, AdminControlled {
         string memory _name, 
         string memory _symbol
     ) ERC20(_name, _symbol)
-      AdminControlled(msg.sender, UNPAUSED_ALL ^ 0xff)
     {
         _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight);
+        AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
     }
 
     function _TRC20_init (
@@ -60,7 +60,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, AdminControlled {
 
     function mint(bytes memory proofData, uint64 proofBlockHeight)
         external
-        pausable (PAUSED_MINT)
+        pausable (PAUSED_MINT,CONTROLLED_ROLE)
     {
         require(!hasRole(BLACK_MINT_ROLE, msg.sender));
         VerifiedReceipt memory _receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
@@ -73,7 +73,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, AdminControlled {
     
     function burn(uint256 amount, address receiver)
         external
-        pausable (PAUSED_BURN)
+        pausable (PAUSED_BURN,CONTROLLED_ROLE)
     {
         require(!hasRole(BLACK_BURN_ROLE, msg.sender));
         require(receiver != address(0));

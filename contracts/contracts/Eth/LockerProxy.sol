@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8;
 
-import "../common/AdminControlledUpgradeable1.sol";
+import "../common/AdminControlledUpgradeable.sol";
 import "../common/Borsh.sol";
 import "./prover/ProofDecoder.sol";
 import "./Locker.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract LockerProxy is Locker,AdminControlledUpgradeable1{
+contract LockerProxy is Locker,AdminControlledUpgradeable{
     
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_LOCK = 1 << 0;
@@ -44,7 +44,7 @@ contract LockerProxy is Locker,AdminControlledUpgradeable1{
     ) internal onlyInitializing{
         require(_owner != address(0));
         isEth = _isEth;
-        AdminControlledUpgradeable1._AdminControlledUpgradeable_init(_owner,UNPAUSED_ALL ^ 0xff);
+        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSED_ALL ^ 0xff);
         Locker._locker_initialize(_prover,_minBlockAcceptanceHeight);
 
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);

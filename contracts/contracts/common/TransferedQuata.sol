@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8;
 
-import "./AdminControlledUpgradeable1.sol";
+import "./AdminControlledUpgradeable.sol";
 
-abstract contract TransferedQuotas is AdminControlledUpgradeable1{
+abstract contract TransferedQuotas is AdminControlledUpgradeable{
     struct Quota{
         uint256 maxTransferedToken;
         uint256 minTransferedToken;
@@ -14,7 +14,7 @@ abstract contract TransferedQuotas is AdminControlledUpgradeable1{
     function bindTransferedQuota(
         uint256 _minTransferedToken, 
         uint256 _maxTransferedToken
-    ) public onlyRole(AdminControlledUpgradeable1.CONTROLLED_ROLE) {
+    ) public onlyRole(AdminControlledUpgradeable.CONTROLLED_ROLE) {
         require(_maxTransferedToken >= _minTransferedToken, "the max quantity of permitted transfer token is less than the min");
         tokenQuota.maxTransferedToken = _maxTransferedToken;
         tokenQuota.minTransferedToken = _minTransferedToken;

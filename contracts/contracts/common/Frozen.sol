@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8;
 
-import "./AdminControlledUpgradeable1.sol";
+import "./AdminControlledUpgradeable.sol";
 
-abstract contract Frozens is AdminControlledUpgradeable1{
+abstract contract Frozens is AdminControlledUpgradeable{
     uint public tokenFrozen; // unit is seconds
     uint public constant MAX_FROZEN_TIME = 15_552_000; //180 days
 
     function bindFrozen(
         uint _frozenDuration
-    ) public onlyRole(AdminControlledUpgradeable1.CONTROLLED_ROLE){
+    ) public onlyRole(AdminControlledUpgradeable.CONTROLLED_ROLE){
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
         tokenFrozen = _frozenDuration;
     }
