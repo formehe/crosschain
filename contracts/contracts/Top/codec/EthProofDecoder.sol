@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../../common/Borsh.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 library EthProofDecoder {
     using Borsh for Borsh.Data;

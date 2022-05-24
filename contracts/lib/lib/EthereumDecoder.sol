@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../external_lib/RLPEncode.sol";
 import "../external_lib/RLPDecode.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 library EthereumDecoder {
     using RLPDecode for RLPDecode.RLPItem;
@@ -196,7 +196,7 @@ library EthereumDecoder {
         uint byte0;
         RLPDecode.Iterator memory it;        
         assembly {
-            byte0 := byte(0, mload(data))
+            byte0 := byte(0, mload(add(data, 0x20)))
         }
 
         if (byte0 <= 0x7f) {

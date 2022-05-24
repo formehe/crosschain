@@ -6,7 +6,7 @@ import "../common/TransferedQuotas.sol";
 import "../common/ERC20Mint.sol";
 import "./prove/ITopProve.sol";
 import "./verify/VerifierUpgradeable.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 contract ERC20MintProxy is VerifierUpgradeable, TransferedQuotas {
     event Burned (
