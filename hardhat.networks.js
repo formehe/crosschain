@@ -5,6 +5,30 @@ const networks = {
     // blockGasLimit: 200000000,
     allowUnlimitedContractSize: true
   },
+
+  rinkeby: {
+    url: 'https://rinkeby.infura.io/v3/b7a2979d9ef740ab8124922f2b326a60',
+    blockGasLimit: 200000000,
+    allowUnlimitedContractSize: true,
+    accounts:['0xce9f7be01bacde7ea1bdd3e334daf53a4de663c00cf1891785bc271f06b82ed0']  
+  },
+
+  hecoTest: {
+    url: 'https://http-testnet.hecochain.com',
+    blockGasLimit: 200000000,
+    allowUnlimitedContractSize: true,
+    chainId: 256,
+    accounts: [`0xce9f7be01bacde7ea1bdd3e334daf53a4de663c00cf1891785bc271f06b82ed0`]
+  },
+
+  topTest:{
+    url: 'http://192.168.30.22:19086',
+    blockGasLimit: 200000000,
+    allowUnlimitedContractSize: true,
+    chainId: 1023,
+    accounts: [`0xce9f7be01bacde7ea1bdd3e334daf53a4de663c00cf1891785bc271f06b82ed0`]
+  },
+
   localhost: {
     // chainId: 1,
     url: 'http://127.0.0.1:8545',
