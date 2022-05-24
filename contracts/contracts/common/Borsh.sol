@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8;
+pragma solidity ^0.8.0;
 
 import "./Utils.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 library Borsh {
     using Borsh for Data;

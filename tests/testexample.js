@@ -623,12 +623,16 @@ describe("TRC20", function () {
         proof = await getProof.receiptProof(tx.hash)
         rpcInstance = new rpc("http://127.0.0.1:8545")
         const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        console.log(block)
         let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
         const re = Receipt.fromRpc(targetReceipt)
         const rlpLog = new LOGRLP(rc.logs[event.logIndex])
         const rlplog = Log.fromRpc(rlpLog)
 
         const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+        const blockHash = keccak256(proof.header.buffer)
+        console.log(proof.header.buffer)
+        console.log(blockHash)
 
         const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
         const buffer = borsh.serialize(schema, value);

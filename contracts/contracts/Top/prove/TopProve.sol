@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./ITopProve.sol";
 import "../../../lib/lib/MPT.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 contract TopProve is ITopProve{
     using MPT for MPT.MerkleProof;

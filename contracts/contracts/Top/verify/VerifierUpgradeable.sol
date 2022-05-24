@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../prove/ITopProve.sol";
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 abstract contract VerifierUpgradeable is Initializable {
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
@@ -61,16 +61,14 @@ abstract contract VerifierUpgradeable is Initializable {
         (_receipt.data, contractAddress) = _parseLog(proof.logEntryData);
         require(contractAddress != address(0), "Invalid Token lock address");
         require(lockProxyHash == contractAddress, "proxy is not bound");
-
         EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
         EthereumDecoder.BlockHeader memory header = EthereumDecoder.toBlockHeader(proof.headerData);
         bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
-        
-        require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
+
         (bool success,) = prover.verify(proof, receipt, header);
         require(success, "Proof should be valid");
-        
+        require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
         _receipt.proofIndex = proofIndex;
     }
 

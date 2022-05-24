@@ -27,7 +27,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
         address _peerProxyHash,
         address _peerAssetHash,
         uint64 _minBlockAcceptanceHeight,
-        string memory _name, 
+        string memory _name,
         string memory _symbol
     ) ERC20(_name, _symbol) {
         _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight);
