@@ -24,7 +24,7 @@ contract TopProve is ITopProve{
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = header.receiptsRoot;
         merkleProof.proof = proof.proof;
-        merkleProof.expectedValue = proof.reciptData; 
+        merkleProof.expectedValue = proof.reciptData;
         bytes memory actualKey = RLPEncode.encodeUint(proof.reciptIndex);
 
         bytes memory key = new bytes(actualKey.length << 1);
@@ -39,12 +39,12 @@ contract TopProve is ITopProve{
         valid = merkleProof.verifyTrieProof();
         require(valid, "Fail to verify");
         // 调用系统合约验证块头
-        // bytes memory payload = abi.encodeWithSignature("getHeaderIfHeightConfirmed(bytes, uint64)", proof.headerData, 2);
-        // (bool success, bytes memory returnData) = bridgeLight.call(payload);
-        // require(success, "Height is not confirmed");
+        bytes memory payload = abi.encodeWithSignature("getHeaderIfHeightConfirmed(bytes,uint64)", proof.headerData, 2);
+        (bool success, bytes memory returnData) = bridgeLight.call(payload);
+        require(success, "Height is not confirmed");
 
-        // (success) = abi.decode(returnData, (bool));
-        // require(success, "fail to decode");
+        (success) = abi.decode(returnData, (bool));
+        require(success, "fail to decode");
         return (true, "");
     }
 }

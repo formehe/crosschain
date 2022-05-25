@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../prove/ITopProve.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 abstract contract VerifierUpgradeable is Initializable {
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;

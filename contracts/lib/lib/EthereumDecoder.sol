@@ -128,7 +128,6 @@ library EthereumDecoder {
             else if ( idx == 13 ) header.mixHash         = bytes32(it.next().toUint());
             else if ( idx == 14 ) header.nonce           = uint64(it.next().toUint());
             else if ( idx == 15 ) header.baseFeePerGas   = it.next().toUint();
-            // else if ( idx == 13 ) header.nonce           = uint64(it.next().toUint());
             else it.next();
             idx++;
         }

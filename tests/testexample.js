@@ -141,11 +141,18 @@ describe("ERC20MintProxy", function () {
         await erc20Sample1.deployed()
         console.log("+++++++++++++Erc20Sample1+++++++++++++++ ", erc20Sample1.address)
 
+        //header sync mock
+        headerMockCon = await ethers.getContractFactory("HeaderSyncMock", deployer)
+        headerMock = await headerMockCon.deploy()
+        //erc20Sample = await erc20SampleCon.attach("0xC66AB83418C20A65C3f8e83B3d11c8C3a6097b6F")
+        await headerMock.deployed()
+        console.log("+++++++++++++HeaderSyncMock+++++++++++++++ ", headerMock.address)
+
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
         topProveContractCon = await ethers.getContractFactory("TopProve", deployer)
 
-        topProveContract = await topProveContractCon.deploy(address)
+        topProveContract = await topProveContractCon.deploy(headerMock.address)
         console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
 
@@ -381,11 +388,18 @@ describe("TRC20", function () {
         await erc20Sample1.deployed()
         console.log("+++++++++++++Erc20Sample+++++++++++++++ ", erc20Sample1.address)
 
+        //header sync mock
+        headerMockCon = await ethers.getContractFactory("HeaderSyncMock", deployer)
+        headerMock = await headerMockCon.deploy()
+        //erc20Sample = await erc20SampleCon.attach("0xC66AB83418C20A65C3f8e83B3d11c8C3a6097b6F")
+        await headerMock.deployed()
+        console.log("+++++++++++++HeaderSyncMock+++++++++++++++ ", headerMock.address)
+
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
         topProveContractCon = await ethers.getContractFactory("TopProve", deployer)
 
-        topProveContract = await topProveContractCon.deploy(address)
+        topProveContract = await topProveContractCon.deploy(headerMock.address)
         console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
 
