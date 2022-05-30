@@ -4,7 +4,7 @@
 [1m+++ b/contracts/contracts/Top/ERC20MintProxy.sol[m
 [36m@@ -6,7 +6,7 @@[m [mimport "../common/TransferedQuotas.sol";[m
  import "../common/ERC20Mint.sol";[m
- import "./prove/ITopProve.sol";[m
+ import "./prove/IProver.sol";[m
  import "./verify/VerifierUpgradeable.sol";[m
 [31m-import "hardhat/console.sol";[m
 [32m+[m[32m//import "hardhat/console.sol";[m
@@ -37,18 +37,18 @@
  [m
  library EthProofDecoder {[m
      using Borsh for Borsh.Data;[m
-[1mdiff --git a/contracts/contracts/Top/prove/TopProve.sol b/contracts/contracts/Top/prove/TopProve.sol[m
+[1mdiff --git a/contracts/contracts/Top/prove/Prover.sol b/contracts/contracts/Top/prove/Prover.sol[m
 [1mindex e76048d..f86765a 100644[m
-[1m--- a/contracts/contracts/Top/prove/TopProve.sol[m
-[1m+++ b/contracts/contracts/Top/prove/TopProve.sol[m
+[1m--- a/contracts/contracts/Top/prove/Prover.sol[m
+[1m+++ b/contracts/contracts/Top/prove/Prover.sol[m
 [36m@@ -3,7 +3,7 @@[m [mpragma solidity ^0.8.0;[m
  [m
- import "./ITopProve.sol";[m
+ import "./IProver.sol";[m
  import "../../../lib/lib/MPT.sol";[m
 [31m-import "hardhat/console.sol";[m
 [32m+[m[32m//import "hardhat/console.sol";[m
  [m
- contract TopProve is ITopProve{[m
+ contract Prover is IProver{[m
      using MPT for MPT.MerkleProof;[m
 [1mdiff --git a/contracts/contracts/Top/verify/VerifierUpgradeable.sol b/contracts/contracts/Top/verify/VerifierUpgradeable.sol[m
 [1mindex e7f6606..a06fc66 100644[m
@@ -57,7 +57,7 @@
 [36m@@ -2,7 +2,7 @@[m
  pragma solidity ^0.8.0;[m
  import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";[m
- import "../prove/ITopProve.sol";[m
+ import "../prove/IProver.sol";[m
 [31m-// import "hardhat/console.sol";[m
 [32m+[m[32mimport "hardhat/console.sol";[m
  abstract contract VerifierUpgradeable is Initializable {[m

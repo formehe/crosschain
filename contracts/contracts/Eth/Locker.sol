@@ -2,15 +2,15 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./prover/INearProver.sol";
-import "./prover/ProofDecoder.sol";
+import "../common/prover/IProver.sol";
+import "../common/codec/EthProofDecoder.sol";
 import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
 import "../common/Utils.sol";
 
 contract Locker is Initializable{
     using Borsh for Borsh.Data;
-    using ProofDecoder for Borsh.Data;
+    using EthProofDecoder for Borsh.Data;
 
     mapping(address => ToAddressHash) public assetHashMap;
 
@@ -19,7 +19,20 @@ contract Locker is Initializable{
         address peerLockProxyHash;
     }
 
-    INearProver private prover;
+    struct VerifiedEvent {
+        address fromToken;
+        address toToken;
+        address sender;
+        uint256 amount;
+        address receiver;
+    }
+
+    struct VerifiedReceipt {
+        bytes32 proofIndex;
+        VerifiedEvent data;
+    }
+
+    IProver private prover;
 
     // Proofs from blocks that are below the acceptance height will be rejected.
     // If `minBlockAcceptanceHeight` value is zero - proofs from block with any height are accepted.
@@ -29,7 +42,7 @@ contract Locker is Initializable{
     event ConsumedProof(bytes32 indexed _receiptId);
 
     function _locker_initialize(
-        INearProver _prover,
+        IProver _prover,
         uint64 _minBlockAcceptanceHeight
     ) internal onlyInitializing{
         prover = _prover;
@@ -42,51 +55,64 @@ contract Locker is Initializable{
         address recipient;
     }
 
-    // Parses the provided proof and consumes it if it's not already used.
-    // The consumed event cannot be reused for future calls.
-    function _parseAndConsumeProof(bytes memory proofData, uint64 proofBlockHeight)
-        internal
-        returns (BurnResult memory result1)
-    {
-        ProofDecoder.ExecutionStatus memory result;
-        require(prover.proveOutcome(proofData, proofBlockHeight), "Proof should be valid");
+    /// Parses the provided proof and consumes it if it's not already used.
+    /// The consumed event cannot be reused for future calls.
+    function _saveProof(
+        bytes32 proofIndex
+    ) internal {
+        usedProofs[proofIndex] = true;
+    }
 
-        // Unpack the proof and extract the execution outcome.
+    /// verify
+    function _verify( bytes memory proofData, 
+        uint64 proofBlockHeight) internal returns (VerifiedReceipt memory _receipt){
+        _receipt = _parseAndConsumeProof(proofData,proofBlockHeight);
+        _saveProof(_receipt.proofIndex);
+        return _receipt;
+
+    }
+
+    /// Parses the provided proof and consumes it if it's not already used.
+    /// The consumed event cannot be reused for future calls.
+    function _parseAndConsumeProof(
+        bytes memory proofData, 
+        uint64 proofBlockHeight
+    ) internal returns (VerifiedReceipt memory _receipt) {
         Borsh.Data memory borshData = Borsh.from(proofData);
-        ProofDecoder.FullOutcomeProof memory fullOutcomeProof = borshData.decodeFullOutcomeProof();
+        EthProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();
 
-        require(
-            fullOutcomeProof.block_header_lite.inner_lite.height >= minBlockAcceptanceHeight,
-            "Proof is from the ancient block"
-        );
+        address contractAddress;
+        (_receipt.data, contractAddress) = _parseLog(proof.logEntryData);
+        require(contractAddress != address(0), "Invalid Token lock address");
 
-        bytes32 receiptId = fullOutcomeProof.outcome_proof.outcome_with_id.outcome.receipt_ids[0];
-        require(!usedProofs[receiptId], "The burn event proof cannot be reused");
-        usedProofs[receiptId] = true;
+        address fromToken = _receipt.data.toToken;
+        ToAddressHash memory toAddressHash = assetHashMap[fromToken];
+        require(toAddressHash.peerLockProxyHash == contractAddress, "proxy is not bound");
 
-        result = fullOutcomeProof.outcome_proof.outcome_with_id.outcome.status;
-        require(!result.failed, "Cannot use failed execution outcome for unlocking the tokens");
-        require(!result.unknown, "Cannot use unknown execution outcome for unlocking the tokens");
+        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
+        EthereumDecoder.BlockHeader memory header = EthereumDecoder.toBlockHeader(proof.headerData);
+        bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
+        bytes32 proofIndex = keccak256(reciptIndex);
 
-        emit ConsumedProof(receiptId);
-
-        Borsh.Data memory borshData1 = Borsh.from(result.successValue);
-        uint8 flag = borshData1.decodeU8();
-        require(flag == 0, "ERR_NOT_WITHDRAW_RESULT");
-        result1.amount = borshData1.decodeU128();
-        bytes20 token = borshData1.decodeBytes20();
-        result1.token = address(uint160(token));
-        bytes20 recipient = borshData1.decodeBytes20();
-        result1.recipient = address(uint160(recipient));
-        
-        ToAddressHash memory toAddressHash = assetHashMap[result1.token];
-
-        require(keccak256(fullOutcomeProof.outcome_proof.outcome_with_id.outcome.executor_id)
-            == keccak256(Utils.toBytes(toAddressHash.peerLockProxyHash)),
-            "Can only unlock tokens from the linked proof producer on Near blockchain");
-
-        borshData1.done();
+        (bool success,) = prover.verify(proof, receipt, header);
+        require(success, "Proof should be valid");
+        require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
+        _receipt.proofIndex = proofIndex;
     }
+
+    function _parseLog(
+        bytes memory log
+    ) private view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+        EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
+        require(logInfo.topics.length == 4, "invalid the number of topics");
+        (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
+
+        _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
+        _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
+        _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
+        _contractAddress = logInfo.contractAddress;
+    }
+
 
 }

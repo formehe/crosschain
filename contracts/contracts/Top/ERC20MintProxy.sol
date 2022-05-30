@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../common/TransferedQuotas.sol";
 import "../common/ERC20Mint.sol";
-import "./prove/ITopProve.sol";
+import "../common/prover/IProver.sol";
 import "./verify/VerifierUpgradeable.sol";
 //import "hardhat/console.sol";
 
@@ -48,7 +48,7 @@ contract ERC20MintProxy is VerifierUpgradeable, TransferedQuotas {
     }
 
     function initialize(
-        ITopProve _prover,
+        IProver _prover,
         address _peerProxyHash,
         uint64 _minBlockAcceptanceHeight
     ) external initializer {

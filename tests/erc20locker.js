@@ -60,7 +60,7 @@ describe('ERC20Locker', () => {
     })
 
     it('It has no permissions', async () => {
-      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xf8047ab327a401c711fd20c7b6e5c451929f0635cb87242f469ec7644b76376e'
+      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xb19546dff01e856fb3f010c267a7b1c60363cf8a4664e21cc89c26224620214e'
       await expect(erc20Locker.connect(wallet2).bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
       ).to.be.revertedWith(msg)
 

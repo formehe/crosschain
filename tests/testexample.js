@@ -150,10 +150,10 @@ describe("ERC20MintProxy", function () {
 
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
-        topProveContractCon = await ethers.getContractFactory("TopProve", deployer)
+        topProveContractCon = await ethers.getContractFactory("Prover", deployer)
 
         topProveContract = await topProveContractCon.deploy(headerMock.address)
-        console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
+        console.log("+++++++++++++Prover+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
 
         //deploy mint contract
@@ -397,10 +397,10 @@ describe("TRC20", function () {
 
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
-        topProveContractCon = await ethers.getContractFactory("TopProve", deployer)
+        topProveContractCon = await ethers.getContractFactory("Prover", deployer)
 
         topProveContract = await topProveContractCon.deploy(headerMock.address)
-        console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
+        console.log("+++++++++++++Prover+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
 
         //deploy mint contract
@@ -692,15 +692,15 @@ describe("TRC20", function () {
 
 //         //deploy prove
 // 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
-//         topProveContractCon = await ethers.getContractFactory("TopProve", deployer)
+//         topProveContractCon = await ethers.getContractFactory("Prover", deployer)
 
 //         topProveContract = await topProveContractCon.deploy(address)
-//         console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
+//         console.log("+++++++++++++Prover+++++++++++++++ ", topProveContract.address)
 
-//         // proveContractCon = await ethers.getContractFactory("TopProve", deployer)
+//         // proveContractCon = await ethers.getContractFactory("Prover", deployer)
 //         // proveContract = await proveContractCon.deploy(deployer.address)
 
-//         // console.log("+++++++++++++TopProve+++++++++++++++ ", proveContract.address)
+//         // console.log("+++++++++++++Prover+++++++++++++++ ", proveContract.address)
 
 //         //deploy contract
 //         lockContractCon = await ethers.getContractFactory("NativeLocker", deployer)

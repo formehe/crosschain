@@ -4,20 +4,17 @@ pragma solidity ^0.8;
 import "../common/AdminControlledUpgradeable.sol";
 import "../common/Borsh.sol";
 import "../common/TransferedQuotas.sol";
-import "./prover/ProofDecoder.sol";
 import "./Locker.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract LockerProxy is Locker,TransferedQuotas{
-    
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
     bool public isEth;
     bytes32 constant public BLACK_UN_LOCK_ROLE = keccak256("BLACK_UN_LOCK_ROLE");
     bytes32 constant public BLACK_LOCK_ROLE = keccak256("BLACK_LOCK_ROLE");
-
     event Locked (
         address indexed fromToken,
         address indexed toToken,
@@ -38,7 +35,7 @@ contract LockerProxy is Locker,TransferedQuotas{
     );
 
     function _lockerProxy_initialize(
-        INearProver _prover,
+        IProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
         bool _isEth

@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./prover/INearProver.sol";
+import "../common/prover/IProver.sol";
 import "../common/IRC20Locker.sol";
 import "../common/ITokenLocker.sol";
 import "./LockerProxy.sol";
@@ -14,7 +14,7 @@ contract EthLocker is ITokenLocker,LockerProxy{
     using SafeERC20 for IERC20;
     
     function _EthLocker_initialize(
-        INearProver _prover,
+        IProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner
     ) external initializer {   
@@ -43,10 +43,9 @@ contract EthLocker is ITokenLocker,LockerProxy{
         payable
         unLock_pauseable
     {
-        BurnResult memory result = _parseAndConsumeProof(proofData, proofBlockHeight);
-        _transferFromContract(result.recipient, result.amount);
-
-        emit Unlocked(result.amount, result.recipient);
+        VerifiedReceipt memory result = _verify(proofData, proofBlockHeight);
+        _transferFromContract(result.data.receiver, result.data.amount);
+        emit Unlocked(result.data.amount,result.data.receiver);
     }
 
     //The unit of amount is gwei

@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./prover/INearProver.sol";
+import "../common/prover/IProver.sol";
 import "../common/IRC20Locker.sol";
 
 import "./LockerProxy.sol";
@@ -12,7 +12,7 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
     using SafeERC20 for IERC20;
 
     function _ERC20Locker_initialize(
-        INearProver _prover,
+        IProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner
     ) external initializer {
@@ -42,10 +42,9 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
         override
         unLock_pauseable
     {   
-        BurnResult memory result= _parseAndConsumeProof(proofData, proofBlockHeight);
-        IERC20(result.token).safeTransfer(result.recipient, result.amount);
-
-        emit Unlocked(result.amount, result.recipient);
+        VerifiedReceipt memory result= _verify(proofData, proofBlockHeight);
+        IERC20(result.data.toToken).safeTransfer(result.data.receiver, result.data.amount);
+        emit Unlocked(result.data.amount, result.data.receiver);
      
     }
 

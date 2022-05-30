@@ -32,7 +32,7 @@ async function main() {
     //deploy TopProve
     //fork address
     address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
-    topProveContractCon = await ethers.getContractFactory("TopProve", deployer)
+    topProveContractCon = await ethers.getContractFactory("Prover", deployer)
     topProveContract = await topProveContractCon.deploy(address)
     await topProveContract.deployed()
     console.log("+++++++++++++TopProve+++++++++++++++ ", topProveContract.address)
