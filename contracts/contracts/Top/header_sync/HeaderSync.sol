@@ -9,7 +9,7 @@ contract HeaderSync {
     }
 
     function initGenesisHeader(bytes memory genesis, string memory emitter) public returns (bool success) {
-        bytes memory payload = abi.encodeWithSignature("init_genesis_block_header(bytes, string)", genesis, emitter);
+        bytes memory payload = abi.encodeWithSignature("init_genesis_block_header(bytes,string)", genesis, emitter);
         (success,) = bridgeLight.call(payload);
         require (success);
     }
@@ -33,7 +33,7 @@ contract HeaderSync {
     }
 
     function getBlockBashByHeight(uint64 chainId, uint64 height) public returns (bytes memory hashcode) {
-        bytes memory payload = abi.encodeWithSignature("getHashOfMainChainByHeight(uint64, uint64)", chainId, height);
+        bytes memory payload = abi.encodeWithSignature("getHashOfMainChainByHeight(uint64,uint64)", chainId, height);
         bool success = false;
         (success, hashcode) = bridgeLight.call(payload);
         require (success);
