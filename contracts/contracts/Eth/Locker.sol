@@ -6,6 +6,7 @@ import "./prover/ITopProver.sol";
 import "../common/codec/EthProofDecoder.sol";
 import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
+import "./bridge/TopDecoder.sol";
 import "../common/Utils.sol";
 
 contract Locker is Initializable{
@@ -91,11 +92,11 @@ contract Locker is Initializable{
         require(toAddressHash.peerLockProxyHash == contractAddress, "proxy is not bound");
 
         EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
-        EthereumDecoder.BlockHeader memory header = EthereumDecoder.toBlockHeader(proof.headerData);
-        bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
+        TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
+        bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
 
-        (bool success,) = prover.verify(proof, receipt, header.receiptsRoot,header.hash);
+        (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_root,header.block_hash);
         require(success, "Proof should be valid");
         require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
         _receipt.proofIndex = proofIndex;

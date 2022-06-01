@@ -17,7 +17,7 @@ contract Prover{
         EthProofDecoder.Proof calldata proof, 
         EthereumDecoder.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot
-    ) internal {
+    ) internal view {
         require((keccak256(proof.logEntryData) == keccak256(EthereumDecoder.getLog(receipt.logs[proof.logIndex]))), "Log is not found");
 
         MPT.MerkleProof memory merkleProof;
