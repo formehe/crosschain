@@ -25,10 +25,10 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     Epoch thisEpoch;
     
-    mapping(uint64 => bytes32) blockHashes_;
-    mapping(uint64 => bytes32) blockMerkleRoots_;
-    mapping(bytes32 => uint64) blockHeights;
-    mapping(address => uint256) public override balanceOf;
+    mapping(uint64 => bytes32) public blockHashes;
+    mapping(uint64 => bytes32) public blockMerkleRoots;
+    mapping(bytes32 => uint64) public blockHeights;
+    mapping(address => uint256) public balanceOf;
 
     struct Epoch {
         bytes32 epochId;
@@ -56,18 +56,18 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     }
 
-    function deposit() public payable override pausable(PAUSED_DEPOSIT) {
-        require(msg.value == lockEthAmount && balanceOf[msg.sender] == 0);
-        balanceOf[msg.sender] = msg.value;
-    }
+    // function deposit() public payable override pausable(PAUSED_DEPOSIT) {
+    //     require(msg.value == lockEthAmount && balanceOf[msg.sender] == 0);
+    //     balanceOf[msg.sender] = msg.value;
+    // }
 
-    function withdraw() public override pausable(PAUSED_WITHDRAW) {
-        require(msg.sender != lastSubmitter);
-        uint amount = balanceOf[msg.sender];
-        require(amount != 0);
-        balanceOf[msg.sender] = 0;
-        payable(msg.sender).transfer(amount);
-    }
+    // function withdraw() public override pausable(PAUSED_WITHDRAW) {
+    //     require(msg.sender != lastSubmitter);
+    //     uint amount = balanceOf[msg.sender];
+    //     require(amount != 0);
+    //     balanceOf[msg.sender] = 0;
+    //     payable(msg.sender).transfer(amount);
+    // }
 
     function initWithBlock(bytes memory data) public override onlyRole(OWNER_ROLE) {
         require(!initialized, "Wrong initialization stage");
@@ -77,8 +77,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         require(topBlock.next_bps.some, "Initialization block must contain next_bps");
         setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
-        blockHashes_[topBlock.inner_lite.height] = topBlock.block_hash;
-        blockMerkleRoots_[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
+        blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
+        blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.block_hash] = topBlock.inner_lite.height;
         maxMainHeight = topBlock.inner_lite.height;
     }
@@ -145,8 +145,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
         }
 
-        blockHashes_[topBlock.inner_lite.height] = topBlock.block_hash;
-        blockMerkleRoots_[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
+        blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
+        blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.block_hash] = topBlock.inner_lite.height;
 
         lastSubmitter = msg.sender;
@@ -176,22 +176,6 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             }
             epoch.stakeThreshold = (totalStake * 2) / 3;
         }
-    }
-
-    function blockHashes(uint64 height) public view override pausable(PAUSED_VERIFY) returns (bytes32 res) {
-        res = blockHashes_[height];
-    }
-
-    function blockMerkleRoots(uint64 height) public view override pausable(PAUSED_VERIFY) returns (bytes32 res) {
-        res = blockMerkleRoots_[height];
-    }
-
-    function getMaxHeight() public view override pausable(PAUSED_VERIFY) returns (uint64 height) {
-        height = maxMainHeight;
-    }
-
-    function getHeightByHash(bytes32 hashCode) public view override pausable(PAUSED_VERIFY) returns (uint64 height) {
-        height = blockHeights[hashCode];
     }
 
     modifier addLightClientBlock_able(){
