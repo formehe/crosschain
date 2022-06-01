@@ -12,7 +12,7 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
     using SafeERC20 for IERC20;
 
     function _ERC20Locker_initialize(
-        IProver _prover,
+        ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner
     ) external initializer {

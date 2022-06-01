@@ -23,7 +23,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
     );
 
     constructor (
-        IProver _prover,
+        IEthProver _prover,
         address _peerProxyHash,
         address _peerAssetHash,
         uint64 _minBlockAcceptanceHeight,
@@ -34,7 +34,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
     }
 
     function _TRC20_init (
-        IProver _prover,
+        IEthProver _prover,
         address _peerProxyHash,
         address _peerAssetHash,
         uint64 _minBlockAcceptanceHeight

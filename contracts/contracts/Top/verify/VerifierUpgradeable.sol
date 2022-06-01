@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../../common/prover/IProver.sol";
+import "../prover/IEthProver.sol";
 // import "hardhat/console.sol";
 abstract contract VerifierUpgradeable is Initializable {
     using Borsh for Borsh.Data;
@@ -24,13 +24,13 @@ abstract contract VerifierUpgradeable is Initializable {
     uint constant PAUSED_BURN = 1 << 0;
     uint constant PAUSED_MINT = 1 << 1;
 
-    IProver private prover;
+    IEthProver private prover;
     address private lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
     mapping(bytes32 => bool) public usedProofs;
 
     function _VerifierUpgradeable_init(
-        IProver _prover,
+        IEthProver _prover,
         address _peerLockProxyHash,
         uint64 _minBlockAcceptanceHeight
     ) internal onlyInitializing {

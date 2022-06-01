@@ -35,7 +35,7 @@ contract LockerProxy is Locker,TransferedQuotas{
     );
 
     function _lockerProxy_initialize(
-        IProver _prover,
+        ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
         bool _isEth

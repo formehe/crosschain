@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../common/prover/IProver.sol";
+import "./prover/ITopProver.sol";
 import "../common/codec/EthProofDecoder.sol";
 import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
@@ -32,7 +32,7 @@ contract Locker is Initializable{
         VerifiedEvent data;
     }
 
-    IProver private prover;
+    ITopProver private prover;
 
     // Proofs from blocks that are below the acceptance height will be rejected.
     // If `minBlockAcceptanceHeight` value is zero - proofs from block with any height are accepted.
@@ -42,7 +42,7 @@ contract Locker is Initializable{
     event ConsumedProof(bytes32 indexed _receiptId);
 
     function _locker_initialize(
-        IProver _prover,
+        ITopProver _prover,
         uint64 _minBlockAcceptanceHeight
     ) internal onlyInitializing{
         prover = _prover;
@@ -95,7 +95,7 @@ contract Locker is Initializable{
         bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
 
-        (bool success,) = prover.verify(proof, receipt, header.receiptsRoot);
+        (bool success,) = prover.verify(proof, receipt, header.receiptsRoot,header.hash);
         require(success, "Proof should be valid");
         require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
         _receipt.proofIndex = proofIndex;

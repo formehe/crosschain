@@ -6,8 +6,15 @@ import "../../common/AdminControlledUpgradeable.sol";
 import "./ITopBridge.sol";
 import "./TopDecoder.sol";
 import "hardhat/console.sol";
+import "../../../lib/external_lib/RLPDecode.sol";
+import "../../../lib/external_lib/RLPEncode.sol";
 
 contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
+    using RLPDecode for bytes;
+    using RLPDecode for uint;
+    using RLPDecode for RLPDecode.RLPItem;
+    using RLPDecode for RLPDecode.Iterator;
+
     // Assumed to be even and to not exceed 256.
     uint constant MAX_BLOCK_PRODUCERS = 100;
     uint constant UNPAUSE_ALL = 0;
@@ -19,12 +26,11 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     // Whether the contract was initialized.
     bool public initialized;
-    uint64 maxMainHeight;
-    address lastSubmitter;
+    uint64 public maxMainHeight;
+    address public lastSubmitter;
     uint256 public lockEthAmount;
 
     Epoch thisEpoch;
-    
     mapping(uint64 => bytes32) public blockHashes;
     mapping(uint64 => bytes32) public blockMerkleRoots;
     mapping(bytes32 => uint64) public blockHeights;
@@ -75,8 +81,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
 
-        require(topBlock.next_bps.some, "Initialization block must contain next_bps");
-        setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
+        // require(topBlock.next_bps.some, "Initialization block must contain next_bps");
+        // setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
         blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.block_hash] = topBlock.inner_lite.height;
@@ -102,10 +108,19 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     ) internal view returns(bool) {
         return ecrecover(
             block_hash,
-            signature.v,
+            signature.v + (signature.v < 27 ? 27 : 0),
             signature.r,
             signature.s
             ) == address(uint160(uint256(keccak256(abi.encodePacked(publicKey.x, publicKey.y)))));
+    }
+
+    /// @dev Batch synchronous  
+    function batchAddLightClientBlock(bytes memory data) public addLightClientBlock_able{
+        RLPDecode.Iterator memory it = data.toRlpItem().iterator();
+        while (it.hasNext()) {
+            bytes memory _bytes = it.next().toBytes();
+            addLightClientBlock(_bytes);
+        }    
     }
 
     function addLightClientBlock(bytes memory data) public override addLightClientBlock_able {
@@ -114,36 +129,36 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
 
-        require(topBlock.inner_lite.height >= (maxMainHeight + 1));
+        // require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
 
-        require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
-        uint256 votedFor = 0;
-        for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i != cnt; ++i) {
-            bytes32 stakes = thisEpoch.packedStakes[i >> 1];
-            if (topBlock.approvals_after_next[i].some) {
-                votedFor += uint128(bytes16(stakes));
-            }
+        // require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
+        // uint256 votedFor = 0;
+        // for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i != cnt; ++i) {
+        //     bytes32 stakes = thisEpoch.packedStakes[i >> 1];
+        //     if (topBlock.approvals_after_next[i].some) {
+        //         votedFor += uint128(bytes16(stakes));
+        //     }
 
-            if (++i == cnt) {
-                break;
-            }
-            if (topBlock.approvals_after_next[i].some) {
-                votedFor += uint128(uint256(stakes));
-            }
-        }
-        require(votedFor > thisEpoch.stakeThreshold, "Too few approvals");
+        //     if (++i == cnt) {
+        //         break;
+        //     }
+        //     if (topBlock.approvals_after_next[i].some) {
+        //         votedFor += uint128(uint256(stakes));
+        //     }
+        // }
+        // require(votedFor > thisEpoch.stakeThreshold, "Too few approvals");
         
-        for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
-            TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
-            if (approval.some) {
-               bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
-               require(success);
-            }
-        }
+        // for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
+        //     TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
+        //     if (approval.some) {
+        //        bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
+        //        require(success);
+        //     }
+        // }
 
-        if (topBlock.next_bps.some) {
-            setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
-        }
+        // if (topBlock.next_bps.some) {
+        //     setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
+        // }
 
         blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;

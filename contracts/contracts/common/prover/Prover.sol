@@ -5,7 +5,7 @@ import "./IProver.sol";
 import "../../../lib/lib/MPT.sol";
 //import "hardhat/console.sol";
 
-contract Prover is IProver{
+contract Prover{
     using MPT for MPT.MerkleProof;
     address public bridgeLight;
 
@@ -13,12 +13,11 @@ contract Prover is IProver{
         bridgeLight = _bridgeLight;
     }
 
-    function verify(
+    function _verify(
         EthProofDecoder.Proof calldata proof, 
         EthereumDecoder.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot
-    ) external override returns (bool valid, string memory reason) {
-        
+    ) internal {
         require((keccak256(proof.logEntryData) == keccak256(EthereumDecoder.getLog(receipt.logs[proof.logIndex]))), "Log is not found");
 
         MPT.MerkleProof memory merkleProof;
@@ -36,15 +35,7 @@ contract Prover is IProver{
             j += 1;
         }
         merkleProof.key = key;
-        valid = merkleProof.verifyTrieProof();
+        bool valid = merkleProof.verifyTrieProof();
         require(valid, "Fail to verify");
-        // 调用系统合约验证块头
-        bytes memory payload = abi.encodeWithSignature("getHeaderIfHeightConfirmed(bytes,uint64)", proof.headerData, 2);
-        (bool success, bytes memory returnData) = bridgeLight.call(payload);
-        require(success, "Height is not confirmed");
-
-        (success) = abi.decode(returnData, (bool));
-        require(success, "fail to decode");
-        return (true, "");
     }
 }

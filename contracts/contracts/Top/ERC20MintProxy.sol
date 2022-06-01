@@ -48,7 +48,7 @@ contract ERC20MintProxy is VerifierUpgradeable, TransferedQuotas {
     }
 
     function initialize(
-        IProver _prover,
+        IEthProver _prover,
         address _peerProxyHash,
         uint64 _minBlockAcceptanceHeight
     ) external initializer {

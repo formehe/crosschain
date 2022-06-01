@@ -14,7 +14,7 @@ contract EthLocker is ITokenLocker,LockerProxy{
     using SafeERC20 for IERC20;
     
     function _EthLocker_initialize(
-        IProver _prover,
+        ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner
     ) external initializer {   
