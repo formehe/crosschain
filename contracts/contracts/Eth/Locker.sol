@@ -96,7 +96,7 @@ contract Locker is Initializable{
         bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
 
-        (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_root,header.block_hash);
+        (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_root,header.inner_lite.height);
         require(success, "Proof should be valid");
         require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
         _receipt.proofIndex = proofIndex;
