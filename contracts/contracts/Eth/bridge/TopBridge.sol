@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import "../../common/AdminControlledUpgradeable.sol";
-import "./INearBridge.sol";
-import "./NearDecoder.sol";
-import "../../common/Ed25519.sol";
+import "./ITopBridge.sol";
+import "./TopDecoder.sol";
+import "hardhat/console.sol";
 
-contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
-    using Borsh for Borsh.Data;
-    using NearDecoder for Borsh.Data;
-
+contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     // Assumed to be even and to not exceed 256.
     uint constant MAX_BLOCK_PRODUCERS = 100;
-
     uint constant UNPAUSE_ALL = 0;
     uint constant PAUSED_DEPOSIT = 1;
     uint constant PAUSED_WITHDRAW = 2;
@@ -21,61 +17,44 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
     uint constant PAUSED_CHALLENGE = 8;
     uint constant PAUSED_VERIFY = 16;
 
-    bytes32 constant public ADDBLOCK_ROLE = keccak256("ADDBLOCK_ROLE");
-
-    struct Epoch {
-        bytes32 epochId;
-        uint numBPs;
-        bytes32[MAX_BLOCK_PRODUCERS] keys;
-        bytes32[MAX_BLOCK_PRODUCERS / 2] packedStakes;
-        uint256 stakeThreshold;
-    }
-
     // Whether the contract was initialized.
     bool public initialized;
-    uint256 public lockEthAmount;
-    Ed25519 private edwards;
-    Epoch thisEpoch;
+    uint64 maxMainHeight;
     address lastSubmitter;
+    uint256 public lockEthAmount;
+
+    Epoch thisEpoch;
     
     mapping(uint64 => bytes32) blockHashes_;
     mapping(uint64 => bytes32) blockMerkleRoots_;
     mapping(bytes32 => uint64) blockHeights;
     mapping(address => uint256) public override balanceOf;
 
-    uint64 maxMainHeight;
+    struct Epoch {
+        bytes32 epochId;
+        uint numBPs;
+        TopDecoder.SECP256K1PublicKey[MAX_BLOCK_PRODUCERS] keys;
+        bytes32[MAX_BLOCK_PRODUCERS / 2] packedStakes;
+        uint256 stakeThreshold;
+    }
+    
+    bytes32 constant public ADDBLOCK_ROLE = keccak256("ADDBLOCK_ROLE");
     
     function initialize(
-        Ed25519 ed,
         uint256 _lockEthAmount,
         address _owner
     ) external initializer {
         require(_owner != address(0));
-        edwards = ed;
         lockEthAmount = _lockEthAmount;
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSE_ALL ^ 0xff);
 
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ADDBLOCK_ROLE, OWNER_ROLE);
         _grantRole(OWNER_ROLE,_owner);
+        _grantRole(ADDBLOCK_ROLE,_owner);
 
     }
-
-    function initWithBlock(bytes memory data) public override onlyRole(OWNER_ROLE) {
-        require(!initialized, "Wrong initialization stage");
-        initialized = true;
-
-        Borsh.Data memory borsh = Borsh.from(data);
-        NearDecoder.LightClientBlock memory topBlock = borsh.decodeLightClientBlock();
-        borsh.done();
-
-        require(topBlock.next_bps.some, "Initialization block must contain next_bps");
-        setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
-        blockHashes_[topBlock.inner_lite.height] = topBlock.hash;
-        blockMerkleRoots_[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-        blockHeights[topBlock.hash] = topBlock.inner_lite.height;
-        maxMainHeight = topBlock.inner_lite.height;
-    }   
 
     function deposit() public payable override pausable(PAUSED_DEPOSIT) {
         require(msg.value == lockEthAmount && balanceOf[msg.sender] == 0);
@@ -89,6 +68,21 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
         balanceOf[msg.sender] = 0;
         payable(msg.sender).transfer(amount);
     }
+
+    function initWithBlock(bytes memory data) public override onlyRole(OWNER_ROLE) {
+        require(!initialized, "Wrong initialization stage");
+        initialized = true;
+
+        TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
+
+        require(topBlock.next_bps.some, "Initialization block must contain next_bps");
+        setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
+        blockHashes_[topBlock.inner_lite.height] = topBlock.block_hash;
+        blockMerkleRoots_[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
+        blockHeights[topBlock.block_hash] = topBlock.inner_lite.height;
+        maxMainHeight = topBlock.inner_lite.height;
+    }
+
     struct BridgeState {
         uint currentHeight; // Height of the current confirmed block
         // If there is currently no unconfirmed block, the last three fields are zero.
@@ -101,15 +95,26 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
         res.numBlockProducers = thisEpoch.numBPs;
     }
 
+    function _checkValidatorSignature(
+        bytes32 block_hash,
+        TopDecoder.Signature memory signature,
+        TopDecoder.SECP256K1PublicKey storage publicKey
+    ) internal view returns(bool) {
+        return ecrecover(
+            block_hash,
+            signature.v,
+            signature.r,
+            signature.s
+            ) == address(uint160(uint256(keccak256(abi.encodePacked(publicKey.x, publicKey.y)))));
+    }
+
     function addLightClientBlock(bytes memory data) public override addLightClientBlock_able {
         require(initialized, "Contract is not initialized");
-        require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
+        //  require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
 
-        Borsh.Data memory borsh = Borsh.from(data);
-        NearDecoder.LightClientBlock memory topBlock = borsh.decodeLightClientBlock();
-        borsh.done();
+        TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
 
-        require(topBlock.inner_lite.height == (maxMainHeight + 1));
+        require(topBlock.inner_lite.height >= (maxMainHeight + 1));
 
         require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
         uint256 votedFor = 0;
@@ -129,18 +134,10 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
         require(votedFor > thisEpoch.stakeThreshold, "Too few approvals");
         
         for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
-            NearDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
+            TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
             if (approval.some) {
-                bytes memory message = abi.encodePacked(
-                    uint8(0),
-                    topBlock.hash,
-                    Utils.swapBytes8(topBlock.inner_lite.height),
-                    bytes23(0)
-                );
-                (bytes32 arg1, bytes9 arg2) = abi.decode(message, (bytes32, bytes9));
-                NearDecoder.Signature memory signature = approval.signature;
-                bool success = edwards.check(thisEpoch.keys[i], signature.r, signature.s, arg1, arg2);
-                require(success);
+               bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
+               require(success);
             }
         }
 
@@ -148,21 +145,22 @@ contract NearBridge is Initializable, INearBridge, AdminControlledUpgradeable {
             setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
         }
 
-        blockHashes_[topBlock.inner_lite.height] = topBlock.hash;
+        blockHashes_[topBlock.inner_lite.height] = topBlock.block_hash;
         blockMerkleRoots_[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-        blockHeights[topBlock.hash] = topBlock.inner_lite.height;
+        blockHeights[topBlock.block_hash] = topBlock.inner_lite.height;
 
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;
     }
 
-    function setBlockProducers(NearDecoder.BlockProducer[] memory src, Epoch storage epoch) internal {
+    
+    function setBlockProducers(TopDecoder.BlockProducer[] memory src, Epoch storage epoch) internal {
         uint cnt = src.length;
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
         epoch.numBPs = cnt;
         unchecked {
             for (uint i = 0; i < cnt; i++) {
-                epoch.keys[i] = src[i].publicKey.k;
+                epoch.keys[i] = src[i].publicKey;
             }
             uint256 totalStake = 0; // Sum of uint128, can't be too big.
             for (uint i = 0; i != cnt; ++i) {

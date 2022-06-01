@@ -16,13 +16,13 @@ contract Prover is IProver{
     function verify(
         EthProofDecoder.Proof calldata proof, 
         EthereumDecoder.TransactionReceiptTrie calldata receipt, 
-        EthereumDecoder.BlockHeader calldata header
+        bytes32 receiptsRoot
     ) external override returns (bool valid, string memory reason) {
         
         require((keccak256(proof.logEntryData) == keccak256(EthereumDecoder.getLog(receipt.logs[proof.logIndex]))), "Log is not found");
 
         MPT.MerkleProof memory merkleProof;
-        merkleProof.expectedRoot = header.receiptsRoot;
+        merkleProof.expectedRoot = receiptsRoot;
         merkleProof.proof = proof.proof;
         merkleProof.expectedValue = proof.reciptData;
         bytes memory actualKey = RLPEncode.encodeUint(proof.reciptIndex);
