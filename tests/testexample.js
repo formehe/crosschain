@@ -150,10 +150,10 @@ describe("ERC20MintProxy", function () {
 
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
-        topProveContractCon = await ethers.getContractFactory("TopProver", deployer)
+        topProveContractCon = await ethers.getContractFactory("EthProver", deployer)
 
         topProveContract = await topProveContractCon.deploy(headerMock.address)
-        console.log("+++++++++++++TopProver+++++++++++++++ ", topProveContract.address)
+        console.log("+++++++++++++EthProver+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
 
         //deploy mint contract
@@ -397,10 +397,10 @@ describe("TRC20", function () {
 
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
-        topProveContractCon = await ethers.getContractFactory("TopProver", deployer)
+        topProveContractCon = await ethers.getContractFactory("EthProver", deployer)
 
         topProveContract = await topProveContractCon.deploy(headerMock.address)
-        console.log("+++++++++++++TopProver+++++++++++++++ ", topProveContract.address)
+        console.log("+++++++++++++EthProver+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
 
         //deploy mint contract
@@ -628,16 +628,13 @@ describe("TRC20", function () {
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
         const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 1000, user.address)
         const rc = await tx.wait()
-        console.log(rc)
         const event = rc.events.find(event=>event.event === "Burned")
-        console.log(event)
 
         // construct receipt proof
         getProof = new GetProof("http://127.0.0.1:8545")
         proof = await getProof.receiptProof(tx.hash)
         rpcInstance = new rpc("http://127.0.0.1:8545")
         const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
-        console.log(block)
         let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
         const re = Receipt.fromRpc(targetReceipt)
         const rlpLog = new LOGRLP(rc.logs[event.logIndex])
@@ -645,8 +642,6 @@ describe("TRC20", function () {
 
         const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
         const blockHash = keccak256(proof.header.buffer)
-        console.log(proof.header.buffer)
-        console.log(blockHash)
 
         const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
         const buffer = borsh.serialize(schema, value);
