@@ -150,7 +150,7 @@ describe("ERC20MintProxy", function () {
 
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
-        topProveContractCon = await ethers.getContractFactory("TopProver", deployer)
+        topProveContractCon = await ethers.getContractFactory("EthProver", deployer)
 
         topProveContract = await topProveContractCon.deploy(headerMock.address)
         console.log("+++++++++++++TopProver+++++++++++++++ ", topProveContract.address)
@@ -397,7 +397,7 @@ describe("TRC20", function () {
 
         //deploy prove
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
-        topProveContractCon = await ethers.getContractFactory("TopProver", deployer)
+        topProveContractCon = await ethers.getContractFactory("EthProver", deployer)
 
         topProveContract = await topProveContractCon.deploy(headerMock.address)
         console.log("+++++++++++++TopProver+++++++++++++++ ", topProveContract.address)

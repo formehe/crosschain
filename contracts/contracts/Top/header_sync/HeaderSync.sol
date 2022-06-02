@@ -25,11 +25,8 @@ contract HeaderSync {
         bool success = false;
         bytes memory returnData;
         (success, returnData) = bridgeLight.call(payload);
-        require(returnData.length >= height + 32);
-        assembly {
-            height := mload(add(returnData, 0x20))
-        }
         require (success);
+        (height) = abi.decode(returnData, (uint64));
     }
 
     function getBlockBashByHeight(uint64 chainId, uint64 height) public returns (bytes memory hashcode) {

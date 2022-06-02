@@ -15,15 +15,14 @@ contract TopProver is Prover, ITopProver{
     function verify(
         EthProofDecoder.Proof calldata proof, 
         EthereumDecoder.TransactionReceiptTrie calldata receipt, 
-        bytes32 receiptsRoot,uint64 height
+        bytes32 receiptsRoot,bytes32 hash
     ) external override returns (bool valid, string memory reason) {
         
         _verify(proof, receipt, receiptsRoot);
         // 调用系统合约验证块头
-        bytes memory payload = abi.encodeWithSignature("blockHashes(uint64)", height);
+        bytes memory payload = abi.encodeWithSignature("blockHashes(bytes32)", hash);
         (bool success, bytes memory returnData) = bridgeLight.call(payload);
         require(success, "Height is not confirmed");
-        require(returnData.length > 0, "Height is not confirmed");
 
         (success) = abi.decode(returnData, (bool));
         require(success, "fail to decode");

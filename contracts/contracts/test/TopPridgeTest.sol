@@ -9,18 +9,19 @@ contract TopPridgeTest is TopBridge{
     using RLPDecode for RLPDecode.RLPItem;
     using RLPDecode for RLPDecode.Iterator;
 
-    function getClickBlock(bytes memory data) view public returns(TopDecoder.LightClientBlock memory){
+    
+    /// @dev Parse a single
+    function getClientBlock(bytes memory data) view public returns(TopDecoder.LightClientBlock memory){
          TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
          return topBlock;
     }
-
+    /// @dev Parsing multiple
     function getbatchClientBlock(bytes memory rlpBytes) view public returns(TopDecoder.LightClientBlock[] memory){
         TopDecoder.LightClientBlock[] memory clientBlocks = new TopDecoder.LightClientBlock[](3);
         RLPDecode.Iterator memory it = rlpBytes.toRlpItem().iterator();
         uint j = 0;
         while (it.hasNext()) {
-            bytes memory rlpBytes = it.next().toBytes();
-            TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(rlpBytes);
+            TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(it.next().toBytes());
             clientBlocks[j] = topBlock;
             j = j + 1;
         }

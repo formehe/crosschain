@@ -46,7 +46,7 @@ library TopDecoder {
         uint64 timestamp; // Timestamp at which the block was built.
         bytes32 elections_hash; // Hash of the next epoch block producers set
         bytes32 txs_root_hash; // Hash of the next epoch block producers set
-        bytes32 receipts_root_root; // Root of the outcomes of transactions and receipts.
+        bytes32 receipts_root_hash; // Root of the outcomes of transactions and receipts.
         bytes32 prev_state_root; // Root hash of the state at the previous block.
         bytes32 block_merkle_root; //all block merkle root hash
         bytes32 inner_hash; // Additional computable element
@@ -124,7 +124,7 @@ library TopDecoder {
             else if (idx == 3) res.timestamp = uint64(it.next().toUint());
             else if (idx == 4) res.elections_hash = bytes32(it.next().toUint());
             else if (idx == 5) res.txs_root_hash = bytes32(it.next().toUint());
-            else if (idx == 6) res.receipts_root_root = bytes32(it.next().toUint());
+            else if (idx == 6) res.receipts_root_hash = bytes32(it.next().toUint());
             else if (idx == 7) res.prev_state_root = bytes32(it.next().toUint());
             else if (idx == 8) res.block_merkle_root = bytes32(it.next().toUint());
             else it.next();
