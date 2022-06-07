@@ -17,11 +17,11 @@ contract TDao is Governor, GovernorCompatibilityBravo, GovernorVotes, GovernorVo
     {}
 
     function votingDelay() public pure override returns (uint256) {
-        return 1; // 1 day
+        return 1; // test, should be 1 day
     }
 
     function votingPeriod() public pure override returns (uint256) {
-        return 5; // 1 week
+        return 4; // test, should be 1 week
     }
 
     function proposalThreshold() public pure override returns (uint256) {
@@ -63,7 +63,6 @@ contract TDao is Governor, GovernorCompatibilityBravo, GovernorVotes, GovernorVo
         returns (uint256)
     {
         uint256 proposalId = super.propose(targets, values, calldatas, description);
-        console.logUint(proposalId);
         return proposalId;
     }
 
@@ -88,7 +87,6 @@ contract TDao is Governor, GovernorCompatibilityBravo, GovernorVotes, GovernorVo
     }
 
     function castVote(uint256 proposalId, uint8 support) public override(Governor,IGovernor) returns (uint256) {
-        console.logUint(proposalId);
         return super.castVote(proposalId, support);
     }
 
