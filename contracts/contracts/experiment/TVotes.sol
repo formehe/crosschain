@@ -20,9 +20,6 @@ contract TVotes is ERC20, ERC20Permit, ERC20Votes {
         internal
         override(ERC20, ERC20Votes)
     {
-        console.logAddress(from);
-        console.logAddress(to);
-        console.logUint(amount);
         super._afterTokenTransfer(from, to, amount);
     }
 

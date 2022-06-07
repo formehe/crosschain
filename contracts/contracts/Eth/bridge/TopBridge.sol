@@ -31,9 +31,9 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     uint256 public lockEthAmount;
 
     Epoch thisEpoch;
-    mapping(bytes32 => bool) public blockHashes;
+    mapping(uint64 => bytes32) public blockHashes;
     mapping(uint64 => bytes32) public blockMerkleRoots;
-    mapping(uint64 => bool) public blockHeights;
+    mapping(bytes32 => uint64) public blockHeights;
     mapping(address => uint256) public balanceOf;
 
     struct Epoch {
@@ -83,9 +83,9 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         // require(topBlock.next_bps.some, "Initialization block must contain next_bps");
         // setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
-        blockHashes[topBlock.block_hash] = true;
+        blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-        blockHeights[topBlock.inner_lite.height] = true;
+        blockHeights[topBlock.block_hash] = topBlock.inner_lite.height;
         maxMainHeight = topBlock.inner_lite.height;
     }
 
@@ -129,7 +129,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
 
-        require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
+        // require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
 
         // require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
         // uint256 votedFor = 0;
@@ -160,9 +160,9 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         //     setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
         // }
 
-        blockHashes[topBlock.block_hash] = true;
+        blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-        blockHeights[topBlock.inner_lite.height] = true;
+        blockHeights[topBlock.block_hash] = topBlock.inner_lite.height;
 
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;

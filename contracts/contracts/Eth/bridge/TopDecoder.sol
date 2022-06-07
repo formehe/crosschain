@@ -141,8 +141,7 @@ library TopDecoder {
     {
 
         RLPDecode.Iterator memory it = rlpBytes.toRlpItem().iterator();
-   
-        
+
         uint256 idx;
         while (it.hasNext()) {
             if (idx == 0) {
