@@ -53,8 +53,6 @@ contract LockerProxy is Locker,TransferedQuotas{
 
         _grantRole(OWNER_ROLE,_owner);
         _grantRole(WITHDRAWAL_ROLE,_owner);
-
-       
     } 
 
     function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) external onlyRole(OWNER_ROLE) returns (bool) {
