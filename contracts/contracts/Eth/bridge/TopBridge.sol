@@ -115,16 +115,17 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     }
 
     /// @dev Batch synchronous  
-    function batchAddLightClientBlock(bytes memory data) public addLightClientBlock_able{
+    function addLightClientBlocks(bytes memory data) public override addLightClientBlock_able{
+        require(initialized, "Contract is not initialized");
         RLPDecode.Iterator memory it = data.toRlpItem().iterator();
         while (it.hasNext()) {
             bytes memory _bytes = it.next().toBytes();
             addLightClientBlock(_bytes);
-        }    
+        }
     }
 
-    function addLightClientBlock(bytes memory data) public override addLightClientBlock_able {
-        require(initialized, "Contract is not initialized");
+    function addLightClientBlock(bytes memory data) private {
+        
         //  require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
 
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);

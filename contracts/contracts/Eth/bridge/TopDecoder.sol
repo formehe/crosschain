@@ -24,8 +24,9 @@ library TopDecoder {
 
     struct OptionalBlockProducers {
        bool some;
-        BlockProducer[] blockProducers;
-        bytes32 bp_hash; // Additional computable element
+       uint64 epochId;
+       BlockProducer[] blockProducers;
+       bytes32 bp_hash; // Additional computable element
     }
 
     struct Signature {

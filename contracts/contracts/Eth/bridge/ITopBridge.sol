@@ -12,5 +12,5 @@ interface ITopBridge {
 
     function initWithBlock(bytes calldata data) external;
 
-    function addLightClientBlock(bytes calldata data) external;
+    function addLightClientBlocks(bytes calldata data) external;
 }
