@@ -79,6 +79,13 @@ describe("TDao", function () {
 
         // // const tx = await tdao.connect(user).proposalSnapshot(128)
         // const tx = await tdao.connect(deployer).propose([erc20Sample.address], [0], [buff], 'abc')
+
+        TopBridgeCon =  await hre.ethers.getContractFactory("TopBridge", deployer)
+        TopBridgeContract = await TopBridgeCon.deploy()
+        await TopBridgeContract.deployed()
+        TopBridgeContract.connect(deployer).initialize(1, user.address)
+
+        console.log("+++++++++++++TopBridge+++++++++++++++ ", TopBridgeContract.address)
     })
 
     it('TDao Test', async () => {
@@ -111,4 +118,15 @@ describe("TDao", function () {
             console.log(e)
         }
     })
+
+    it('Bridge, batch', async () => {
+        // //deploy TRC20
+        // const tx = await tdao.connect(user1).updateTimelock("0x0000000000000000000000000000000000000000")
+         try {
+             const data = '0xf9029eb9029b00f90297b86d00f86a7b8201c882350ba0c45f950382d542169ea207959ee0220ec1491755abe405cd7498d6b16adb6df8a0d25688cf0ab10afa1a0e2dba7853ed5f1e5bf1c631757ed4e103b593ff3f5620a0e3f407f83fc012470c26a93fdff534100f2c6f736439ce0ca90e9914f7d1c381a0cda1f407f83fc012470c26a93fdff534100f2c6f736439ce0ca9acbde1234567f9012864f90124f847a0b72d55c76bd8f477f4b251763c33f75e6f5f5dd8af071e711e0cb9b2accc70eaa0b72d55c76bd8f477f4b251763c33f75e6f5f5dd8af071e711e0cb9b2accc70ea8412345678f847a0b72d55c76bd8f477f4b251763c33f75e6f5f5dd8af071e711e0cb9b2accc70eaa0b72d55c76bd8f477f4b251763c33f75e6f5f5dd8af071e711e0cb9b2accc70ea8412345678f847a0b72d55c76bd8f477f4b251763c33f75e6f5f5dd8af071e711e0cb9b2accc70eaa0b72d55c76bd8f477f4b251763c33f75e6f5f5dd8af071e711e0cb9b2accc70ea8412345678f847a0b72d55c76bd8f477f4b251763c33f75e6f5f5dd8af071e711e0cb9b2accc70eaa0b72d55c76bd8f477f4b251763c33f75e6f5f5dd8af071e711e0cb9b2accc70ea8412345678f8daf84601f843a04f89ece0f576ba39123456789123456781604b97cf3baa922b010a758d303842a04f812345678abcdef1234ba19a44d94601604b97cf3baa922b010a758d30384201f84601f843a04f89ece0f576ba39123456789123456781604b97cf3baa922b010a758d303842a04f812345678abcdef1234ba19a44d94601604b97cf3baa922b010a758d30384201c180f84601f843a04f89ece0f576ba39123456789123456781604b97cf3baa922b010a758d303842a04f812345678abcdef1234ba19a44d94601604b97cf3baa922b010a758d30384201'
+             await TopBridgeContract.connect(user).addLightClientBlocks(data);
+         } catch (e) {
+             console.log(e)
+         }
+     })
 })

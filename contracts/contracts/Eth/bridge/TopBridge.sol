@@ -117,7 +117,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     /// @dev Batch synchronous  
     function addLightClientBlocks(bytes memory data) public override addLightClientBlock_able{
         require(initialized, "Contract is not initialized");
-        RLPDecode.Iterator memory it = data.toRlpItem().iterator();
+        RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
         while (it.hasNext()) {
             bytes memory _bytes = it.next().toBytes();
             addLightClientBlock(_bytes);
@@ -125,11 +125,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     }
 
     function addLightClientBlock(bytes memory data) private {
-        
         //  require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
-
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
-
         require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
 
         // require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
