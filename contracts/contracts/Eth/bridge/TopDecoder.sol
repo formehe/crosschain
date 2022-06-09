@@ -102,13 +102,13 @@ library TopDecoder {
     {
         res.bp_hash = sha256(abi.encodePacked(itemBytes.toBytes()));
         if (itemBytes.isList()) {
-            res.some = true;
             console.logBytes(itemBytes.toBytes());
             RLPDecode.Iterator memory it = itemBytes.iterator();
             uint256 idx;
             while (it.hasNext()) {
                 if (idx == 0) res.epochId = uint64(it.next().toUint());
                 else if (idx == 1) {
+                    res.some = true;
                     RLPDecode.RLPItem memory item = it.next();
                     RLPDecode.RLPItem[] memory ls = item.toList();
                     if (ls.length > 0) {                       
@@ -207,10 +207,11 @@ library TopDecoder {
             idx++;
         }
 
-        bytes[] memory raw_list = new bytes[](3);
-        raw_list[0] = RLPEncode.encodeBytes(abi.encodePacked(res.inner_lite.inner_hash));
-        raw_list[1] = RLPEncode.encodeBytes(abi.encodePacked(res.prev_block_hash));
-        raw_list[2] = RLPEncode.encodeBytes(abi.encodePacked(res.next_bps.bp_hash));
+        bytes[] memory raw_list = new bytes[](4);
+        raw_list[0] = RLPEncode.encodeUint(abi.encodePacked(res.version));
+        raw_list[1] = RLPEncode.encodeBytes(abi.encodePacked(res.inner_lite.inner_hash));
+        raw_list[2] = RLPEncode.encodeBytes(abi.encodePacked(res.prev_block_hash));
+        raw_list[3] = RLPEncode.encodeBytes(abi.encodePacked(res.next_bps.bp_hash));
         bytes memory  hash_raw = RLPEncode.encodeList(raw_list);
 
         //calc innter hash
