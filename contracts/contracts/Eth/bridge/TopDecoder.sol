@@ -208,7 +208,7 @@ library TopDecoder {
         }
 
         bytes[] memory raw_list = new bytes[](4);
-        raw_list[0] = RLPEncode.encodeUint(abi.encodePacked(res.version));
+        raw_list[0] = RLPEncode.encodeUint(res.version);
         raw_list[1] = RLPEncode.encodeBytes(abi.encodePacked(res.inner_lite.inner_hash));
         raw_list[2] = RLPEncode.encodeBytes(abi.encodePacked(res.prev_block_hash));
         raw_list[3] = RLPEncode.encodeBytes(abi.encodePacked(res.next_bps.bp_hash));
