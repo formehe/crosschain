@@ -30,7 +30,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     address public lastSubmitter;
     uint256 public lockEthAmount;
 
-    Epoch thisEpoch;
+    Epoch  public thisEpoch;
     mapping(bytes32 => bool) public blockHashes;
     mapping(uint64 => bytes32) public blockMerkleRoots;
     mapping(uint64 => bool) public blockHeights;
@@ -81,8 +81,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
 
-        // require(topBlock.next_bps.some, "Initialization block must contain next_bps");
-        // setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
+        require(topBlock.next_bps.some, "Initialization block must contain next_bps");
+        setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.inner_lite.height] = true;
@@ -120,16 +120,17 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
         while (it.hasNext()) {
             bytes memory _bytes = it.next().toBytes();
-            addLightClientBlock(_bytes);
+            addLightClientBlock1(_bytes);
         }
     }
 
-    function addLightClientBlock(bytes memory data) private {
+    function addLightClientBlock(bytes memory data) internal {
         //  require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
         require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
 
-        // require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
+        //require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
+
         // uint256 votedFor = 0;
         // for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i != cnt; ++i) {
         //     bytes32 stakes = thisEpoch.packedStakes[i >> 1];
@@ -144,19 +145,53 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         //         votedFor += uint128(uint256(stakes));
         //     }
         // }
-        // require(votedFor > thisEpoch.stakeThreshold, "Too few approvals");
-        
-        // for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
-        //     TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
-        //     if (approval.some) {
-        //        bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
-        //        require(success);
-        //     }
-        // }
 
-        // if (topBlock.next_bps.some) {
-        //     setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
-        // }
+        require(topBlock.approvals_after_next.length > thisEpoch.stakeThreshold, "Too few approvals");
+        
+        for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
+            TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
+            if (approval.some) {
+               bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
+               require(success);
+            }
+        }
+
+        if (topBlock.next_bps.some) {
+            setBlockProducers(topBlock.next_bps.blockProducers, thisEpoch);
+        }
+
+        blockHashes[topBlock.block_hash] = true;
+        blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
+        blockHeights[topBlock.inner_lite.height] = true;
+
+        lastSubmitter = msg.sender;
+        maxMainHeight = topBlock.inner_lite.height;
+    }
+        
+    function addLightClientBlock1(bytes memory data) internal {
+        //  require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
+        TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
+        require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
+
+        uint votedFor = 0;
+        uint256 approvalsLength = topBlock.approvals_after_next.length;
+        for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
+
+            for (uint j = 0; j < approvalsLength; j++) {
+                 TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[j];
+                 bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
+                 if(success){
+                    votedFor++;
+                 }
+
+            }
+        }
+
+        require(votedFor >= 1, "Too few approvals");
+
+        if (topBlock.next_bps.some) {
+            setBlockProducers1(topBlock.next_bps.blockProducers, thisEpoch);
+        }
 
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
@@ -166,7 +201,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         maxMainHeight = topBlock.inner_lite.height;
     }
 
-    
+    uint256  public  x;
+    uint256  public  y;
     function setBlockProducers(TopDecoder.BlockProducer[] memory src, Epoch storage epoch) internal {
         uint cnt = src.length;
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
@@ -174,6 +210,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         unchecked {
             for (uint i = 0; i < cnt; i++) {
                 epoch.keys[i] = src[i].publicKey;
+                x = src[2].publicKey.x;
+                y = src[2].publicKey.y;
             }
             uint256 totalStake = 0; // Sum of uint128, can't be too big.
             for (uint i = 0; i != cnt; ++i) {
@@ -189,6 +227,19 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             }
             epoch.stakeThreshold = (totalStake * 2) / 3;
         }
+    }
+
+    function setBlockProducers1(TopDecoder.BlockProducer[] memory src, Epoch storage epoch) internal {
+        uint cnt = src.length;
+        require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
+        epoch.numBPs = cnt;
+        unchecked {
+            for (uint i = 0; i < cnt; i++) {
+                epoch.keys[i] = src[i].publicKey;
+            }
+            epoch.stakeThreshold = (cnt * 2) / 3;
+        }
+        
     }
 
     modifier addLightClientBlock_able(){
