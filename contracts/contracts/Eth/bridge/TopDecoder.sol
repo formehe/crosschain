@@ -15,6 +15,7 @@ library TopDecoder {
     struct SECP256K1PublicKey {
         uint256 x;
         uint256 y;
+        address signer; //additional
     }
 
     struct BlockProducer {
@@ -26,7 +27,7 @@ library TopDecoder {
        bool some;
        uint64 epochId;
        BlockProducer[] blockProducers;
-       bytes32 bp_hash; // Additional computable element
+    //    bytes32 bp_hash; // Additional computable element
     }
 
     struct Signature {
@@ -85,14 +86,14 @@ library TopDecoder {
                         idx1++;
                     }
 
-                    // console.log("OptionalSignature's signature r s v:", uint(res.signature.r), uint(res.signature.s), uint(res.signature.v));
+                    console.log("OptionalSignature's signature r s v:", uint(res.signature.r), uint(res.signature.s), uint(res.signature.v));
                 }
             } else it.next();
 
             idx++;
         }
 
-        // console.log("OptionalSignature's some:", res.some);
+        console.log("OptionalSignature's some:", res.some);
     }
 
     function decodeOptionalBlockProducers(RLPDecode.RLPItem memory itemBytes)
@@ -100,9 +101,9 @@ library TopDecoder {
         view
         returns (OptionalBlockProducers memory res)
     {
-        res.bp_hash = sha256(abi.encodePacked(itemBytes.toBytes()));
+        console.logBytes(itemBytes.toBytes());
+        // res.bp_hash = sha256(abi.encodePacked(itemBytes.toBytes()));
         if (itemBytes.isList()) {
-            console.logBytes(itemBytes.toBytes());
             RLPDecode.Iterator memory it = itemBytes.iterator();
             uint256 idx;
             while (it.hasNext()) {
@@ -118,6 +119,7 @@ library TopDecoder {
                             res.blockProducers[i].publicKey.x = items[0].toUint();
                             res.blockProducers[i].publicKey.y = items[1].toUint();
                             res.blockProducers[i].stake = uint128(items[2].toUint());
+                            res.blockProducers[i].publicKey.signer = address(uint160(uint256(keccak256(abi.encodePacked(res.blockProducers[i].publicKey.x, res.blockProducers[i].publicKey.y)))));
                             console.log("OptionalBlockProducers producer's publickey x:", uint(res.blockProducers[i].publicKey.x));
                             console.log("OptionalBlockProducers producer's publickey y:", uint(res.blockProducers[i].publicKey.y));
                             console.log("OptionalBlockProducers producer's stake:", uint(res.blockProducers[i].stake));
@@ -127,7 +129,6 @@ library TopDecoder {
 
                 idx++;
             }
-            console.log("OptionalBlockProducers bp_hash:", uint(res.bp_hash));
             console.log("OptionalBlockProducers epoch id:", uint(res.epochId));
         }
     }
@@ -162,6 +163,7 @@ library TopDecoder {
         }
 
         console.log("inner header's hash:", uint(res.inner_hash));
+        console.logBytes32(res.inner_hash);
         console.log("inner header's version:", uint(res.version));
         console.log("inner header's height:", uint(res.height));
         console.log("inner header's epochId:", uint(res.epoch_id));
@@ -181,7 +183,10 @@ library TopDecoder {
             byte0 := byte(0, mload(add(rlpBytes, 0x20)))
         }
 
+        console.logBytes(rlpBytes);
+
         res.version = uint8(byte0);
+        RLPDecode.RLPItem memory bp;
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpBytes, 1).iterator();
         uint256 idx;
         while (it.hasNext()) {
@@ -190,7 +195,8 @@ library TopDecoder {
             } else if (idx == 1) {
                 res.prev_block_hash = bytes32(it.next().toUint());
             } else if (idx == 2) {
-                res.next_bps = decodeOptionalBlockProducers(it.next());
+                bp = it.next();
+                res.next_bps = decodeOptionalBlockProducers(bp);
             } else if (idx == 3) {
                 RLPDecode.RLPItem memory sig_item = it.next();
                 if (sig_item.numItems() > 0) {
@@ -211,13 +217,23 @@ library TopDecoder {
         raw_list[0] = RLPEncode.encodeUint(res.version);
         raw_list[1] = RLPEncode.encodeBytes(abi.encodePacked(res.inner_lite.inner_hash));
         raw_list[2] = RLPEncode.encodeBytes(abi.encodePacked(res.prev_block_hash));
-        raw_list[3] = RLPEncode.encodeBytes(abi.encodePacked(res.next_bps.bp_hash));
+        bytes[] memory raw_list1;
+        if (res.next_bps.some) {
+            raw_list1 = new bytes[](1);
+            raw_list1[0] = bp.toBytes();
+            raw_list[3] = RLPEncode.encodeList(raw_list1);
+        } else {
+            raw_list[3] = RLPEncode.encodeList(raw_list1);
+        }
+
         bytes memory  hash_raw = RLPEncode.encodeList(raw_list);
+        console.logBytes(hash_raw);
 
         //calc innter hash
         res.block_hash = keccak256(abi.encodePacked(hash_raw));
         console.log("header's version:", uint(res.version));
         console.log("header's prev block hash:", uint(res.prev_block_hash));
         console.log("header's block_hash:", uint(res.block_hash));
+        console.logBytes32(res.block_hash);
     }
 }
