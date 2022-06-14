@@ -26,11 +26,8 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
     {
         require((fromAssetHash != address(0)) && (receiver != address(0)));
         require(amount != 0, "amount can not be 0");
-        require(
-            (IERC20(fromAssetHash).balanceOf(address(this)) + amount) <= ((uint256(1) << 128) - 1),
-            "Maximum tokens locked exceeded (< 2^128 - 1)");
         checkTransferedQuota(fromAssetHash,amount);    
-        address toAssetHash = assetHashMap[fromAssetHash].toAssetHash;
+        address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         IERC20(fromAssetHash).safeTransferFrom(msg.sender, address(this), amount);
 

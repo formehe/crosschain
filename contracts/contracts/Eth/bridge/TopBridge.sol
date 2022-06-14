@@ -45,8 +45,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         uint256 stakeThreshold;
     }
     
-    //keccak256("ADDBLOCK.ROLE")
-    bytes32 constant public ADDBLOCK_ROLE = 0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86;
+    bytes32 constant public ADDBLOCK_ROLE = keccak256("ADDBLOCK_ROLE");
     
     function initialize(
         uint256 _lockEthAmount,
@@ -106,14 +105,13 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     function _checkValidatorSignature(
         bytes32 block_hash,
         TopDecoder.Signature memory signature,
-        TopDecoder.SECP256K1PublicKey storage publicKey
-    ) internal view returns(bool) {
-        return ecrecover(
-            block_hash,
-            signature.v + (signature.v < 27 ? 27 : 0),
-            signature.r,
-            signature.s
-            ) == address(uint160(uint256(keccak256(abi.encodePacked(publicKey.x, publicKey.y)))));
+        TopDecoder.SECP256K1PublicKey memory publicKey
+    ) internal pure returns(bool) {
+        uint8  _v = signature.v + (signature.v < 27 ? 27 : 0);
+        bytes memory signatureBytes = abi.encodePacked(signature.r,signature.s,_v);
+        (address _address,) = ECDSA.tryRecover(block_hash,signatureBytes);
+        return _address == publicKey.signer;
+
     }
 
     /// @dev Batch synchronous  
@@ -131,22 +129,22 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
         require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
 
-        //require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
+        require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
 
-        // uint256 votedFor = 0;
-        // for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i != cnt; ++i) {
-        //     bytes32 stakes = thisEpoch.packedStakes[i >> 1];
-        //     if (topBlock.approvals_after_next[i].some) {
-        //         votedFor += uint128(bytes16(stakes));
-        //     }
+        uint256 votedFor = 0;
+        for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i != cnt; ++i) {
+            bytes32 stakes = thisEpoch.packedStakes[i >> 1];
+            if (topBlock.approvals_after_next[i].some) {
+                votedFor += uint128(bytes16(stakes));
+            }
 
-        //     if (++i == cnt) {
-        //         break;
-        //     }
-        //     if (topBlock.approvals_after_next[i].some) {
-        //         votedFor += uint128(uint256(stakes));
-        //     }
-        // }
+            if (++i == cnt) {
+                break;
+            }
+            if (topBlock.approvals_after_next[i].some) {
+                votedFor += uint128(uint256(stakes));
+            }
+        }
 
         require(topBlock.approvals_after_next.length > thisEpoch.stakeThreshold, "Too few approvals");
         
@@ -189,7 +187,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             }
         }
 
-        require(votedFor >= 1, "Too few approvals");
+        require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
 
         if (topBlock.next_bps.some) {
             setBlockProducers1(topBlock.next_bps.blockProducers, thisEpoch);
@@ -202,6 +200,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;
     }
+
     function setBlockProducers(TopDecoder.BlockProducer[] memory src, Epoch storage epoch) internal {
         uint cnt = src.length;
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
@@ -222,7 +221,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
                 totalStake += stake2;
                 epoch.packedStakes[i >> 1] = bytes32(uint256(bytes32(bytes16(stake1))) + stake2);
             }
-            epoch.stakeThreshold = (totalStake * 2) / 3;
+            epoch.stakeThreshold = (totalStake * 2 + 3 -1) / 3;
         }
     }
 
@@ -234,7 +233,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             for (uint i = 0; i < cnt; i++) {
                 epoch.keys[i] = src[i].publicKey;
             }
-            epoch.stakeThreshold = (cnt * 2) / 3;
+            epoch.stakeThreshold = (cnt * 2 + 3 -1) / 3;
         }
         
     }

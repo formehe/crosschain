@@ -64,9 +64,9 @@ contract LockerProxy is Locker,TransferedQuotas{
             require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
         }
    
-        assetHashMap[_fromAssetHash] = ToAddressHash({
-            toAssetHash:_toAssetHash,
-            peerLockProxyHash:_peerLockProxyHash
+        assets[_fromAssetHash] = ToAddressHash({
+            assetHash:_toAssetHash,
+            lockProxyHash:_peerLockProxyHash
         });
         emit BindAsset(_fromAssetHash, _toAssetHash,_peerLockProxyHash);
         return true;

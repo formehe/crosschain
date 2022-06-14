@@ -28,7 +28,7 @@ contract EthLocker is ITokenLocker,LockerProxy{
         lockToken_pauseable
     {
         require(fromAssetHash == address(0), "from asset address must be zero");
-        address toAssetHash = assetHashMap[fromAssetHash].toAssetHash;
+        address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         require(amount != 0, "amount cannot be zero");
         checkTransferedQuota(fromAssetHash,amount);  
