@@ -24,7 +24,7 @@ library TopDecoder {
     }
 
     struct OptionalBlockProducers {
-       bool some;
+       bool some; 
        uint64 epochId;
        BlockProducer[] blockProducers;
     //    bytes32 bp_hash; // Additional computable element

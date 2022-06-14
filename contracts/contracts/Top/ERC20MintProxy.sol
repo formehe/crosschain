@@ -33,7 +33,7 @@ contract ERC20MintProxy is VerifierUpgradeable, TransferedQuotas {
         bool    existed;
     }
 
-    mapping(address => ProxiedAsset) private assets;
+    mapping(address => ProxiedAsset) public assets;
 
     function bindAssetHash(
         address localAssetHash, 

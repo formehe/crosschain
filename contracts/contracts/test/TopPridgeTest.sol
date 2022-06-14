@@ -34,7 +34,7 @@ contract TopPridgeTest is TopBridge{
     /// @dev add block
     function addLightClientBlockTest(bytes memory data) public{
         require(initialized, "Contract is not initialized");
-        addLightClientBlock1(data);
+        addLightClientBlock(data);
     }
 
 
