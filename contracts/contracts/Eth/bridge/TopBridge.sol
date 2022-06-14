@@ -8,6 +8,7 @@ import "./TopDecoder.sol";
 import "hardhat/console.sol";
 import "../../../lib/external_lib/RLPDecode.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     using RLPDecode for bytes;
@@ -100,7 +101,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         res.currentHeight = maxMainHeight;
         res.numBlockProducers = thisEpoch.numBPs;
     }
-
+    
     function _checkValidatorSignature(
         bytes32 block_hash,
         TopDecoder.Signature memory signature,
@@ -176,7 +177,6 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         uint votedFor = 0;
         uint256 approvalsLength = topBlock.approvals_after_next.length;
         for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
-
             for (uint j = 0; j < approvalsLength; j++) {
                  TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[j];
                  bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
@@ -200,9 +200,6 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;
     }
-
-    uint256  public  x;
-    uint256  public  y;
     function setBlockProducers(TopDecoder.BlockProducer[] memory src, Epoch storage epoch) internal {
         uint cnt = src.length;
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
@@ -210,8 +207,6 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         unchecked {
             for (uint i = 0; i < cnt; i++) {
                 epoch.keys[i] = src[i].publicKey;
-                x = src[2].publicKey.x;
-                y = src[2].publicKey.y;
             }
             uint256 totalStake = 0; // Sum of uint128, can't be too big.
             for (uint i = 0; i != cnt; ++i) {
