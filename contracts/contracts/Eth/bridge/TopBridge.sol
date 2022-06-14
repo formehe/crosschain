@@ -101,7 +101,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         res.currentHeight = maxMainHeight;
         res.numBlockProducers = thisEpoch.numBPs;
     }
-    
+
     function _checkValidatorSignature(
         bytes32 block_hash,
         TopDecoder.Signature memory signature,
@@ -168,7 +168,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;
     }
-        
+
+
     function addLightClientBlock1(bytes memory data) internal {
         //  require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);

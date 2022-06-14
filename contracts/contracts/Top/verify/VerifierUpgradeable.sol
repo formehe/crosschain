@@ -25,7 +25,7 @@ abstract contract VerifierUpgradeable is Initializable {
     uint constant PAUSED_MINT = 1 << 1;
 
     IEthProver private prover;
-    address private lockProxyHash;
+    address public lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
     mapping(bytes32 => bool) public usedProofs;
 
