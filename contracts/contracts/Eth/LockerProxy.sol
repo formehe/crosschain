@@ -13,8 +13,10 @@ contract LockerProxy is Locker,TransferedQuotas{
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
     bool public isEth;
-    bytes32 constant public BLACK_UN_LOCK_ROLE = keccak256("BLACK_UN_LOCK_ROLE");
-    bytes32 constant public BLACK_LOCK_ROLE = keccak256("BLACK_LOCK_ROLE");
+    //keccak256("BLACK.UN.LOCK.ROLE")
+    bytes32 constant public BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
+    //keccak256("BLACK.LOCK.ROLE")
+    bytes32 constant public BLACK_LOCK_ROLE = 0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4;
     event Locked (
         address indexed fromToken,
         address indexed toToken,

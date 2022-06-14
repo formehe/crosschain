@@ -44,7 +44,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         uint256 stakeThreshold;
     }
     
-    bytes32 constant public ADDBLOCK_ROLE = keccak256("ADDBLOCK_ROLE");
+    //keccak256("ADDBLOCK.ROLE")
+    bytes32 constant public ADDBLOCK_ROLE = 0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86;
     
     function initialize(
         uint256 _lockEthAmount,

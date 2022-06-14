@@ -24,6 +24,6 @@ abstract contract TransferedQuota is AdminControlledUpgradeable{
         uint256 _amount
     ) internal view {
        require(_amount >= tokenQuota.minTransferedToken, "the amount of transfered is overflow");
-       require(_amount <= tokenQuota.maxTransferedToken, "the amount of transfered is overflow");
+       require(_amount <= tokenQuota.maxTransferedToken, "the amount of transfered is downflow");
     }
 }
