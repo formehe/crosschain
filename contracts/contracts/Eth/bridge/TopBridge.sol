@@ -243,37 +243,25 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     // }
 
     function setBlockProducers(TopDecoder.BlockProducer[] memory src,uint64 epochId) internal {
-        Epoch memory epoch;
+        Epoch storage epoch0 = epochs[0];
+        Epoch storage epoch1 = epochs[1];
+        if(epoch0.numBPs != 0){
+            epochs[0] = epochs[1];
+        }
         uint cnt = src.length;
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
-        epoch.epochId = epochId;
-        epoch.numBPs = cnt;
+        epoch1.epochId = epochId;
+        epoch1.numBPs = cnt;
+
+        delete epoch1.keys;
         unchecked {
             for (uint i = 0; i < cnt; i++) {
-                epoch.keys[i] = src[i].publicKey;
+                epoch1.keys[i] = src[i].publicKey;
             }
-            epoch.stakeThreshold = (cnt * 2 + 3 -1) / 3;
-        }
-
-        addEpochs(epoch);
-    }
-    
-    /// @dev add Epochs 
-    function addEpochs(Epoch memory epoch) private{
-        epochs[0] = epochs[1];
-        Epoch storage epoch1 = epochs[1];
-        epoch1.numBPs = epoch.numBPs;
-        epoch1.packedStakes = epoch.packedStakes;
-        epoch1.stakeThreshold = epoch.stakeThreshold;
-        epoch1.epochId = epoch.epochId;
-  
-        delete epoch1.keys;
-        uint cnt = epoch.keys.length;
-        for (uint i = 0; i < cnt; i++) {
-            epoch1.keys[i] = epoch.keys[i];
+            epoch1.stakeThreshold = (cnt * 2 + 3 -1) / 3;
         }
     }
-    
+ 
     /// @dev Gets the validated election block
     function getValidationEpoch(uint64 epochId) private view returns(Epoch memory epoch){
         uint cnt = epochs.length;
@@ -283,6 +271,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
                 break;
             }
         }
+        require(epoch.numBPs > 0 ,"without numBPs");
         return epoch;
     }
 

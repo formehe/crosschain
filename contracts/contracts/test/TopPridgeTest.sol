@@ -51,6 +51,21 @@ contract TopPridgeTest is TopBridge{
         return returnEpochs;
     } 
 
+    function addEpochsTest(Epoch memory epoch) public{
+        epochs[0] = epochs[1];
+        Epoch storage epoch1 = epochs[1];
+        epoch1.numBPs = epoch.numBPs;
+        epoch1.packedStakes = epoch.packedStakes;
+        epoch1.stakeThreshold = epoch.stakeThreshold;
+        epoch1.epochId = epoch.epochId;
+  
+        delete epoch1.keys;
+        uint cnt = epoch.keys.length;
+        for (uint i = 0; i < cnt; i++) {
+            epoch1.keys[i] = epoch.keys[i];
+        }
+    }
+
     function getValidationEpochTest(uint64 epochId) public view returns(Epoch memory epoch){
         uint cnt = epochs.length;
         for (uint i = cnt-1; i >= 0; i--) {
@@ -72,7 +87,7 @@ contract TopPridgeTest is TopBridge{
             v + (v < 27 ? 27 : 0),
             r,
             s
-            ) == address(uint160(uint256(keccak256(abi.encodePacked(x,y)))));
+        ) == address(uint160(uint256(keccak256(abi.encodePacked(x,y)))));
     }
 
 }
