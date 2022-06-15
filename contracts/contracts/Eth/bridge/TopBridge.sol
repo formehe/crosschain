@@ -251,7 +251,10 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         epoch1.epochId = epochId;
         epoch1.numBPs = cnt;
 
-        delete epoch1.keys;
+        for (uint i = 0; i < cnt; i++) {
+            delete epoch1.keys[i];
+        }
+
         unchecked {
             for (uint i = 0; i < cnt; i++) {
                 epoch1.keys[i] = src[i].publicKey;
