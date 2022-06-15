@@ -31,7 +31,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     address public lastSubmitter;
     uint256 public lockEthAmount;
 
-    Epoch[] public epochs;
+    Epoch[2] internal epochs;
 
     mapping(bytes32 => bool) public blockHashes;
     mapping(uint64 => bytes32) public blockMerkleRoots;
@@ -61,8 +61,6 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         _setRoleAdmin(ADDBLOCK_ROLE, OWNER_ROLE);
         _grantRole(OWNER_ROLE,_owner);
         _grantRole(ADDBLOCK_ROLE,_owner);
-
-        initEpochs();
 
     }
 
@@ -260,19 +258,9 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         addEpochs(epoch);
     }
     
-    /// @dev init Epochs 
-    function initEpochs() private{
-        epochs.push();
-        epochs.push();
-    }
-
     /// @dev add Epochs 
     function addEpochs(Epoch memory epoch) private{
         epochs[0] = epochs[1];
-
-        epochs.pop();
-        epochs.push();
-
         Epoch storage epoch1 = epochs[1];
         epoch1.numBPs = epoch.numBPs;
         epoch1.packedStakes = epoch.packedStakes;
