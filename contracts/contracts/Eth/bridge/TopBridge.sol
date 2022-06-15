@@ -203,6 +203,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
 
         if (topBlock.next_bps.some) {
+            require(topBlock.next_bps.epochId == epochs[1].epochId + 1 ,"Failure of the epochId");
             setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId);
         }
 
@@ -236,7 +237,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     //             totalStake += stake2;
     //             epoch.packedStakes[i >> 1] = bytes32(uint256(bytes32(bytes16(stake1))) + stake2);
     //         }
-    //         epoch.stakeThreshold = (totalStake * 2 + 3 -1) / 3;
+    //         epoch.stakeThreshold = (totalStake * 2 + 2) / 3;
 
     //     }
     //     addEpochs(epoch);
@@ -244,9 +245,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     function setBlockProducers(TopDecoder.BlockProducer[] memory src,uint64 epochId) internal {
         Epoch storage epoch1 = epochs[1];
-        require(epochId > epoch1.epochId ,"Failure of the epochId");
         epochs[0] = epochs[1];
-
         uint cnt = src.length;
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
         epoch1.epochId = epochId;
@@ -257,7 +256,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             for (uint i = 0; i < cnt; i++) {
                 epoch1.keys[i] = src[i].publicKey;
             }
-            epoch1.stakeThreshold = (cnt * 2 + 3 -1) / 3;
+            epoch1.stakeThreshold = (cnt * 2 + 2) / 3;
         }
     }
  
