@@ -252,7 +252,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         epoch1.epochId = epochId;
         epoch1.numBPs = cnt;
 
-        for (uint i = 0; i < cnt; i++) {
+        for (uint i = 0; i < MAX_BLOCK_PRODUCERS; i++) {
             delete epoch1.keys[i];
         }
 
@@ -272,6 +272,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
                 epoch = epochs[i];
                 break;
             }
+            if(i == 0) break;
         }
         require(epoch.numBPs > 0 ,"without numBPs");
         return epoch;

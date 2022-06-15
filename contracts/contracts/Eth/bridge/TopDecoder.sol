@@ -109,11 +109,11 @@ library TopDecoder {
             while (it.hasNext()) {
                 if (idx == 0) res.epochId = uint64(it.next().toUint());
                 else if (idx == 1) {
-                    res.some = true;
                     RLPDecode.RLPItem memory item = it.next();
                     RLPDecode.RLPItem[] memory ls = item.toList();
                     if (ls.length > 0) {                       
                         res.blockProducers = new BlockProducer[](ls.length);
+                        res.some = true;
                         for (uint256 i = 0; i < ls.length; i++) {
                             RLPDecode.RLPItem[] memory items = ls[i].toList();
                             res.blockProducers[i].publicKey.x = items[0].toUint();

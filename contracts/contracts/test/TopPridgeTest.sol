@@ -51,19 +51,10 @@ contract TopPridgeTest is TopBridge{
         return returnEpochs;
     } 
 
-    function addEpochsTest(Epoch memory epoch) public{
-        epochs[0] = epochs[1];
-        Epoch storage epoch1 = epochs[1];
-        epoch1.numBPs = epoch.numBPs;
-        epoch1.packedStakes = epoch.packedStakes;
-        epoch1.stakeThreshold = epoch.stakeThreshold;
-        epoch1.epochId = epoch.epochId;
-  
-        delete epoch1.keys;
-        uint cnt = epoch.keys.length;
-        for (uint i = 0; i < cnt; i++) {
-            epoch1.keys[i] = epoch.keys[i];
-        }
+    function addEpochsTest(bytes memory data) public{
+        TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
+        setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId);
+
     }
 
     function getValidationEpochTest(uint64 epochId) public view returns(Epoch memory epoch){
