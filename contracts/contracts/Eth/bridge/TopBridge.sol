@@ -277,7 +277,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     /// @dev Gets the validated election block
     function getValidationEpoch(uint64 epochId) private view returns(Epoch memory epoch){
         uint cnt = epochs.length;
-        for (uint i = 0; i < cnt; i++) {
+        for (uint i = cnt-1; i >= 0; i--) {
             if(epochs[i].epochId == epochId){
                 epoch = epochs[i];
                 break;

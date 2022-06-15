@@ -37,10 +37,30 @@ contract TopPridgeTest is TopBridge{
         addLightClientBlock(data);
     }
 
+    function getEpochs() public view returns(Epoch[] memory){
+        Epoch[] memory returnEpochs = new Epoch[](epochs.length);
+        for(uint i = 0; i < epochs.length; i++){
+           Epoch memory epoch;
+           epoch.epochId = epochs[i].epochId;
+           epoch.keys = epochs[i].keys;
+           epoch.numBPs = epochs[i].numBPs;
+           epoch.packedStakes = epochs[i].packedStakes;
+           epoch.stakeThreshold = epochs[i].stakeThreshold;
+           returnEpochs[i] = epoch;
+        }
+        return returnEpochs;
+    } 
 
-    // function checkValidatorSignature(bytes hash) public returns(bool){
-    //     _checkValidatorSignature(hash);
-    // }
+    function getValidationEpochTest(uint64 epochId) public view returns(Epoch memory epoch){
+        uint cnt = epochs.length;
+        for (uint i = cnt-1; i >= 0; i--) {
+            if(epochs[i].epochId == epochId){
+                epoch = epochs[i];
+                break;
+            }
+        }
+        return epoch;
+    }
 
     function checkValidatorSignatureTest(
         bytes32 block_hash,
