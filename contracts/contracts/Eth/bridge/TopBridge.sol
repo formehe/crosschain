@@ -195,6 +195,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
                  bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
                  if(success){
                     votedFor++;
+                    break;
                  }
 
             }
