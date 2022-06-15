@@ -244,7 +244,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     function setBlockProducers(TopDecoder.BlockProducer[] memory src,uint64 epochId) internal {
         Epoch storage epoch1 = epochs[1];
-        require(epochId > epoch1.epochId ,"without epochId");
+        require(epochId > epoch1.epochId ,"Failure of the epochId");
         epochs[0] = epochs[1];
 
         uint cnt = src.length;
