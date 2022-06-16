@@ -53,8 +53,7 @@ contract TopPridgeTest is TopBridge{
 
     function addEpochsTest(bytes memory data) public{
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
-        setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId);
-
+        setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId, topBlock.inner_lite.height);
     }
 
     function getValidationEpochTest(uint64 epochId) public view returns(Epoch memory epoch){

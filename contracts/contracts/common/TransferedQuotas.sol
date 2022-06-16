@@ -34,6 +34,6 @@ abstract contract TransferedQuotas is AdminControlledUpgradeable{
     ) internal view {
        Quota memory  quota = tokenQuotas[_asset];
        require(_amount >= quota.minTransferedToken, "the amount of transfered is overflow");
-       require(_amount <= quota.maxTransferedToken, "the amount of transfered is overflow");
+       require(_amount <= quota.maxTransferedToken, "the amount of transfered is underflow");
     }
 }

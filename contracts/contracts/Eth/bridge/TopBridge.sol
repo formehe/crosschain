@@ -32,6 +32,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     uint256 public lockEthAmount;
 
     Epoch[2] internal epochs;
+    uint private currentEpochIdex;
 
     mapping(bytes32 => bool) public blockHashes;
     mapping(uint64 => bytes32) public blockMerkleRoots;
@@ -44,6 +45,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         TopDecoder.SECP256K1PublicKey[MAX_BLOCK_PRODUCERS] keys;
         bytes32[MAX_BLOCK_PRODUCERS / 2] packedStakes;
         uint256 stakeThreshold;
+        uint64 ownerHeight;
     }
     
     bytes32 constant public ADDBLOCK_ROLE = 0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86;
@@ -84,7 +86,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
 
         require(topBlock.next_bps.some, "Initialization block must contain next_bps");
-        setBlockProducers(topBlock.next_bps.blockProducers,topBlock.next_bps.epochId);
+        setBlockProducers(topBlock.next_bps.blockProducers,topBlock.next_bps.epochId, topBlock.inner_lite.height);
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.inner_lite.height] = true;
@@ -94,6 +96,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     struct BridgeState {
         uint currentHeight; // Height of the current confirmed block
         // If there is currently no unconfirmed block, the last three fields are zero.
+        //uint currentEpochHeight;
         uint nextTimestamp; // Timestamp of the current unconfirmed block
         uint numBlockProducers; // Number of block producers for the current unconfirmed block
     }
@@ -183,13 +186,16 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     function addLightClientBlock(bytes memory data) internal {
         //  require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
-        require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
+        require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
+        require(!blockHeights[topBlock.inner_lite.height], "block is exsisted");
 
         Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);
+        console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
 
         uint votedFor = 0;
+
         uint256 approvalsLength = topBlock.approvals_after_next.length;
-        for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
+        for (uint i = 0; i < thisEpoch.numBPs; i++) {
             for (uint j = 0; j < approvalsLength; j++) {
                  TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[j];
                  bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
@@ -197,15 +203,27 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
                     votedFor++;
                     break;
                  }
-
             }
         }
+
+        console.log("vote, num bps:", votedFor, thisEpoch.stakeThreshold);
+        // for (uint i = 0; i < thisEpoch.numBPs; i++) {
+        //     TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
+        //     if (!approval.some) {
+        //         continue;
+        //     }
+
+        //     bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
+        //     if(success){
+        //         votedFor++;
+        //     }
+        // }
 
         require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
 
         if (topBlock.next_bps.some) {
-            require(topBlock.next_bps.epochId == epochs[1].epochId + 1 ,"Failure of the epochId");
-            setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId);
+            require(topBlock.next_bps.epochId == epochs[currentEpochIdex].epochId + 1 ,"Failure of the epochId");
+            setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId, topBlock.inner_lite.height);
         }
 
         blockHashes[topBlock.block_hash] = true;
@@ -244,36 +262,43 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     //     addEpochs(epoch);
     // }
 
-    function setBlockProducers(TopDecoder.BlockProducer[] memory src,uint64 epochId) internal {
-        Epoch storage epoch1 = epochs[1];
-        epochs[0] = epochs[1];
-        uint cnt = src.length;
+    function setBlockProducers(TopDecoder.BlockProducer[] memory src,uint64 epochId, uint64 blockHeight) internal {
+        uint cnt = src.length;        
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
-        epoch1.epochId = epochId;
-        epoch1.numBPs = cnt;
-
-        for (uint i = 0; i < MAX_BLOCK_PRODUCERS; i++) {
-            delete epoch1.keys[i];
+        if (currentEpochIdex == (epochs.length - 1)) {
+            currentEpochIdex = 0;
+        } else {
+            currentEpochIdex++;
         }
 
         unchecked {
             for (uint i = 0; i < cnt; i++) {
-                epoch1.keys[i] = src[i].publicKey;
+                epochs[currentEpochIdex].keys[i] = src[i].publicKey;
             }
-            epoch1.stakeThreshold = (cnt * 2 + 2) / 3;
         }
+
+        epochs[currentEpochIdex].stakeThreshold = (cnt << 1 + 2) / 3;
+        epochs[currentEpochIdex].ownerHeight = blockHeight;
+        epochs[currentEpochIdex].epochId = epochId;
+        epochs[currentEpochIdex].numBPs = cnt;
     }
  
     /// @dev Gets the validated election block
     function getValidationEpoch(uint64 epochId) private view returns(Epoch memory epoch){
         uint cnt = epochs.length;
-        for (uint i = cnt-1; i >= 0; i--) {
+        for ((uint i, uint num) = (currentEpochIdex, 0); num < cnt; num++) {
             if(epochs[i].epochId == epochId){
                 epoch = epochs[i];
                 break;
             }
-            if(i == 0) break;
+
+            if (i == (cnt - 1)) {
+                i = 0;
+            } else {
+                i++;
+            }
         }
+
         require(epoch.numBPs > 0 ,"without numBPs");
         return epoch;
     }

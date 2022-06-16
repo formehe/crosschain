@@ -114,6 +114,4 @@ contract Locker is Initializable{
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
         _contractAddress = logInfo.contractAddress;
     }
-
-
 }
