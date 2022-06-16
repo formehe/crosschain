@@ -101,18 +101,10 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         uint numBlockProducers; // Number of block producers for the current unconfirmed block
     }
 
-    function bridgeState() public view returns (BridgeState[] memory ) {
-        uint cnt = epochs.length;
-        BridgeState[] memory res = new BridgeState[](cnt);
-        for (uint i = 0; i < cnt; i++) {
-            BridgeState memory state = BridgeState({
-                currentHeight: maxMainHeight,
-                nextTimestamp:block.timestamp,
-                numBlockProducers: epochs[i].numBPs
-            });
-            res[i] = state;
-        }
-        return res;
+    function bridgeState() public view returns (BridgeState memory state) {
+        state = BridgeState(epochs[currentEpochIdex].ownerHeight,
+                block.timestamp,
+                epochs[currentEpochIdex].numBPs);
     }
 
     function _checkValidatorSignature(
@@ -277,7 +269,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             }
         }
 
-        epochs[currentEpochIdex].stakeThreshold = (cnt << 1 + 2) / 3;
+        epochs[currentEpochIdex].stakeThreshold = ((cnt << 1) + 2) / 3;
         epochs[currentEpochIdex].ownerHeight = blockHeight;
         epochs[currentEpochIdex].epochId = epochId;
         epochs[currentEpochIdex].numBPs = cnt;

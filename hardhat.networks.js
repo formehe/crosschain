@@ -13,6 +13,13 @@ const networks = {
     accounts:['0xce9f7be01bacde7ea1bdd3e334daf53a4de663c00cf1891785bc271f06b82ed0']  
   },
 
+  ropsten: {
+    url: 'https://ropsten.infura.io/v3/fb2a09e82a234971ad84203e6f75990e',
+    blockGasLimit: 200000000,
+    allowUnlimitedContractSize: true,
+    accounts:['0x33c13ada154a84951ac8306c786860b862df96c2b92e1cabc52142e142098d38']  
+  },
+
   hecoTest: {
     url: 'https://http-testnet.hecochain.com',
     blockGasLimit: 200000000,
