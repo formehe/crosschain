@@ -25,11 +25,12 @@ describe('ERC20Locker', () => {
     const Erc20token2 =  await hre.ethers.getContractFactory("ERC20Mintable", wallet, overrides)
     erc20Token2 = await Erc20token2.deploy('ERC20Mintable2', 'et2')
 
-    const Erc20Locker =  await hre.ethers.getContractFactory("ERC20Locker", wallet, overrides)
-    erc20Locker = await Erc20Locker.deploy()
+    const TopBridge = await hre.artifacts.readArtifact("TopBridge")
+    bridge = await deployMockContract(wallet, TopBridge.abi, overrides)
 
     console.log("wallet>>>> "  + wallet.address)
     console.log("wallet2>>>> "  + wallet2.address)
+
 
     console.log("erc20Token>>>> "  + erc20Token.address)
     console.log("erc20Token2>>>> "  + erc20Token2.address)
@@ -242,6 +243,24 @@ describe('ERC20Locker', () => {
 
     })
 
+  })
+
+   //unlockToken
+   describe('unlockToken', () => {
+    it('Normal unlock', async () => {
+      await erc20Token.mint(wallet.address,toWei('200'))
+      await erc20Token.mint(wallet3.address,toWei('200'))
+
+      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
+      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+
+      await erc20Token.approve(erc20Locker.address,toWei('200'))
+    
+      await erc20Locker.adminPause(0)
+
+
+
+    })
   })
 
 })

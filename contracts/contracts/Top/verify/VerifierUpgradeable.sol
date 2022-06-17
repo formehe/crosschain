@@ -24,7 +24,7 @@ abstract contract VerifierUpgradeable is Initializable {
     uint constant PAUSED_BURN = 1 << 0;
     uint constant PAUSED_MINT = 1 << 1;
 
-    IEthProver private prover;
+    IEthProver internal prover;
     address public lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
     mapping(bytes32 => bool) public usedProofs;
@@ -74,11 +74,12 @@ abstract contract VerifierUpgradeable is Initializable {
 
     function _parseLog(
         bytes memory log
-    ) private view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+    ) internal virtual view returns (VerifiedEvent memory _receipt, address _contractAddress) {
         EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
+        bytes32 topics0 = logInfo.topics[0];
+        require(topics0 == 0x56b161a6e4643e17140e8adce689a2b4dd38a651272b26645c7320a9284d7ab3, "invalid the function of topics");
         (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
-
         _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));

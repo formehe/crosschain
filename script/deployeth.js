@@ -49,11 +49,37 @@ async function deployeth() {
         signer
     )
     console.log("+++++++++++++ERC20Locker+++++++++++++++ ", erc20Locker.address)
+
+    const TopBridgeResult = await deploy("TopBridge", {
+      from: deployer,
+      skipIfAlreadyDeployed: true
+    })
+  
+    const topBridge = await hardhat.ethers.getContractAt(
+      "TopBridge",
+      TopBridgeResult.address,
+      signer
+    )
+    console.log("+++++++++++++TopBridge+++++++++++++++ ", topBridge.address)
+
+    const TopProverResult = await deploy("TopProver", {
+      args: [topBridge.address],
+      from: deployer,
+      skipIfAlreadyDeployed: true
+    })
+
+    const topProver = await hardhat.ethers.getContractAt(
+      "TopProver",
+      TopProverResult.address,
+      signer
+    )
+
+    console.log("+++++++++++++TopProver+++++++++++++++ ", topProver.address)
     
     //method is called
-    await erc20Locker._ERC20Locker_initialize(AddressZero,minBlockAcceptanceHeight,'0x12e7ad7470bb315a6ba8d0883cec8ec3ac548a36')
-    await erc20Locker.adminPause(0)
-    await erc20Locker.bindTransferedQuota(erc20TokenSample.address,minTransferedQuota,maxTransferedQuota) 
+    // await erc20Locker._ERC20Locker_initialize(AddressZero,minBlockAcceptanceHeight,'0x12e7ad7470bb315a6ba8d0883cec8ec3ac548a36')
+    // await erc20Locker.adminPause(0)
+    // await erc20Locker.bindTransferedQuota(erc20TokenSample.address,minTransferedQuota,maxTransferedQuota) 
 }
 
 //perform Eth

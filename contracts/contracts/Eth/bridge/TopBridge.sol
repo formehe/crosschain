@@ -183,34 +183,20 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);
         console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
-
         uint votedFor = 0;
-
-        uint256 approvalsLength = topBlock.approvals_after_next.length;
         for (uint i = 0; i < thisEpoch.numBPs; i++) {
-            for (uint j = 0; j < approvalsLength; j++) {
-                 TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[j];
-                 bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
-                 if(success){
-                    votedFor++;
-                    break;
-                 }
+            TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
+            if (!approval.some) {
+                continue;
+            }
+
+            bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
+            if(success){
+                votedFor++;
             }
         }
 
         console.log("vote, num bps:", votedFor, thisEpoch.stakeThreshold);
-        // for (uint i = 0; i < thisEpoch.numBPs; i++) {
-        //     TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
-        //     if (!approval.some) {
-        //         continue;
-        //     }
-
-        //     bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
-        //     if(success){
-        //         votedFor++;
-        //     }
-        // }
-
         require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
 
         if (topBlock.next_bps.some) {
@@ -271,6 +257,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         epochs[currentEpochIdex].stakeThreshold = ((cnt << 1) + 2) / 3;
         epochs[currentEpochIdex].ownerHeight = blockHeight;
+
+        console.log("ownerHeight:", epochs[currentEpochIdex].ownerHeight);
         epochs[currentEpochIdex].epochId = epochId;
         epochs[currentEpochIdex].numBPs = cnt;
     }
