@@ -78,6 +78,7 @@ abstract contract VerifierUpgradeable is Initializable {
         EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
+        //Lock
         require(topics0 == 0x56b161a6e4643e17140e8adce689a2b4dd38a651272b26645c7320a9284d7ab3, "invalid the function of topics");
         (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
         _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));

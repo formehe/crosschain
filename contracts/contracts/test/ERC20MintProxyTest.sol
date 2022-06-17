@@ -10,6 +10,7 @@ contract ERC20MintProxyTest is ERC20MintProxy{
         EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
+        //burn
         require(topics0 == 0x4f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842, "invalid the function of topics");
         (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
         _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
