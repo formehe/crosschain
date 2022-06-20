@@ -8,8 +8,9 @@ import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
 import "./bridge/TopDecoder.sol";
 import "../common/Utils.sol";
+import "../common/ForbiddenRecorder.sol";
 
-contract Locker is Initializable{
+contract Locker is Initializable, ForbiddenRecorder{
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
 
@@ -95,6 +96,7 @@ contract Locker is Initializable{
         TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
         bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
+        require(forbiddens[proofIndex] == false, "receipt id has already been forbidden");
 
         (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash,header.block_hash);
         require(success, "Proof should be valid");
