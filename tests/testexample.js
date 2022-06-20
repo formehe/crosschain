@@ -18,6 +18,7 @@ const toWei = (val) => ethers.utils.parseEther('' + val)
 const {rlp,bufArrToArr} = require('ethereumjs-util')
 const { keccak256 } = require('@ethersproject/keccak256')
 const { Account, Header, Log, Proof, Receipt, Transaction } = require("eth-object")
+const Web3EthAbi = require('web3-eth-abi')
 console.log(process.argv)
 class ReceiptRLP {
     constructor(status, cumulativeGasUsed, logsBloom, logs) {
@@ -645,8 +646,9 @@ describe("TRC20", function () {
 
         const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
         const buffer = borsh.serialize(schema, value);
-
+        
         //mint
+        // await TRC20Contract1.connect(admin).forbiden(keccak256(Web3EthAbi.encodeParameters(['uint', 'uint'], [block.number, event.transactionIndex])))
         await TRC20Contract1.connect(user).mint(buffer, 1)
         await TRC20Contract1.connect(user).burn(100, user1.address)
         const ownerBalance = await TRC20Contract1.balanceOf(user.address);

@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../prover/IEthProver.sol";
+import "../../common/ForbiddenRecorder.sol";
 // import "hardhat/console.sol";
-abstract contract VerifierUpgradeable is Initializable {
+abstract contract VerifierUpgradeable is Initializable, ForbiddenRecorder {
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
 
@@ -65,6 +66,7 @@ abstract contract VerifierUpgradeable is Initializable {
         EthereumDecoder.BlockHeader memory header = EthereumDecoder.toBlockHeader(proof.headerData);
         bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
+        require(forbiddens[proofIndex] == false, "receipt id has already been forbidden");
 
         (bool success,) = prover.verify(proof, receipt, header.receiptsRoot);
         require(success, "Proof should be valid");
