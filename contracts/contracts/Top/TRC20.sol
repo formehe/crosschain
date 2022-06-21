@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../common/AdminControlledUpgradeable.sol";
 import "./verify/VerifierUpgradeable.sol";
-import "../common/TransferedQuotas.sol";
+import "../common/ILimit.sol";
 
-contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
+contract TRC20 is ERC20, VerifierUpgradeable {
     address private assetHash;
     event Burned (
         address indexed fromToken,
@@ -28,16 +28,18 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
         address _peerAssetHash,
         uint64 _minBlockAcceptanceHeight,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        ILimit _limiter
     ) ERC20(_name, _symbol) {
-        _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight);
+        _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight, _limiter);
     }
 
     function _TRC20_init (
         IEthProver _prover,
         address _peerProxyHash,
         address _peerAssetHash,
-        uint64 _minBlockAcceptanceHeight
+        uint64 _minBlockAcceptanceHeight,
+        ILimit _limiter
     ) private initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
         require(_peerAssetHash != address(0), "peer asset can not be zero");
@@ -50,7 +52,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
 
         _grantRole(OWNER_ROLE, msg.sender);
 
-        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight);
+        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
     }
 
@@ -74,7 +76,7 @@ contract TRC20 is ERC20, VerifierUpgradeable, TransferedQuotas {
         require(!hasRole(BLACK_BURN_ROLE, msg.sender));
         require(receiver != address(0));
         require(amount != 0, "amount can not be 0");
-        checkTransferedQuota(address(this), amount);
+        limiter.checkTransferedQuota(address(this), amount);
         _burn(msg.sender, amount);
         emit Burned(address(this), assetHash, msg.sender, amount, receiver);
     }

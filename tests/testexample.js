@@ -174,12 +174,20 @@ describe("ERC20MintProxy", function () {
         console.log("+++++++++++++MintContract2+++++++++++++++ ", mintContract2.address)
         await mintContract2.deployed()
 
-        await mintContract.initialize(topProveContract.address, mintContract1.address, 1000)
+        limitCon = await ethers.getContractFactory("Limit", admin)
+        limitContract = await limitCon.deploy()
+        console.log("+++++++++++++limitContract+++++++++++++++ ", limitContract.address)
+        await limitContract.deployed()
+
+        await limitContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        await limitContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
+
+        await mintContract.initialize(topProveContract.address, mintContract1.address, 1000, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).adminPause(0)
-        await mintContract1.initialize(topProveContract.address, mintContract.address, 1000)
+        await mintContract1.initialize(topProveContract.address, mintContract.address, 1000, limitContract.address)
         await mintContract1.connect(admin).adminPause(0)
-        await mintContract2.initialize(topProveContract.address, mintContract1.address, 1000)
+        await mintContract2.initialize(topProveContract.address, mintContract1.address, 1000, limitContract.address)
         await mintContract2.connect(admin).adminPause(0)
     })
 
@@ -210,21 +218,21 @@ describe("ERC20MintProxy", function () {
 
     it('the asset contract of burn must be bound', async () => {
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
         await expect(mintContract.burn(erc20Sample1.address, 1, address))
             .to.be.revertedWith('asset address must has been bound')
     })
 
     it('the receiver of burn can not be zero', async () => {
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
         await expect(mintContract.burn(erc20Sample1.address, 1, zeroAccount))
             .to.be.revertedWith('Transaction reverted without a reason string')
     })
 
     it('the owner must grant to mintContract enough allowance', async () => {
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
         await erc20Sample.connect(deployer).approve(mintContract.address, 1)
         await expect(mintContract.connect(deployer).burn(erc20Sample.address, 10, address))
             .to.be.revertedWith('ERC20: insufficient allowance')
@@ -232,7 +240,7 @@ describe("ERC20MintProxy", function () {
 
     it('burn of mintContract success', async () => {
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
         await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
     })
@@ -240,7 +248,7 @@ describe("ERC20MintProxy", function () {
     it('burn success, the mint asset must be bound', async () => {
         //burn
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
         const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
         const rc = await tx.wait()
@@ -269,7 +277,7 @@ describe("ERC20MintProxy", function () {
     it('burn success, the mint proxy must be bound', async () => {
         //burn
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
         const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
         const rc = await tx.wait()
@@ -297,7 +305,7 @@ describe("ERC20MintProxy", function () {
     it('burn success, repeat mint', async () => {
         //burn
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
         const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
         const rc = await tx.wait()
@@ -321,7 +329,7 @@ describe("ERC20MintProxy", function () {
 
         //mint
         await mintContract1.connect(admin).bindAssetHash(erc20Sample1.address, erc20Sample.address)
-        await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
+        // await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
         await mintContract1.connect(user).mint(buffer, 1)
         await expect(mintContract1.connect(user).mint(buffer, 1))
             .to.be.revertedWith('The burn event proof cannot be reused')
@@ -330,7 +338,7 @@ describe("ERC20MintProxy", function () {
     it('burn and mint success', async () => {
         //burn
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
         const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
         const rc = await tx.wait()
@@ -353,7 +361,7 @@ describe("ERC20MintProxy", function () {
 
         //mint
         await mintContract1.connect(admin).bindAssetHash(erc20Sample1.address, erc20Sample.address)
-        await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
+        // await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
         await mintContract1.connect(user).mint(buffer, 1)
 
         expect(await erc20Sample1.balanceOf(address))
@@ -404,6 +412,14 @@ describe("TRC20", function () {
         console.log("+++++++++++++EthProver+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
 
+        limitCon = await ethers.getContractFactory("Limit", admin)
+        limitContract = await limitCon.deploy()
+        console.log("+++++++++++++limitContract+++++++++++++++ ", limitContract.address)
+        await limitContract.deployed()
+
+        await limitContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        await limitContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
+
         //deploy mint contract
         mintContractCon = await ethers.getContractFactory("ERC20MintProxyTest", admin)
         mintContract = await mintContractCon.deploy()
@@ -414,15 +430,15 @@ describe("TRC20", function () {
     it('burn success, the mint asset must be bound', async () => {
         //deploy TRC20
         TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample1.address, 1, "hhh", "hhh")
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample1.address, 1, "hhh", "hhh", limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
-        await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
+        // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
@@ -453,15 +469,15 @@ describe("TRC20", function () {
     it('burn success, the mint proxy must be bound', async () => {
         //burn
         TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, address, erc20Sample.address, 1, "hhh", "hhh")
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
-        await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
+        // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
         const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
@@ -490,15 +506,15 @@ describe("TRC20", function () {
     it('burn success, repeat mint', async () => {
         //burn
         TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh")
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
-        await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
+        // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
@@ -531,15 +547,15 @@ describe("TRC20", function () {
     it('burn success, mint success', async () => {
         //burn
         TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh")
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
-        await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
+        // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
@@ -573,16 +589,17 @@ describe("TRC20", function () {
     it('burn amount exceeds balance', async () => {
         //burn
         TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh")
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)
+        await limitContract.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
-        await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
+        // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
@@ -614,16 +631,17 @@ describe("TRC20", function () {
     it('burn success', async () => {
         //burn
         TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh")
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
+        await limitContract.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
         console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
-        await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
+        // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
-        await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
@@ -648,7 +666,7 @@ describe("TRC20", function () {
         const buffer = borsh.serialize(schema, value);
         
         //mint
-        // await TRC20Contract1.connect(admin).forbiden(keccak256(Web3EthAbi.encodeParameters(['uint', 'uint'], [block.number, event.transactionIndex])))
+        // await limitContract.connect(admin).forbiden(keccak256(Web3EthAbi.encodeParameters(['uint', 'uint'], [block.number, event.transactionIndex])))
         await TRC20Contract1.connect(user).mint(buffer, 1)
         await TRC20Contract1.connect(user).burn(100, user1.address)
         const ownerBalance = await TRC20Contract1.balanceOf(user.address);

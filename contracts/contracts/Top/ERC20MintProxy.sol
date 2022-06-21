@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Address.sol";
-import "../common/TransferedQuotas.sol";
+import "../common/ILimit.sol";
 import "../common/ERC20Mint.sol";
 import "../common/prover/IProver.sol";
 import "./verify/VerifierUpgradeable.sol";
 //import "hardhat/console.sol";
 
-contract ERC20MintProxy is VerifierUpgradeable, TransferedQuotas {
+contract ERC20MintProxy is VerifierUpgradeable {
     event Burned (
         address indexed fromToken,
         address indexed toToken,
@@ -50,10 +50,11 @@ contract ERC20MintProxy is VerifierUpgradeable, TransferedQuotas {
     function initialize(
         IEthProver _prover,
         address _peerProxyHash,
-        uint64 _minBlockAcceptanceHeight
+        uint64 _minBlockAcceptanceHeight,
+        ILimit _limiter
     ) external initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
-        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight);
+        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
@@ -87,7 +88,7 @@ contract ERC20MintProxy is VerifierUpgradeable, TransferedQuotas {
         require(!hasRole(BLACK_BURN_ROLE, msg.sender));
         require((Address.isContract(localAssetHash)) && (receiver != address(0)));
         require(amount != 0, "amount can not be 0");
-        checkTransferedQuota(localAssetHash, amount);
+        limiter.checkTransferedQuota(localAssetHash, amount);
         ProxiedAsset memory peerAsset = assets[localAssetHash];
         require(peerAsset.existed, "asset address must has been bound");
         ERC20Mint(localAssetHash).burnFrom(msg.sender, amount);

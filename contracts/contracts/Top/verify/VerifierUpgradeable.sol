@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "../../common/AdminControlledUpgradeable.sol";
 import "../prover/IEthProver.sol";
-import "../../common/ForbiddenRecorder.sol";
-import "../../common/Frozens.sol";
+import "../../common/ILimit.sol";
 // import "hardhat/console.sol";
-abstract contract VerifierUpgradeable is Initializable, ForbiddenRecorder,Frozens {
+abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeable {
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
 
@@ -27,6 +27,7 @@ abstract contract VerifierUpgradeable is Initializable, ForbiddenRecorder,Frozen
     uint constant PAUSED_MINT = 1 << 1;
 
     IEthProver internal prover;
+    ILimit internal limiter;
     address public lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
     mapping(bytes32 => bool) public usedProofs;
@@ -34,11 +35,13 @@ abstract contract VerifierUpgradeable is Initializable, ForbiddenRecorder,Frozen
     function _VerifierUpgradeable_init(
         IEthProver _prover,
         address _peerLockProxyHash,
-        uint64 _minBlockAcceptanceHeight
+        uint64 _minBlockAcceptanceHeight,
+        ILimit _limiter
     ) internal onlyInitializing {
         prover = _prover;
         lockProxyHash = _peerLockProxyHash;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
+        limiter = _limiter;
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
@@ -65,10 +68,9 @@ abstract contract VerifierUpgradeable is Initializable, ForbiddenRecorder,Frozen
         require(lockProxyHash == contractAddress, "proxy is not bound");
         EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
         EthereumDecoder.BlockHeader memory header = EthereumDecoder.toBlockHeader(proof.headerData);
-        checkFrozen(_receipt.data.toToken,header.timestamp);
         bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
-        require(forbiddens[proofIndex] == false, "receipt id has already been forbidden");
+        require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
 
         (bool success,) = prover.verify(proof, receipt, header.receiptsRoot);
         require(success, "Proof should be valid");

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../Top/TRC20.sol";
+import "../common/ILimit.sol";
 
 contract TRC20Test is TRC20{
   constructor (
@@ -10,8 +11,9 @@ contract TRC20Test is TRC20{
         address _peerAssetHash,
         uint64 _minBlockAcceptanceHeight,
         string memory _name,
-        string memory _symbol
-    ) TRC20(_prover, _peerProxyHash,_peerAssetHash,_minBlockAcceptanceHeight,_name,_symbol) {}
+        string memory _symbol,
+        ILimit _limiter
+    ) TRC20(_prover, _peerProxyHash,_peerAssetHash,_minBlockAcceptanceHeight,_name,_symbol, _limiter) {}
 
 
     function _parseLog(
