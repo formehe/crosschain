@@ -156,11 +156,10 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
         EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
         TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
-        limit.checkFrozen(_receipt.data.fromToken,header.inner_lite.timestamp);
+        limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(header.inner_lite.height));
         bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
         require(limit.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
-
         (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash,header.block_hash);
         require(success, "Proof should be valid");
         require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
