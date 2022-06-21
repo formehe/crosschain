@@ -7,12 +7,10 @@ contract TopProverTest is TopProver{
     constructor(address _bridgeLight)
     TopProver(_bridgeLight) {}
 
-    function verifyHeight(uint64 height) public returns(bool valid, string memory reason){
-        // 调用系统合约验证块头
-        bytes memory payload = abi.encodeWithSignature("blockHashes(uint64)", height);
+    function verifyHash(bytes32 hash) public returns(bool valid, string memory reason){
+        bytes memory payload = abi.encodeWithSignature("blockHashes(bytes32)", hash);
         (bool success, bytes memory returnData) = bridgeLight.call(payload);
         require(success, "Height is not confirmed");
-        require(returnData.length > 0, "Height is not confirmed1");
 
         (success) = abi.decode(returnData, (bool));
         require(success, "fail to decode");

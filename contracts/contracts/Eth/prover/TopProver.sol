@@ -34,7 +34,7 @@ contract TopProver is Prover, ITopProver{
         (bool success, bytes memory returnData) = bridgeLight.call(payload);
         require(success, "Height is not confirmed");
         (time) = abi.decode(returnData, (uint256));
-        require(time > 0, "Height is not confirmed");
+        require(time > 0, "Height is not confirmed1");
         return time;
     }
 }

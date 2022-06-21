@@ -27,25 +27,32 @@ describe('TopProver', () => {
     const TopProver =  await hre.ethers.getContractFactory("TopProverTest", wallet, overrides)
     topProver = await TopProver.deploy(topBridge.address)
 
-    // const TopBridge1 = await hre.artifacts.readArtifact("TopPridgeTest")
-    // topBridge1 = await deployMockContract(wallet, TopBridge1.abi, overrides)
+  })
 
-    // const TopProver1 =  await hre.ethers.getContractFactory("TopProverTest", wallet, overrides)
-    // topProver1 = await TopProver1.deploy(topBridge1.address)
+  describe('verifyHash', () => {
+    it('There is no hash', async () => {
+        await expect(topProver.verifyHash('0x0000000000000000000000000000000000000000000000000000000000000001')
+        ).to.be.revertedWith('fail to decode')
+    })
+
+    it('There is hash', async () => {
+      await topBridge.setBlockHashes('0x0000000000000000000000000000000000000000000000000000000000000001',true)
+      let{valid,reason} = await topProver.verifyHash('0x0000000000000000000000000000000000000000000000000000000000000001');
+    })
 
   })
 
-  describe('verifyHeight', () => {
+  describe('getAddLightClientTime', () => {
     it('There is no height', async () => {
-        let{valid,reason} = await topProver.verifyHeight(2);
-        console.log("There is no height->  " + valid + "  " + reason)
+        await expect(topProver.getAddLightClientTime(2)
+        ).to.be.revertedWith('Height is not confirmed1')
     })
 
     it('There is height', async () => {
-        //await topBridge.mock.calculateEarlyExitFee.withArgs(account,controlledToken,borrowAmount).returns(toWei('0.02'),toWei('0.02'))
+      await topBridge.setBlockHeights(2,100)
+      let{valid,reason} = await topProver.getAddLightClientTime(2);
     })
 
   })
-
 
 })

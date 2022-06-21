@@ -179,7 +179,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         //require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
         //require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
-        require(topBlock.inner_lite.height == (epochs[currentEpochIdex].ownerHeight + 1), "height must higher than epoch block height");
+        require(topBlock.inner_lite.height == (maxMainHeight + 1), "height must higher than epoch block height");
         require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");
 
         Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);

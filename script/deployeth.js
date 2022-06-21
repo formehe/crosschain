@@ -50,6 +50,19 @@ async function deployeth() {
     )
     console.log("+++++++++++++ERC20Locker+++++++++++++++ ", erc20Locker.address)
 
+    const LimitResult = await deploy("Limit", {
+      from: deployer,
+      skipIfAlreadyDeployed: true
+    })
+  
+    const limit = await hardhat.ethers.getContractAt(
+      "Limit",
+      LimitResult.address,
+      signer
+    )
+
+    console.log("+++++++++++++LimitResult+++++++++++++++ ", limit.address)
+
     const TopBridgeResult = await deploy("TopBridge", {
       from: deployer,
       skipIfAlreadyDeployed: true
@@ -61,6 +74,10 @@ async function deployeth() {
       signer
     )
     console.log("+++++++++++++TopBridge+++++++++++++++ ", topBridge.address)
+
+
+
+
 
     const TopProverResult = await deploy("TopProver", {
       args: [topBridge.address],
