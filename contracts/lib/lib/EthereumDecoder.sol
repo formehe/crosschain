@@ -167,7 +167,7 @@ library EthereumDecoder {
         data = RLPEncode.encodeList(list);
     }
 
-    function toReceiptLog(bytes memory data) internal view returns (Log memory log) {
+    function toReceiptLog(bytes memory data) internal pure returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
 
         uint idx;
@@ -191,7 +191,7 @@ library EthereumDecoder {
         }
     }
 
-    function toReceipt(bytes memory data) internal view returns (TransactionReceiptTrie memory receipt) {
+    function toReceipt(bytes memory data) internal pure returns (TransactionReceiptTrie memory receipt) {
         uint byte0;
         RLPDecode.Iterator memory it;        
         assembly {

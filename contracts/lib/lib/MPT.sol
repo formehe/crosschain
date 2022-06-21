@@ -152,7 +152,7 @@ library MPT {
         else return false;
     }
 
-    function b2b32(bytes memory data) view internal returns(bytes32 part) {
+    function b2b32(bytes memory data) pure internal returns(bytes32 part) {
         assembly {
             part := mload(add(data, 32))
         }
@@ -164,7 +164,7 @@ library MPT {
         uint256 length,
         bool removeFirstNibble
     )
-        view internal returns(bytes memory)
+        pure internal returns(bytes memory)
     {
         uint256 slots = length / 32;
         uint256 rest = (length % 32) * 8;
@@ -195,14 +195,14 @@ library MPT {
         }
     }
 
-    function getNibbles(bytes1 b) internal view returns (bytes1 nibble1, bytes1 nibble2) {
+    function getNibbles(bytes1 b) internal pure returns (bytes1 nibble1, bytes1 nibble2) {
         assembly {
                 nibble1 := shr(4, b)
                 nibble2 := shr(4, shl(4, b))
             }
     }
 
-    function expandKeyEven(bytes memory data) internal view returns (bytes memory) {
+    function expandKeyEven(bytes memory data) internal pure returns (bytes memory) {
         uint256 length = data.length * 2;
         bytes memory expanded = new bytes(length);
 
@@ -214,7 +214,7 @@ library MPT {
         return expanded;
     }
 
-    function expandKeyOdd(bytes memory data) internal view returns(bytes memory) {
+    function expandKeyOdd(bytes memory data) internal pure returns(bytes memory) {
         uint256 length = data.length * 2 - 1;
         bytes memory expanded = new bytes(length);
         expanded[0] = data[0];

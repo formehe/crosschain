@@ -71,7 +71,7 @@ contract TopPridgeTest is TopBridge{
         bytes32 block_hash,
         bytes32 r,bytes32 s,uint8 v,
         uint256 x,uint256 y
-    ) internal view returns(bool) {
+    ) internal pure returns(bool) {
         return ecrecover(
             block_hash,
             v + (v < 27 ? 27 : 0),

@@ -17,7 +17,7 @@ library EthProofDecoder {
         bytes[] proof;
     }
 
-    function decode(Borsh.Data memory data) internal view returns (Proof memory proof) {
+    function decode(Borsh.Data memory data) internal pure returns (Proof memory proof) {
         proof.logIndex = data.decodeU64();
         proof.logEntryData = data.decodeBytes();
         proof.reciptIndex = data.decodeU64();

@@ -101,7 +101,7 @@ library Borsh {
         }
     }
 
-    function decodeBytes(Data memory data) internal view returns (bytes memory res) {
+    function decodeBytes(Data memory data) internal pure returns (bytes memory res) {
         uint length = data.decodeU32();
         data.requireSpace(length);
         res = Utils.memoryToBytes(data.ptr, length);
