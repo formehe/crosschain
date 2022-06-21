@@ -50,7 +50,7 @@ describe('TopProver', () => {
 
     it('There is height', async () => {
       await topBridge.setBlockHeights(2,100)
-      let{valid,reason} = await topProver.getAddLightClientTime(2);
+      expect(await call(topProver,"getAddLightClientTime",2)).to.equal(100)
     })
 
   })
