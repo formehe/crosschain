@@ -5,10 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../common/prover/IProver.sol";
 import "../common/IRC20Locker.sol";
+import "./Locker.sol";
 
-import "./LockerProxy.sol";
-
-contract ERC20Locker is IRC20Locker,LockerProxy{
+contract ERC20Locker is IRC20Locker,Locker{
     using SafeERC20 for IERC20;
 
     function _ERC20Locker_initialize(
@@ -16,7 +15,7 @@ contract ERC20Locker is IRC20Locker,LockerProxy{
         uint64 _minBlockAcceptanceHeight,
         address _owner
     ) external initializer {
-        LockerProxy._lockerProxy_initialize(_prover,_minBlockAcceptanceHeight,_owner,false);
+        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,false);
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)

@@ -8,14 +8,42 @@ import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
 import "./bridge/TopDecoder.sol";
 import "../common/Utils.sol";
-import "../common/ForbiddenRecorder.sol";
-import "../common/Frozens.sol";
+import "../common/Limit.sol";
 
-contract Locker is Initializable, ForbiddenRecorder,Frozens{
+contract Locker is Initializable,Limit{
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
 
     mapping(address => ToAddressHash) public assets;
+    
+    uint constant UNPAUSED_ALL = 0;
+    uint constant PAUSED_LOCK = 1 << 0;
+    uint constant PAUSED_UNLOCK = 1 << 1;
+
+    bool public isEth;
+    //keccak256("BLACK.UN.LOCK.ROLE")
+    bytes32 constant public BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
+    //keccak256("BLACK.LOCK.ROLE")
+    bytes32 constant public BLACK_LOCK_ROLE = 0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4;
+
+    event Locked (
+        address indexed fromToken,
+        address indexed toToken,
+        address indexed sender,
+        uint256 amount,
+        address receiver
+    );
+
+    event Unlocked (
+        uint256 amount,
+        address recipient
+    );
+
+    event BindAsset(
+        address fromAssetHash,
+        address toAssetHash,
+        address peerLockProxyHash
+    );
 
     struct ToAddressHash{
         address assetHash;
@@ -44,14 +72,28 @@ contract Locker is Initializable, ForbiddenRecorder,Frozens{
 
     event ConsumedProof(bytes32 indexed _receiptId);
 
-    function _locker_initialize(
+
+    function _Locker_initialize(
         ITopProver _prover,
-        uint64 _minBlockAcceptanceHeight
+        uint64 _minBlockAcceptanceHeight,
+        address _owner,
+        bool _isEth
     ) internal onlyInitializing{
+        require(_owner != address(0));
         prover = _prover;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
+        isEth = _isEth;
+        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSED_ALL ^ 0xff);
+        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+
+        _setRoleAdmin(BLACK_UN_LOCK_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_LOCK_ROLE, OWNER_ROLE);
+
+        _grantRole(OWNER_ROLE,_owner);
+        _grantRole(WITHDRAWAL_ROLE,_owner);
     } 
-    
+
     struct BurnResult {
         uint128 amount;
         address token;
@@ -64,6 +106,21 @@ contract Locker is Initializable, ForbiddenRecorder,Frozens{
         bytes32 proofIndex
     ) internal {
         usedProofs[proofIndex] = true;
+    }
+
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) external onlyRole(OWNER_ROLE) returns (bool) {
+        if(isEth){
+            require(_toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
+        }else{
+            require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
+        }
+   
+        assets[_fromAssetHash] = ToAddressHash({
+            assetHash:_toAssetHash,
+            lockProxyHash:_peerLockProxyHash
+        });
+        emit BindAsset(_fromAssetHash, _toAssetHash,_peerLockProxyHash);
+        return true;
     }
 
     /// verify
@@ -119,5 +176,15 @@ contract Locker is Initializable, ForbiddenRecorder,Frozens{
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
         _contractAddress = logInfo.contractAddress;
+    }
+
+    modifier lockToken_pauseable(){
+        require(!hasRole(BLACK_LOCK_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
+        _;
+    }
+
+    modifier unLock_pauseable(){
+        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
+        _;
     }
 }
