@@ -13,9 +13,10 @@ contract ERC20Locker is IRC20Locker,Locker{
     function _ERC20Locker_initialize(
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
-        address _owner
+        address _owner,
+        ILimit limit
     ) external initializer {
-        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,false);
+        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit,false);
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)
@@ -25,7 +26,7 @@ contract ERC20Locker is IRC20Locker,Locker{
     {
         require((fromAssetHash != address(0)) && (receiver != address(0)));
         require(amount != 0, "amount can not be 0");
-        checkTransferedQuota(fromAssetHash,amount);    
+        limit.checkTransferedQuota(fromAssetHash,amount);    
         address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         IERC20(fromAssetHash).safeTransferFrom(msg.sender, address(this), amount);

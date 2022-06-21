@@ -36,7 +36,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     mapping(bytes32 => bool) public blockHashes;
     mapping(uint64 => bytes32) public blockMerkleRoots;
-    mapping(uint64 => bool) public blockHeights;
+    mapping(uint64 => uint256) public blockHeights;
     mapping(address => uint256) public balanceOf;
 
     struct Epoch {
@@ -89,7 +89,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         setBlockProducers(topBlock.next_bps.blockProducers,topBlock.next_bps.epochId, topBlock.inner_lite.height);
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-        blockHeights[topBlock.inner_lite.height] = true;
+        blockHeights[topBlock.inner_lite.height] = topBlock.inner_lite.timestamp;
         maxMainHeight = topBlock.inner_lite.height;
     }
 
@@ -180,7 +180,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
         //require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
         require(topBlock.inner_lite.height == (epochs[currentEpochIdex].ownerHeight + 1), "height must higher than epoch block height");
-        require(!blockHeights[topBlock.inner_lite.height], "block is exsisted");
+        require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");
 
         Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);
         console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
@@ -207,7 +207,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-        blockHeights[topBlock.inner_lite.height] = true;
+        blockHeights[topBlock.inner_lite.height] = topBlock.inner_lite.timestamp;
 
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./AdminControlledUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-abstract contract Limit is AdminControlledUpgradeable{
+contract Limit is Ownable{
     struct Quota{
         uint256 maxTransferedToken;
         uint256 minTransferedToken;
@@ -18,7 +18,7 @@ abstract contract Limit is AdminControlledUpgradeable{
         address _asset, 
         uint256 _minTransferedToken, 
         uint256 _maxTransferedToken
-    ) public onlyRole(OWNER_ROLE) {
+    ) public onlyOwner {
         require(_maxTransferedToken >= _minTransferedToken, "the max quantity of permitted transfer token is less than the min");
         tokenQuotas[_asset].maxTransferedToken = _maxTransferedToken;
         tokenQuotas[_asset].minTransferedToken = _minTransferedToken;
@@ -34,7 +34,7 @@ abstract contract Limit is AdminControlledUpgradeable{
     function checkTransferedQuota(
         address _asset,
         uint256 _amount
-    ) internal view {
+    ) external view {
        Quota memory  quota = tokenQuotas[_asset];
        require(_amount >= quota.minTransferedToken, "the amount of transfered is overflow");
        require(_amount <= quota.maxTransferedToken, "the amount of transfered is underflow");
@@ -42,14 +42,14 @@ abstract contract Limit is AdminControlledUpgradeable{
 
     function forbiden(
         bytes32 _forbiddenId
-    ) public onlyRole(OWNER_ROLE) {
+    ) public onlyOwner {
         require(forbiddens[_forbiddenId] == false, "the id has been already forbidden");
         forbiddens[_forbiddenId] = true;
     }
 
     function recover(
         bytes32 _forbiddenId
-    ) public onlyRole(OWNER_ROLE) {
+    ) public onlyOwner {
         require(forbiddens[_forbiddenId], "the id has not been forbidden");
         forbiddens[_forbiddenId] = false;
     }
@@ -57,7 +57,7 @@ abstract contract Limit is AdminControlledUpgradeable{
     function bindFrozen(
         address _asset, 
         uint _frozenDuration
-    ) public onlyRole(OWNER_ROLE){
+    ) public onlyOwner{
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
         tokenFrozens[_asset] = _frozenDuration;
     }
@@ -71,10 +71,7 @@ abstract contract Limit is AdminControlledUpgradeable{
     function checkFrozen(
         address _asset, 
         uint _timestamp
-    ) internal view {
+    ) external view {
         require(block.timestamp >= (_timestamp + tokenFrozens[_asset]), "the transaction is frozen");
     }
-
-
-
 }

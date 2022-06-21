@@ -8,18 +8,20 @@ import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
 import "./bridge/TopDecoder.sol";
 import "../common/Utils.sol";
-import "../common/Limit.sol";
+import "../common/ILimit.sol";
+import "../common/AdminControlledUpgradeable.sol";
 
-contract Locker is Initializable,Limit{
+contract Locker is Initializable,AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
 
     mapping(address => ToAddressHash) public assets;
-    
+
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
 
+    ILimit public limit;
     bool public isEth;
     //keccak256("BLACK.UN.LOCK.ROLE")
     bytes32 constant public BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
@@ -77,11 +79,13 @@ contract Locker is Initializable,Limit{
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
+        ILimit _limit,
         bool _isEth
     ) internal onlyInitializing{
         require(_owner != address(0));
         prover = _prover;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
+        limit = _limit;
         isEth = _isEth;
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSED_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
@@ -152,10 +156,10 @@ contract Locker is Initializable,Limit{
 
         EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
         TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
-        checkFrozen(_receipt.data.fromToken,header.inner_lite.timestamp);
+        limit.checkFrozen(_receipt.data.fromToken,header.inner_lite.timestamp);
         bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
-        require(forbiddens[proofIndex] == false, "receipt id has already been forbidden");
+        require(limit.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
 
         (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash,header.block_hash);
         require(success, "Proof should be valid");

@@ -16,9 +16,10 @@ contract EthLocker is ITokenLocker,Locker{
     function _EthLocker_initialize(
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
-        address _owner
+        address _owner,
+        ILimit limit
     ) external initializer {   
-        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,true);
+        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit,true);
     }
     
     function lockToken(address fromAssetHash,uint256 amount, address receiver)
@@ -31,7 +32,7 @@ contract EthLocker is ITokenLocker,Locker{
         address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         require(amount != 0, "amount cannot be zero");
-        checkTransferedQuota(fromAssetHash,amount);  
+        limit.checkTransferedQuota(fromAssetHash,amount);  
         require(receiver != address(0), "receive address can not be zero");
         require(_transferToContract(amount));
         emit Locked(fromAssetHash, toAssetHash ,msg.sender, amount, receiver);
