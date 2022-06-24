@@ -7,9 +7,9 @@ const {
 
 //perform Eth
 async function performEth(){
-    performLocker()
-    performLimit()
-    performTopBridge()
+    await performLocker()
+    await performLimit()
+    await performTopBridge()
 }
 
 async function performLocker(){
@@ -35,7 +35,7 @@ async function performLimit(){
     } = await getNamedAccounts()
     const signer = await ethers.provider.getSigner(deployer)
     const limit = await ethers.getContractAt('Limit', limitEth, signer)
-    await limit.bindTransferedQuota(lockerEth,minTransferedToken,maxTransferedToken)
+    await limit.bindTransferedQuota(tokenEth,minTransferedToken,maxTransferedToken)
 }
 
 async function performTopBridge(){
@@ -45,7 +45,6 @@ async function performTopBridge(){
     } = await getNamedAccounts()
     const signer = await ethers.provider.getSigner(deployer)
     const bridge = await ethers.getContractAt('TopBridge', bridgeEth, signer)
-    await bridge.initialize(0,deployer)
     await bridge.initWithBlock(topInitBlock)
 }
 

@@ -85,10 +85,8 @@ async function deployeth() {
 
     console.log("+++++++++++++TopProver+++++++++++++++ ", topProver.address)
     
-    //method is called
-    // await erc20Locker._ERC20Locker_initialize(AddressZero,minBlockAcceptanceHeight,'0x12e7ad7470bb315a6ba8d0883cec8ec3ac548a36')
-    // await erc20Locker.adminPause(0)
-    // await erc20Locker.bindTransferedQuota(erc20TokenSample.address,minTransferedQuota,maxTransferedQuota) 
+    await erc20Locker._ERC20Locker_initialize(topProver.address,0,deployer,limit.address)
+    await topBridge.initialize(0,deployer)
 }
 
 deployeth()
