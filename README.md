@@ -610,9 +610,7 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
   bytes32：收据id（块高 + 收据index）字节数组的keccak256  
 
   ``` 
-
 <br>
-
 ## **UI调用前判断限制**
 
 ####ETH端
@@ -641,10 +639,7 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
         通过TopBridge合约的blockHeights(uint64 height)
 
    （2）黑名单（hash黑名单，地址黑名单）待定
-
-
 <br>
-
 ####TOP端
 
 **(1),function mint()**
@@ -664,7 +659,7 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
    （2）黑名单（hash黑名单，地址黑名单）待定
     
 
-**(2),function burn()**
+**(2),function burn()**Cancel changes
 
     UI提前限制：
     (1)，销毁金额是否在金额区间内
@@ -672,7 +667,6 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
     Limit合约
     getTransferedQuota（address _asset）
     返回具体的数量供UI判断
-
 
 ## **部署合约**
 
