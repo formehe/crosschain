@@ -78,7 +78,7 @@
 
 ## **合约方法**
 
-####ETH端
+#### ETH端
 
 - **ERC20Locker.sol**
 
@@ -386,8 +386,7 @@
 
 <br> 
 
-####TOP端
-
+#### TOP端
 
 - **ERC20MintProxy.sol**
 
