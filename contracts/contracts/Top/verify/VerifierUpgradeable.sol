@@ -27,7 +27,7 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
     uint constant PAUSED_MINT = 1 << 1;
 
     IEthProver internal prover;
-    ILimit internal limiter;
+    ILimit public limiter;
     address public lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
     mapping(bytes32 => bool) public usedProofs;
