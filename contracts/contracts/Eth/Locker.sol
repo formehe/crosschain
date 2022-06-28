@@ -156,7 +156,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
         EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
         TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
-        limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(header.inner_lite.height));
+        require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(header.inner_lite.height)),'the transaction is frozen');
         bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
         require(limit.forbiddens(proofIndex) == false, "receipt id has already been forbidden");

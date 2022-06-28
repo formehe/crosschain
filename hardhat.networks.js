@@ -33,7 +33,7 @@ const networks = {
     blockGasLimit: 200000000,
     allowUnlimitedContractSize: true,
     chainId: 1023,
-    accounts: [`0xce9f7be01bacde7ea1bdd3e334daf53a4de663c00cf1891785bc271f06b82ed0`]
+    accounts: [`0x17198cd9a784d5adfa89331195dd235152520b6c2005d28bb4d62c68a87cf515`]
   },
 
   localhost: {

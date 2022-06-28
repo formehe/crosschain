@@ -73,7 +73,7 @@ contract Limit is Ownable{
     function checkFrozen(
         address _asset, 
         uint _timestamp
-    ) external {
-        require(block.timestamp >= (_timestamp + tokenFrozens[_asset]), "the transaction is frozen");
+    ) external view returns(bool) {
+        return block.timestamp >= _timestamp + tokenFrozens[_asset];
     }
 }

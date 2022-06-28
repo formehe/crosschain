@@ -10,7 +10,7 @@ interface ILimit{
     function checkFrozen(
         address _asset, 
         uint _timestamp
-    ) external view;
+    ) external view returns(bool);
 
     function forbiddens(bytes32 proofIndex) external view returns(bool);
 

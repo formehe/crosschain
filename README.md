@@ -206,6 +206,18 @@
   ``` 
 
 
+  **(6),function limit() returns(address)**
+
+  ``` 
+  方法:获取限制合约
+
+  返回：
+
+  限制合约地址
+
+  ``` 
+
+
 - **ETHLocker.sol**
 
   ```
@@ -234,23 +246,7 @@
 ```
 
 
-**(2),function bindFrozen(address _asset, uint _frozenDuration)**
-
-  ```
-  方法：解锁时长的设置  
-
-  权限：owner
-
-  参数：
-
-  _asset：token
-
-  _frozenDuration：时间
-
-  ```
-
-
-**(3),function forbiden(bytes32 _forbiddenId)**
+**(2),function forbiden(bytes32 _forbiddenId)**
 
   ```
   方法：收据id黑名单的添加
@@ -266,7 +262,7 @@
   ```
 
 
-**(4),function recover(bytes32 _forbiddenId)** 
+**(3),function recover(bytes32 _forbiddenId)** 
 
   ```
   方法：收据id黑名单的解除
@@ -279,8 +275,42 @@
 
   （块高 + 收据index）字节数组的keccak256   
 
+  ```  
+
+
+**(4),function bindFrozen(address _asset, uint _frozenDuration)**
+
+  ```
+  方法：解锁时长的设置  
+
+  权限：owner
+
+  参数：
+
+  _asset：token
+
+  _frozenDuration：时间
+
   ```   
 
+
+**(5),function checkFrozen(address _asset,uint _timestamp) view returns(bool)** 
+
+  ```
+  方法：检查资产是否符合解锁时长
+
+  权限：owner
+
+  参数：
+
+  _asset：对端token(如在eth端调用需要传top端的token)
+
+  _timestamp:对应交易block的时间
+
+  ```   
+  返回：
+
+  true和false
 
 - **TopBridge.sol**
 
