@@ -168,8 +168,11 @@ library RLPEncode {
             dest += 32;
             src += 32;
         }
-
-        uint mask = 256 ** (32 - len) - 1;
+        
+        uint mask = type(uint).max;
+        if (len > 0) {
+                mask = 256 ** (32 - len) - 1;
+        }
         assembly {
             let srcpart := and(mload(src), not(mask))
             let destpart := and(mload(dest), mask)

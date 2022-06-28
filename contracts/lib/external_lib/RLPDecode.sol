@@ -327,7 +327,11 @@ library RLPDecode {
 
         // left over bytes. Mask is used to remove unwanted bytes from the word
         unchecked {
-            uint mask = 256 ** (WORD_SIZE - len) - 1;
+              // Copy remaining bytes
+            uint mask = type(uint).max;
+            if (len > 0) {
+                mask = 256 ** (WORD_SIZE - len) - 1;
+            }
             assembly {
                 let srcpart := and(mload(src), not(mask)) // zero out src
                 let destpart := and(mload(dest), mask) // retrieve the bytes
