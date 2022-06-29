@@ -2,7 +2,7 @@ const hardhat = require("hardhat")
 const {ethers} = require("hardhat");
 
 const {
-    lockerEth,tokenEth,limitEth,bridgeEth,lockerTop,tokenTop,minTransferedToken,maxTransferedToken,topInitBlock
+    lockerEth,tokenEth,limitEth,bridgeEth,lockerTop,tokenTop,minTransferedToken,maxTransferedToken,bridgeEthAddBolckAdmin,topInitBlock
 } = require('./performparams')
 
 //perform Eth
@@ -46,6 +46,7 @@ async function performTopBridge(){
     const signer = await ethers.provider.getSigner(deployer)
     const bridge = await ethers.getContractAt('TopBridge', bridgeEth, signer)
     await bridge.initWithBlock(topInitBlock)
+    await bridge.grantRole('0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86',bridgeEthAddBolckAdmin)
 }
 
 performEth()

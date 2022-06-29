@@ -89,7 +89,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         setBlockProducers(topBlock.next_bps.blockProducers,topBlock.next_bps.epochId, topBlock.inner_lite.height);
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-        blockHeights[topBlock.inner_lite.height] = topBlock.inner_lite.timestamp;
+        blockHeights[topBlock.inner_lite.height] = block.timestamp;
         maxMainHeight = topBlock.inner_lite.height;
     }
 
@@ -207,7 +207,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-        blockHeights[topBlock.inner_lite.height] = topBlock.inner_lite.timestamp;
+        blockHeights[topBlock.inner_lite.height] = block.timestamp;
 
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;
@@ -285,7 +285,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     }
 
     modifier addLightClientBlock_able(){
-        require(( isPause(PAUSED_ADD_BLOCK)|| hasRole(ADDBLOCK_ROLE,_msgSender())),"without permission");
+        require(( isPause(PAUSED_ADD_BLOCK) && hasRole(ADDBLOCK_ROLE,_msgSender())),"without permission");
         _;
     }
 }
