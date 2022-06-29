@@ -41,7 +41,7 @@ contract ERC20Locker is IRC20Locker,Locker{
     {   
         VerifiedReceipt memory result= _verify(proofData, proofBlockHeight);
         IERC20(result.data.toToken).safeTransfer(result.data.receiver, result.data.amount);
-        emit Unlocked(result.data.amount, result.data.receiver);
+        emit Unlocked(result.proofIndex,result.data.amount, result.data.receiver);
      
     }
 

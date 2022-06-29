@@ -37,6 +37,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     );
 
     event Unlocked (
+        bytes32 proofIndex,
         uint256 amount,
         address recipient
     );

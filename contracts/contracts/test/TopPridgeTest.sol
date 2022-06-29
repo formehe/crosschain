@@ -32,7 +32,7 @@ contract TopPridgeTest is TopBridge{
     }
 
     /// @dev add block
-    function addLightClientBlockTest(bytes memory data) public{
+    function addLightClientBlockTest(bytes memory data) public addLightClientBlock_able{
         require(initialized, "Contract is not initialized");
         addLightClientBlock(data);
     }
@@ -87,5 +87,7 @@ contract TopPridgeTest is TopBridge{
     function setBlockHeights(uint64 height,uint256 time) public{
         blockHeights[height] = time;
     }
+
+    
 
 }

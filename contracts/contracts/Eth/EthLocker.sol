@@ -46,7 +46,7 @@ contract EthLocker is ITokenLocker,Locker{
     {
         VerifiedReceipt memory result = _verify(proofData, proofBlockHeight);
         _transferFromContract(result.data.receiver, result.data.amount);
-        emit Unlocked(result.data.amount,result.data.receiver);
+        emit Unlocked(result.proofIndex,result.data.amount,result.data.receiver);
     }
 
     //The unit of amount is gwei
