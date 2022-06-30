@@ -16,7 +16,12 @@ contract ERC20Locker is IRC20Locker,Locker{
         address _owner,
         ILimit limit
     ) external initializer {
-        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit,false);
+        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit);
+    }
+
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) external onlyRole(OWNER_ROLE) {
+        require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
+        _bindAssetHash(_fromAssetHash,_toAssetHash,_peerLockProxyHash);
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)

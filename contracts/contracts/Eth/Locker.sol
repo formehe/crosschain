@@ -22,7 +22,6 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     uint constant PAUSED_UNLOCK = 1 << 1;
 
     ILimit public limit;
-    bool public isEth;
     //keccak256("BLACK.UN.LOCK.ROLE")
     bytes32 constant public BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
     //keccak256("BLACK.LOCK.ROLE")
@@ -75,28 +74,25 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
     event ConsumedProof(bytes32 indexed _receiptId);
 
-
     function _Locker_initialize(
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
-        ILimit _limit,
-        bool _isEth
+        ILimit _limit
     ) internal onlyInitializing{
         require(_owner != address(0));
         prover = _prover;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
         limit = _limit;
-        isEth = _isEth;
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSED_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(WITHDRAWAL_ROLE, OWNER_ROLE);
 
         _setRoleAdmin(BLACK_UN_LOCK_ROLE, OWNER_ROLE);
         _setRoleAdmin(BLACK_LOCK_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE,_owner);
-        _grantRole(WITHDRAWAL_ROLE,_owner);
     } 
 
     struct BurnResult {
@@ -113,19 +109,12 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         usedProofs[proofIndex] = true;
     }
 
-    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) external onlyRole(OWNER_ROLE) returns (bool) {
-        if(isEth){
-            require(_toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
-        }else{
-            require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
-        }
-   
+    function _bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) internal{
         assets[_fromAssetHash] = ToAddressHash({
             assetHash:_toAssetHash,
             lockProxyHash:_peerLockProxyHash
         });
         emit BindAsset(_fromAssetHash, _toAssetHash,_peerLockProxyHash);
-        return true;
     }
 
     /// verify
