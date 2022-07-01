@@ -40,8 +40,9 @@ describe("Limit", function () {
     })
 
     it('bind transfered only for owner', async () => {
+        let msg = 'AccessControl: account ' + user.address.toLowerCase() + ' is missing role 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6'
         await expect(limitContract.connect(user).bindTransferedQuota(user.address, 100, 50))
-            .to.be.revertedWith('caller is not the owner')
+            .to.be.revertedWith(msg)
     })
 
     it('bind transfered quota fail because of min is bigger than max', async () => {
@@ -66,8 +67,9 @@ describe("Limit", function () {
     })
 
     it('black tx list only for owner', async () => {
+        let msg = 'AccessControl: account ' + user.address.toLowerCase() + ' is missing role 0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d'
         await expect(limitContract.connect(user).forbiden("0x1111111111111111111111111111111111111111111111111111111111111111"))
-            .to.be.revertedWith('caller is not the owner')
+            .to.be.revertedWith(msg)
     })
 
     it('black tx list, tx has been forbidden', async () => {
