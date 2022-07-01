@@ -2,14 +2,14 @@ const hardhat = require("hardhat")
 const {ethers} = require("hardhat");
 
 const {
-    lockerEth,tokenEth,limitEth,bridgeEth,lockerTop,tokenTop,minTransferedToken,maxTransferedToken,bridgeEthAddBolckAdmin,topInitBlock
+    isErc20Locker,lockerEth,tokenEth,limitEth,proverEth,bridgeEth,lockerTop,tokenTop,minTransferedToken,maxTransferedToken,bridgeEthAddBolckAdmin,topInitBlock
 } = require('./performparams')
 
 //perform Eth
 async function performEth(){
     await performLocker()
     await performLimit()
-     //await performTopBridge()
+    await performTopBridge()
 }
 
 async function performLocker(){
@@ -22,10 +22,15 @@ async function performLocker(){
     const signer = await ethers.provider.getSigner(deployer)
 
     console.log("+++++++++++++lockerEth+++++++++++++++ ", lockerEth)
-    const locker = await ethers.getContractAt('ERC20Locker', lockerEth, signer)
-
-    await locker.adminPause(0);
-    await locker.bindAssetHash(tokenEth,tokenTop,lockerTop)
+    let locker
+    if(!isErc20Locker){
+        locker = await ethers.getContractAt('EthLocker', lockerEth, signer)
+        await locker.adminPause(0)
+    }else{
+        locker = await ethers.getContractAt('ERC20Locker', lockerEth, signer)
+        await locker.adminPause(0)
+        await locker.bindAssetHash(tokenEth,tokenTop,lockerTop)
+    } 
 }
 
 async function performLimit(){

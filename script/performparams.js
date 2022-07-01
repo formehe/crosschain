@@ -1,7 +1,8 @@
 const toWei = ethers.utils.parseEther
 //perform params
-// eth params 
-const lockerEth = "0xfa378e5528B4bC489C8DF38cb08273F2B7763B19";
+const isErc20Locker = false;
+//eth params 
+const lockerEth = "0xCa4eaEA66Dd475EC02e6bCa9Ed658d7cEDd7f33D";
 const tokenEth = "0x0000000000000000000000000000000000000000";
 const bridgeEth = "0x3DB1a16518b9cd4e7E8128C5B5684bE433e5fbde"
 const proverEth = "0xb7EC0276Bd7eaC4B93E45FaA852729327468E57E"
@@ -18,5 +19,5 @@ const tokenTop = "0x71fa5CfaE76c3Fcfa3EC3A5ba8d2B5dAbDBffa6D";
 const limitTop = "0x465370F902bAe111204D56F5bDb825369b6b0Ba4"
 
 module.exports = {
-    lockerEth,tokenEth,limitEth,proverEth,bridgeEth,lockerTop,tokenTop,limitTop,minTransferedToken,maxTransferedToken,bridgeEthAddBolckAdmin,topInitBlock
+    isErc20Locker,lockerEth,tokenEth,limitEth,proverEth,bridgeEth,lockerTop,tokenTop,limitTop,minTransferedToken,maxTransferedToken,bridgeEthAddBolckAdmin,topInitBlock
 }

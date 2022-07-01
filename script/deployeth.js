@@ -7,6 +7,10 @@ const hardhat = require("hardhat")
 const {ethers} = require("hardhat");
 const { AddressZero } = require("ethers").constants
 const toWei = ethers.utils.parseEther
+const {
+  isErc20Locker
+} = require('./performparams')
+
 
 //deploy eth
 async function deployeth() {
@@ -32,30 +36,35 @@ async function deployeth() {
         signer
     )
     console.log("+++++++++++++ERC20TokenSample+++++++++++++++ ", erc20TokenSample.address)
-
-    //deploy ERC20Locker
-    const ERC20LockerResult = await deploy("ERC20Locker", {
-        from: deployer,
-        skipIfAlreadyDeployed: true
-    })
-    const erc20Locker = await hardhat.ethers.getContractAt(
-        "ERC20Locker",
-        ERC20LockerResult.address,
-        signer
-    )
-    console.log("+++++++++++++ERC20Locker+++++++++++++++ ", erc20Locker.address)
-
-    //deploy EthLocker
-    const EthLockerResult = await deploy("EthLocker", {
-          from: deployer,
-          skipIfAlreadyDeployed: true
-    })
-    const ethLocker = await hardhat.ethers.getContractAt(
-          "ERC20Locker",
-          EthLockerResult.address,
-          signer
-    )
-    console.log("+++++++++++++EthLocker+++++++++++++++ ", ethLocker.address)
+    let erc20Locker 
+    let ethLocker
+    if(isErc20Locker){
+        //deploy ERC20Locker
+        const ERC20LockerResult = await deploy("ERC20Locker", {
+            from: deployer,
+            skipIfAlreadyDeployed: true
+        })
+        erc20Locker = await hardhat.ethers.getContractAt(
+            "ERC20Locker",
+            ERC20LockerResult.address,
+            signer
+        )
+        console.log("+++++++++++++ERC20Locker+++++++++++++++ ", erc20Locker.address)
+    }
+   
+    else{
+        //deploy EthLocker
+        const EthLockerResult = await deploy("EthLocker", {
+            from: deployer,
+            skipIfAlreadyDeployed: true
+        })
+        ethLocker = await hardhat.ethers.getContractAt(
+            "ERC20Locker",
+            EthLockerResult.address,
+            signer
+        )
+        console.log("+++++++++++++EthLocker+++++++++++++++ ", ethLocker.address)
+    }
 
     const LimitResult = await deploy("Limit", {
       from: deployer,
@@ -94,11 +103,7 @@ async function deployeth() {
       TopProverResult.address,
       signer
     )
-
     console.log("+++++++++++++TopProver+++++++++++++++ ", topProver.address)
-    
-    await ethLocker._EthLocker_initialize(topProver.address,0,deployer,limit.address)
-    //await topBridge.initialize(0,deployer)
 }
 
 deployeth()
