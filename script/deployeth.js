@@ -59,7 +59,7 @@ async function deployeth() {
             skipIfAlreadyDeployed: true
         })
         ethLocker = await hardhat.ethers.getContractAt(
-            "ERC20Locker",
+            "EthLocker",
             EthLockerResult.address,
             signer
         )

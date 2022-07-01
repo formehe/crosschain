@@ -1,30 +1,31 @@
+
 ## **合约**
 
 #### ETH端
 
 - **ERC20Locker.sol**
 
-用途：ERC20代币的锁定及解锁合约
+**用途**：ERC20代币的锁定及解锁合约
 
 - **EthLocker.sol**
 
-用途：Eth的锁定及解锁合约
+**用途**：Eth的锁定及解锁合约
 
 - **TopProver.sol**
 
-用途：收据和块头验证合约
+**用途**：收据和块头验证合约
 
 - **TopBridge.sol**
 
-用途：top端块头同步合约
+**用途**：top端块头同步合约
 
 - **Limit.sol**
 
-用途：限制（如收据id黑名单，解锁时长限制，锁定金额限制）合约
+**用途**：限制（如收据id黑名单，解锁时长限制，锁定金额限制）合约
 
 - **ERC20TokenSample.sol**
 
-用途：资产合约
+**用途**：资产合约
 
 <br> 
 
@@ -50,7 +51,7 @@
       usdc = 4,
   };
   
-  对应token id从里面取，但是针对mint和burnfrom都是有权限的，测试需要让相关人员添加权限
+  对应token id从里面取，但是针对mint和burnfrom都是有权限的，测试需要让相关人员添加权限   todo
 
   ```
 
@@ -58,21 +59,21 @@
 
 - **Limit.sol**
 
-  用途：限制（如收据id黑名单，解锁时长限制，锁定金额限制）合约
+  **用途**：限制（如收据id黑名单，解锁时长限制，锁定金额限制）合约
 
 - **ERC20MintProxy.sol**
   
-  用途：铸造和销毁资产合约
+  **用途**：铸造和销毁资产合约
 
-  注：TRC20.sol也是一样的
+  **注**：TRC20.sol也是一样的
 
 - **EthProver.sol**
 
-  用途：收据和块头验证合约
+  **用途**：收据和块头验证合约
 
 - **HeaderSync.sol**
 
-  用途：初始top块头同步的合约
+  **用途**：初始top块头同步的合约
 
 <br> 
 
@@ -84,37 +85,37 @@
 
   **(1),function _ERC20Locker_initialize(ITopProver _prover,uint64 _minBlockAcceptanceHeight,address _owner,ILimit _limit)**
 
-  ```
+  **方法**：初始化
 
-  方法：初始化
-
-  权限：
+  **权限**：
 
   只能调用一次
 
-  参数：
+  **参数**：
 
   _prover：验证合约
 
   _minBlockAcceptanceHeight：当前传0就行
   
-  _owner：owner
+  _owner：owner（验证通过hasRole(bytes32 role, address account)returns（bool）判断
 
-  _limit :限制合约
+        role：0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6
 
-  ```
+        account：owner账户）
 
+  _limit :限制合约（验证limit()获取）
+
+  <br>
 
   **(2),function lockToken(address fromAssetHash, uint256 amount, address receiver) public**
   
-  ```
-  方法：锁定资产
+  **方法**：锁定资产
 
-  权限：
-  owner或者
-  当前没有暂停&&sender不在黑名单(BLACK_LOCK_ROLE权限组)
+  **权限**：
+  1,当前合约没有暂停 || sender在CONTROLLED_ROLE权限角色里
+  2,sender不在BLACK_LOCK_ROLE权限角色黑名单里
 
-  补充说明：
+  **补充说明**：
 
   除上面权限外还会校检
 
@@ -127,28 +128,27 @@
   (4),safeTransferFrom
 
 
-  参数：
+  **参数**：
 
-  fromAssetHash: token
+  fromAssetHash: token（如果是主币地址为0x0000000000000000000000000000000000000000）
 
   amount:数量
 
   receiver：接收地址
 
-  ```
-
+  <br>
 
   **(3),function unlockToken(bytes memory proofData, uint64 proofBlockHeight) public**
   
-  ```
-  方法：解锁资产
+  **方法**：解锁资产
 
-  权限：
 
-  owner或者
-  当前没有暂停&&sender不在黑名单(BLACK_UN_LOCK_ROLE权限组)&&收据id不在黑名单
+  **权限**：
+  1,当前合约没有暂停 || sender在CONTROLLED_ROLE权限角色里
+  2,sender不在BLACK_UN_LOCK_ROLE权限角色黑名单里
+  3,收据id不在黑名
 
-  补充说明：
+  **补充说明**：
 
   除上面权限外还会校检
 
@@ -156,86 +156,121 @@
 
   (2),是否重复解锁及解锁时长
 
-  参数:
+  **参数**:
 
   proofData:证明
 
   proofBlockHeight：高度（当前传0就行）
 
-  ```
-
+  <br>
 
   **(4),function assets(address _address) returns(ToAddressHash)**  
+ 
+  **方法**:获取对端的token地址及跨链合约
 
-  ``` 
-  方法:获取对端的token地址及跨链合约
-
-  参数：
+  **参数**：
 
   address：eth端的token地址
   
-  返回：
+  **返回**：
 
   struct ToAddressHash{
-        address assetHash; //top端token
 
-        address lockProxyHash;top端跨链合约（例如ERC20MintPxoxy）
+    address assetHash; //top端token
+
+    address lockProxyHash;top端跨链合约（例如ERC20MintPxoxy）
   }
 
-  ``` 
-
+  <br>
 
   **(5),function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash)**  
+ 
+  **方法**:绑定top端的资产及跨链合约
 
-  ``` 
-  方法:绑定top端的资产及跨链合约
-
-  特殊说明：
-
-  如果是锁定eth,_fromAssetHash则是空地址
-
-  参数：
+  **参数**：
 
   _fromAssetHash：eth端的token地址
 
   _toAssetHash：top端的token地址
 
   _peerLockProxyHash：top端的跨联合约（如ERC20MintProxy）
-
-
-  ``` 
-
+ 
+  <br>
 
   **(6),function limit() returns(address)**
+ 
+  **方法**:获取限制合约
 
-  ``` 
-  方法:获取限制合约
-
-  返回：
+  **返回**：
 
   限制合约地址
 
-  ``` 
-
-
-- **ETHLocker.sol**
-
-  ```
-  同上，只是资产的地址是空地址
-
-  ```
+  <br>
  
+- **ETHLocker.sol**
+  
+  **(1),function _EthLocker_initialize(ITopProver _prover,uint64 _minBlockAcceptanceHeight,address _owner,ILimit _limit,address _toAssetHash,address _peerLockProxyHash)**
+
+
+  **方法**：初始化
+
+  **权限**：
+
+  只能调用一次
+
+  **参数**：
+
+  _prover：验证合约
+
+  _minBlockAcceptanceHeight：当前传0就行
+  
+  _owner：owner（验证通过hasRole(bytes32 role, address account)returns（bool）判断
+
+        role：0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6
+
+        account：owner账户）
+
+
+  _limit :限制合约（验证limit()获取）
+   
+  _toAssetHash: top端的token（验证assets（）获取）
+  
+  _peerLockProxyHash：top端的跨联合约（例如Erc20MintProxy.sol）（验证assets（）获取）
+
+ <br>
+
+ **(2),function adminTransfer(address payable destination, uint amount)**
+
+  **方法**：eth提现
+
+  **权限**：
+
+  WITHDRAWAL_ROLE权限
+
+  **参数**：
+
+  destination：收款地址
+
+  amount：金额
+
+  <br>
+  **其余方法同上**
+
+  针对eth fromToken是0x0000000000000000000000000000000000000000
+
+  无bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash)方法，因为在初始化的时候就已经绑定好了
+ 
+  <br>
 
 - **Limit.sol**
 
 **(1),function bindTransferedQuota(address _asset, uint256 _minTransferedToken, uint256 _maxTransferedToken)**
 
-```
-  方法：锁定金额的限制
+  **方法**：锁定金额的限制
 
-  权限：owner
+  **权限**：OWNER_ROLE权限
 
-  参数:
+  **参数**:
 
   _asset:token
 
@@ -243,176 +278,155 @@
 
  _maxTransferedToken：最大金额
 
-```
-
+ <br>
 
 **(2),function forbiden(bytes32 _forbiddenId)**
 
-  ```
-  方法：收据id黑名单的添加
+  **方法**：收据id黑名单的添加
 
-  权限：owner
+  **权限**：FORBIDEN_ROLE权限
 
-  参数：
+  **参数**：
 
   _forbiddenId：id
 
-  （块高 + 收据index）字节数组的keccak256   
+  （块高 + transactionIndex）字节数组的keccak256   
 
-  ```
-
+<br>
 
 **(3),function recover(bytes32 _forbiddenId)** 
 
-  ```
-  方法：收据id黑名单的解除
+  **方法**：收据id黑名单的解除
 
-  权限：owner
+  **权限**：FORBIDEN_ROLE权限
 
-  参数：
+  **参数**：
 
   _forbiddenId：id
 
-  （块高 + 收据index）字节数组的keccak256   
-
-  ```  
-
+  （块高 + transactionIndex）字节数组的keccak256   
+ 
+<br>
 
 **(4),function bindFrozen(address _asset, uint _frozenDuration)**
 
-  ```
-  方法：解锁时长的设置  
+  **方法**：解锁时长的设置  
 
-  权限：owner
+  **权限**：OWNER_ROLE权限
 
-  参数：
+  **参数**：
 
   _asset：token
 
   _frozenDuration：时间
-
-  ```   
-
+   
+<br>
 
 **(5),function checkFrozen(address _asset,uint _timestamp) view returns(bool)** 
 
-  ```
-  方法：检查资产是否符合解锁时长
+  **方法**：检查资产是否符合解锁时长
 
-  权限：owner
+  **权限**：无
 
-  参数：
+  **参数**：
 
   _asset：对端token(如在eth端调用需要传top端的token)
 
   _timestamp:对应交易block的时间
-
-  ```   
-  返回：
+   
+  **返回**：
 
   true和false
+
+  <br>
 
 - **TopBridge.sol**
 
 **(1),function initialize(uint256 _lockEthAmount,address _owner)**
+ 
+  **方法**：初始化
 
-  ``` 
-  方法：初始化
+  **权限**：只能初始化一次
 
-  权限：只能初始化一次
-
-  参数：
+  **参数**：
 
   _lockEthAmount：目前传0就行
 
   _owner：owner地址（目前可以是部署地址）
 
-  ```
-
+ <br>
 
 **(2),function initWithBlock(bytes memory data)**
 
-  ``` 
-  方法：初始创世块
+  **方法**：初始创世块
 
-  权限：owner&&只能初始化一次
+  **权限**：OWNER_ROLE权限&&只能初始化一次
 
-  参数：
+  **参数**：
 
   data：块头的rlp编码字节流
 
-  ``` 
-
+<br>
 
 **(3),function addLightClientBlocks(bytes memory data)**
 
-  ``` 
-  方法：同步块头
+  **方法**：同步块头
 
-  权限：当前没有暂停&&sender属于admin(ADDBLOCK_ROLE权限组)
+  **权限**：当前没有暂停&&sender属于admin(ADDBLOCK_ROLE权限)
 
-  参数：
+  **参数**：
 
-  data：块头的rlp编码字节流
+  data：块头的rlp编码字节流 
 
-  ``` 
-
+<br>
 
 **(4),function blockHashes(bytes32 hash) returens(bool)**
+ 
+  **方法**：某一块头是否已经同步
 
-  ``` 
-  方法：某一块头是否已经同步
+  **权限**：无
 
-  权限：无
+  **参数**：
 
-  参数：
+  bytes32：block的hash 
 
-  bytes32：block的hash
+<br>
 
-  ``` 
+**(5),function blockHeights(uint64 height) returens(uint256)**
 
+  **方法**：某一块头的同步时间就是添加块头的当前时间
 
-**(5),function blockHeights(bytes32 hash) returens(uint256)**
+  **权限**：无
 
-  ``` 
-  方法：某一块头的同步时间
+  **参数**：
 
-  权限：无
+  bytes32：block的height
 
-  参数：
-
-  bytes32：block的hash
-
-  ``` 
-
+<br>
 
 **(6),function maxMainHeight()**
-  
-  ``` 
-  方法:当前同步块头的最大高度
+   
+  **方法**:当前同步块头的最大高度
 
-  权限：无
+  **权限**：无
 
-  参数：
+  **参数**：
 
-  ``` 
-
+<br>
 
 - **TopProver.sol**
 
 
 **(1),constructor(address _bridgeLight)**
+ 
+  **方法**:构造函数
 
-  ``` 
-  方法:构造函数
+  **权限**：无
 
-  权限：无
-
-  参数：
+  **参数**：
 
   _bridgeLight：TopBridge合约
 
-  ``` 
 
 <br> 
 
@@ -423,36 +437,34 @@
 
  **(1),function initialize(IEthProver _prover,address _peerProxyHash,uint64 _minBlockAcceptanceHeight,ILimit _limiter)**
 
-  ```
-  方法：初始化
+  **方法**：初始化
 
-  权限：
+  **权限**：
 
   只能调用一次
 
-  参数：
+  **参数**：
 
   _prover：验证合约(EthProver)
 
-  _peerProxyHash:对端的跨链合约（如ERC20Locker合约）
+  _peerProxyHash(同下的方法):对端的跨链合约（如ERC20Locker合约）(lockProxyHash()获取)
 
   _minBlockAcceptanceHeight：当前传0就行
-  
-  _limiter：限制合约（Limit）
 
-  ```
+  _limiter：限制合约(limiter()获取)
 
-
+ <br>
+ 
  **(2),function mint(bytes memory proofData, uint64 proofBlockHeight) public pausable (PAUSED_MINT)**
-  
-  ``` 
-  方法:铸造资产
+   
+  **方法**:铸造资产
 
-  权限：
-  owner或者
-  当前没有暂停&&sender不在黑名单(BLACK_MINT_ROLE权限组)&&收据id不在黑名单
+  **权限**：
 
-  补充说明：
+  1,当前合约没有暂停 || sender在CONTROLLED_ROLE权限角色里
+  2,sender不在BLACK_MINT_ROLE权限角色黑名单里
+
+  **补充说明**：
 
   除上面权限外还会校检
 
@@ -460,28 +472,25 @@
 
   (2),是否重复解锁及解锁时长
 
-  参数：
+  **参数**：
 
   proofData：证明
 
   proofBlockHeight：高度（暂时没用传0就行）
 
-
-  ``` 
-
+ <br>
 
  **(3),function burn(address localAssetHash, uint256 amount, address receiver) public pausable (PAUSED_BURN)**
-  
-  ``` 
+   
+  **方法**:销毁资产
 
-  方法:销毁资产
+  **权限**：
 
-  权限：
+  1,当前合约没有暂停 || sender在CONTROLLED_ROLE权限角色里
+  2,sender不在BLACK_BURN_ROLE权限角色黑名单里
+  3,收据id不在黑名
 
-  owner或者
-  当前没有暂停&&sender不在黑名单(BLACK_BURN_ROLE权限组)
-
-  补充说明：
+  **补充说明**：
 
   除上面权限外还会校检
 
@@ -493,7 +502,7 @@
 
   (4),burnFrom（这面top代币的合约地址会有权限的校检，只有当前合约可以销毁）
 
-  参数：
+  **参数**：
 
   localAssetHash：资产地址
 
@@ -501,93 +510,89 @@
 
   receiver：接收地址
 
-  ```   
+
+ <br>  
 
 
  **(4),function bindAssetHash(address localAssetHash, address peerAssetHash)** 
 
-  ``` 
-  方法：绑定eth端的资产
+  **方法**：绑定eth端的资产
 
-  参数：
+  **参数**：
 
   localAssetHash：top端的token地址
 
   peerAssetHash：eth端的token地址
 
-  ``` 
-
+  <br>
 
  **(5),function lockProxyHash() returns(address)**  
 
-  ``` 
-  方法:对端跨链合约地址（例如eth端的ERC20Locker合约）
+  **方法**:对端跨链合约地址（例如eth端的ERC20Locker合约）
 
-  参数：无
+  **参数**：无
 
-  ``` 
+  <br>
 
+ **(6),function limiter() returns(address)** 
 
- **(6),function assets(address _address) returns(ProxiedAsset)** 
+ **方法**:获取限制合约地址
 
-  ``` 
-  方法:资产与对端资产的绑定查询
+ **参数**：无
 
-  参数：
+  <br>
 
-  address：top端的token地址
+ **(7),function assets(address _address) returns(ProxiedAsset)** 
 
-  ``` 
+  **方法**:资产与对端资产的绑定查询
 
+  **参数**：
+
+  **address**：top端的token地址
+
+ <br>
 
 - **EthProver.sol**  
   
-
   **(1),constructor(address _bridgeLight)**
+ 
+  **方法**:构造函数
 
-  ``` 
-  方法:构造函数
+  **权限**：无
 
-  权限：无
-
-  参数：
+  **参数**：
 
   _bridgeLight：ff00000000000000000000000000000000000002
 
-  ``` 
-
+  <br>
 
 - **HeaderSync.sol**  
   
   **(1),constructor(address _bridgeLight)**
+ 
+  **方法**:构造函数
 
-  ``` 
-  方法:构造函数
+  **权限**：无
 
-  权限：无
-
-  参数：
+  **参数**：
 
   _bridgeLight：ff00000000000000000000000000000000000002
-
-  ``` 
-
+ 
+  <br>
 
   **(2),function initGenesisHeader(bytes memory genesis, string memory emitter)**
 
-  ``` 
-  方法:初始化创世块头
+  **方法**:初始化创世块头
 
-  权限：无
+  **权限**：无
 
-  参数：
+  **参数**：
 
   genesis：eth head的rlp字节流
 
   emitter：目前没用0x就行
-
-  ``` 
-
+ 
+  <br>
 
 - **Limit.sol**
 
@@ -597,42 +602,192 @@
 
 ## **其他说明**
 
-- **针对暂停权限**
+- **暂停权限**
 
-eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth的ERC20Locker和top的ERC20MintProxy)
+例如：ERC20Locker.sol,EthLocker.sol,TopBridge.sol和ERC20MintProxy.sol都是继承AdminControlledUpgradeable.sol
 
-这里面有是否暂停的方法
+AdminControlledUpgradeable会有暂停及开启的逻辑
+
+针对以上合约默认都是暂停的，所以在部署合约之后是需要开启的
+ 
+也是可以做到部分开启，如果你只想开启某个（对应的值取反就可以，在调用adminPause设置进去） 
 
 **(1),function adminPause(uint flags) public onlyRole(CONTROLLED_ROLE)**
 
-  ``` 
-  方法:设置是否暂停
+  **方法**:设置是否暂停
 
-  权限：
+  **权限**：
 
-  CONTROLLED_ROLE权限组
+  CONTROLLED_ROLE权限角色
 
-  参数：
+  **参数**：
 
-  flags：标记参数（传0都开启）
+  flags：状态参数（传0都开启） 
 
-  ``` 
+<br>
+
+**(1),function paused() public returns(uint256)**
+
+  **方法**:查看当前的状态
+
+  **权限**：
+
+  无
+
+  **参数**：
+
+  无
+
+  **返回**：
+
+  当前的状态
+
+<br>
   
-  - **针对重复解锁和铸造**
+- **重复解锁和铸造**
 
-  eth端判断是否重复解锁及top端判断是否重复铸造(如eth的ERC20Locker和top的ERC20MintProxy)
+例如：ERC20Locker.sol,EthLocker.sol,和ERC20MintProxy.sol
 
-  **(1),function usedProofs(bytes32 _bytes32) returns(bool)**
+**(1),function usedProofs(bytes32 _bytes32) returns(bool)**
 
-  ``` 
+  **方法**:判断是否重复解锁及重复铸造
 
-  方法:是否重复解锁及重复铸造
-
-  参数：
+  **参数**：
 
   bytes32：收据id（块高 + 收据index）字节数组的keccak256  
 
-  ``` 
+  **返回**：
+
+  如果是true则收据已经使用过，否则收据是没使用过的
+
+<br>
+
+
+- **权限角色**
+
+需要权限的合约都会继承AccessControl.sol这里面会专门有针对权限的方法
+
+**目前**
+
+含义：owner角色
+
+OWNER_ROLE = 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6 
+
+含义：就算是暂停，此角色里的人也是可以操作的如锁定，解锁，铸造，销毁
+
+CONTROLLED_ROLE = 0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de  
+
+含义：提现角色角色
+
+WITHDRAWAL_ROLE = 0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443
+
+含义：锁定黑名单角色
+
+BLACK_LOCK_ROLE = 0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4
+
+含义：解锁黑名单角色
+
+BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219
+
+含义：销毁黑名单角色
+
+BLACK_BURN_ROLE = 0x644464d9d2566ad56a676295c65afc4dcee3d72dac5acd473e78e531f06e0bce
+
+含义：铸造黑名单角色
+
+BLACK_MINT_ROLE = 0xd4e43efef4d741d853f42cbb6ea70c0f7d0e722b28b900128e3706c76762edc8
+
+含义：收据id黑名单角色
+
+FORBIDEN_ROLE = 0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d
+
+含义：添加块头角色
+
+ADDBLOCK_ROLE = 0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86
+
+**注**：
+
+所有角色的admin角色都是owner
+
+owner的admin角色还是owner
+
+
+**(1),grantRole(bytes32 role, address account)**
+
+  **方法**:添加权限
+
+  **权限**：
+
+  针对这个角色的admin角色
+
+  **参数**：
+
+  role：权限的角色
+
+  account：成员
+
+<br>
+
+**(1),revokeRole(bytes32 role, address account)**
+
+  **方法**:移除权限
+
+  **权限**：
+
+  针对这个角色的admin角色
+
+  **参数**：
+
+  role：权限的角色
+
+  account：成员
+
+<br>
+
+
+**(1),hasRole(bytes32 role, address account)**
+
+  **方法**:权限的查询
+
+  **权限**：
+
+  无
+
+  **参数**：
+
+  role：权限的角色
+
+  account：成员
+
+  **返回**：
+
+  布尔值
+
+<br>
+
+
+- **_initialize函数**
+
+针对合约的_initialize函数查看是否初始化
+
+**(1),function _initialized() returns(bool)**
+
+  **方法**:是否初始化成功
+
+  **权限**：
+
+  无
+
+  **参数**：
+
+ 无
+
+  **返回**：
+
+  true：初始化成功
+
+  false：未初始化
+
 <br>
 
 ## **UI调用前判断限制**
@@ -700,40 +855,29 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
 
 - **部署ERC20Sample.sol**
   
-  ```
-  参数：直接部署就行，msg.sender会作为代币持有者
+  **参数**：直接部署就行，msg.sender会作为代币持有者
 
-  ```
- 
+
 - **部署Limit.sol**
 
-  ```
-  参数：直接部署就行，无参数，msg.sender会作为owner
+  **参数**：直接部署就行，无参数，msg.sender会作为owner
 
-  ```
 
 - **部署ERC20Locker.sol**
   
-  ``` 
+  **参数**：直接部署就行
 
-  参数：直接部署就行
-
-  ```
 
 - **部署TopBridge.sol**
 
-  ```
-  参数：直接部署就行
+  **参数**：直接部署就行
 
-  ```
 
 - **部署TopProver.sol**
 
-  ```
-  参数1：_bridgeLight
+  **参数**：_bridgeLight
   _bridgeLight: 上面的部署TopBridge合约
   
-  ```
 
 <br>
 
@@ -741,35 +885,31 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
 
 - **部署TopErc20Wrapper.sol**
   
-  注：如测试也可以直接部署ERC20Sample合约
+  注：如测试也可以直接部署ERC20Sample合约,如部署了TopErc20Wrapper需要添加铸造和销毁的权限
+
 
 - **部署Limit.sol**
   
-  ```
-  参数：直接部署就行，无参数，msg.sender会作为owner
-  ```
+  **参数**：直接部署就行，无参数，msg.sender会作为owner
+
 
 - **部署ERC20MintProxy.sol**
   
-  ```
-  参数：直接部署就行，无参数
-  ```
+  **参数**：直接部署就行，无参数
+
 
 - **部署EthProver.sol**
   
-  ```
-  参数：_bridgeLight
+  **参数**：_bridgeLight
   _bridgeLight: top网上的块同步合约：ff00000000000000000000000000000000000002
-  ```
+
 
 - **部署HeaderSync.sol**
   
-  ```
-  参数：_bridgeLight
+  **参数**：_bridgeLight
   _bridgeLight: top网上的块同步合约：ff00000000000000000000000000000000000002
-  ```
 
-  注：此合约是为了初始化ff00000000000000000000000000000000000002合约的创世块头
+  **注**：此合约是为了初始化ff00000000000000000000000000000000000002合约的创世块头
 
 <br> 
 
@@ -777,20 +917,30 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
 
 ####ETH端
 
-- **ERC20Locker合约**
+- **ERC20Locker合约(测试Erc20)**
 
     **(1),function _ERC20Locker_initialize(ITopProver _prover,uint64 _minBlockAcceptanceHeight,address _owner,ILimit _limit)**
 
+
     **(2),function adminPause(uint flags)**
   
-    ``` 
-    参数：
+    **参数**：
 
     flags：0就行,就是开启了，如不设置，是不能进行lock和unLocker
 
-    ```
-
     **(3),function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash)** 
+
+
+- **EthLocker合约(测试主币)**
+
+    **(1),function _EthLocker_initialize(ITopProver _prover,uint64 _minBlockAcceptanceHeight,address _owner,ILimit _limit,address _toAssetHash,address _peerLockProxyHash)**
+
+    **(2),function adminPause(uint flags)**
+  
+    **参数**：
+
+    flags：0就行,就是开启了，如不设置，是不能进行lock和unLocker
+
 
 - **Limit合约(用来限制金额)**
 
@@ -800,7 +950,44 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
 
     **(1),function initialize(uint256 _lockEthAmount,address _owner)**
 
-    **(2),function initWithBlock(bytes memory data)**
+
+    **(2),function adminPause(uint flags)**
+
+
+    **参数**：
+
+    flags：0就行,就是开启了
+
+
+    **(3),function initWithBlock(bytes memory data)**
+
+
+    **(4),function grantRole(bytes32 role, address account)**
+
+
+    同步块头是需要权限的，并不是谁都可以调用的
+    默认部署合约地址（也就是owner是有权限的）
+    
+    **参数**：
+
+    role：0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86
+  
+    account：同步块头的地址
+
+
+
+- **补充说明**
+
+
+  **如果这面进行eth的测试那再部署EthLocker合约，limit，bridge和prover可以复用不用在调用方法**
+
+
+  **（1）EthLocker同上**
+
+
+  **（2）limit再次调用bindTransferedQuota()进行资产最大最小的绑定**
+
+
 
 初始创世块
  
@@ -823,13 +1010,10 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
     **(1),function initialize(IEthProver _prover,address _peerProxyHash,uint64 _minBlockAcceptanceHeight,ILimit _limiter)**
  
     **(2),function adminPause(uint flags)**
-  
-    ```
-    参数：
+
+    **参数**：
 
     flags：0就行,就是开启了，如不设置，是不能进行mint和burn
-
-    ```
   
     **(3),function bindAssetHash(address localAssetHash, address peerAssetHash)**
   
@@ -841,14 +1025,27 @@ eth端和top端的跨链合约都会继承AdminControlledUpgradeable.sol(如eth�
 
     **(1),function initGenesisHeader(bytes memory genesis, string memory emitter)**
 
+- **c++代币合约，需要加权限（因为铸造和销毁是需要权限的）**
 
+
+- **补充说明**
+
+
+  **如果eth那面部署了EthLocker和Erc20Locker,那这面要部署两个一样的ERC20MintProxy的合约(及再部署一个代币合约)，像limit，HeaderSync都是通用的。**
+
+
+  **（1）ERC20MintProxy同上方法在走一遍**
+
+
+  **（2）limit再次调用bindTransferedQuota()进行资产最大最小的绑定**
+   
 <br> 
 
 ## **基本流程**
 
 - 部署合约
 
-- 执行合约配置
+- 执行合约的参数配置
 
 - 双方块头开始同步
 
