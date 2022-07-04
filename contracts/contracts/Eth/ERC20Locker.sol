@@ -19,9 +19,9 @@ contract ERC20Locker is IRC20Locker,Locker{
         Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit);
     }
 
-    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) external onlyRole(OWNER_ROLE) {
-        require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
-        _bindAssetHash(_fromAssetHash,_toAssetHash,_peerLockProxyHash);
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash,uint8 _toAssetHashDecimals,address _peerLockProxyHash) external onlyRole(OWNER_ROLE) {
+        require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0) && _toAssetHashDecimals != 0, "both asset addresses are not to be 0");
+        _bindAssetHash(_fromAssetHash,_toAssetHash,_toAssetHashDecimals,_peerLockProxyHash);
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)
@@ -35,8 +35,8 @@ contract ERC20Locker is IRC20Locker,Locker{
         address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         IERC20(fromAssetHash).safeTransferFrom(msg.sender, address(this), amount);
-
-        emit Locked(fromAssetHash, toAssetHash, msg.sender, amount, receiver);
+        uint256 eventAmount = conversionFromAssetDecimals(fromAssetHash,amount,true);
+        emit Locked(fromAssetHash, toAssetHash, msg.sender, eventAmount, receiver);
     }
 
     function unlockToken(bytes memory proofData, uint64 proofBlockHeight)
@@ -45,8 +45,9 @@ contract ERC20Locker is IRC20Locker,Locker{
         unLock_pauseable
     {   
         VerifiedReceipt memory result= _verify(proofData, proofBlockHeight);
-        IERC20(result.data.toToken).safeTransfer(result.data.receiver, result.data.amount);
-        emit Unlocked(result.proofIndex,result.data.amount, result.data.receiver);
+        uint256 realAmount = conversionFromAssetDecimals(result.data.toToken,result.data.amount,false);
+        IERC20(result.data.toToken).safeTransfer(result.data.receiver, realAmount);
+        emit Unlocked(result.proofIndex,realAmount, result.data.receiver);
      
     }
 

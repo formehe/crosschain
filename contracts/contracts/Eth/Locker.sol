@@ -10,13 +10,13 @@ import "./bridge/TopDecoder.sol";
 import "../common/Utils.sol";
 import "../common/ILimit.sol";
 import "../common/AdminControlledUpgradeable.sol";
+import "./IERC20Decimals.sol";
 
 contract Locker is Initializable,AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
 
     mapping(address => ToAddressHash) public assets;
-
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
@@ -44,12 +44,14 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     event BindAsset(
         address fromAssetHash,
         address toAssetHash,
+        uint256 toAddressDecimals,
         address peerLockProxyHash
     );
 
     struct ToAddressHash{
         address assetHash;
         address lockProxyHash;
+        uint8 decimals;
     }
 
     struct VerifiedEvent {
@@ -109,12 +111,13 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         usedProofs[proofIndex] = true;
     }
 
-    function _bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) internal{
+    function _bindAssetHash(address _fromAssetHash,address _toAssetHash,uint8 _toAssetHashDecimals,address _peerLockProxyHash) internal{
         assets[_fromAssetHash] = ToAddressHash({
             assetHash:_toAssetHash,
-            lockProxyHash:_peerLockProxyHash
+            lockProxyHash:_peerLockProxyHash,
+            decimals:_toAssetHashDecimals
         });
-        emit BindAsset(_fromAssetHash, _toAssetHash,_peerLockProxyHash);
+        emit BindAsset(_fromAssetHash, _toAssetHash,_toAssetHashDecimals,_peerLockProxyHash);
     }
 
     /// verify
@@ -169,6 +172,41 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
         _contractAddress = logInfo.contractAddress;
+    }
+
+    function conversionFromAssetDecimals(address _fromAssetHash,uint256 amount,bool isLock) internal view virtual returns(uint256){
+        uint8 toAssetHashDecimals = assets[_fromAssetHash].decimals;
+        uint8 fromAssetHashDecimals;
+        uint256 returnAmount;
+        if(_fromAssetHash == address(0)){
+           fromAssetHashDecimals = 18; 
+        }else{
+           fromAssetHashDecimals = IERC20Decimals(_fromAssetHash).decimals(); 
+        }
+        require(fromAssetHashDecimals > 0 && toAssetHashDecimals > 0 , "invalid the decimals");
+        if(fromAssetHashDecimals > toAssetHashDecimals){
+            uint8 differenceDecimals = fromAssetHashDecimals - toAssetHashDecimals;
+            if(isLock){
+                returnAmount =  amount / (10**differenceDecimals);
+            }else{
+                returnAmount =  amount * (10**differenceDecimals);
+            }
+        
+        }else if(fromAssetHashDecimals < toAssetHashDecimals){
+            uint8 differenceDecimals = toAssetHashDecimals - fromAssetHashDecimals;
+            if(isLock){
+                returnAmount =  amount * (10**differenceDecimals);
+            }else{
+                returnAmount =  amount / (10**differenceDecimals);
+            }
+
+        }else {
+            returnAmount = amount;
+            
+        }
+        require(returnAmount > 0 , "invalid the amount");
+        return returnAmount;
+        
     }
 
     modifier lockToken_pauseable(){
