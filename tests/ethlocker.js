@@ -43,39 +43,7 @@ describe('EthLocker', () => {
     console.log("bridge>>>> "  + bridge.address)
     console.log("Limit>>>> "  + limit.address)
 
-    await ethLocker._EthLocker_initialize(prover.address,0,wallet.address,limit.address,erc20Token.address,18,erc20Token.address)
-
-  })
-
-  //conversionFromAssetDecimals
-  describe('conversionFromAssetDecimals', () => {
-    // it('The decimals of from is greater than that of to', async () => {
-    //   await erc20Locker.bindAssetHash(erc20Token.address,erc20Token2.address,6,erc20Token2.address);  
-    //   expect(await erc20Locker.conversionFromAssetDecimalsTest(erc20Token.address,toWei("1"),true)).to.equal(toWei("0.000000000001"));
-    // })
-
-    // it('The decimals of from is less than that of to', async () => {
-    //   await erc20Locker.bindAssetHash(erc20Token.address,erc20Token2.address,20,erc20Token2.address);  
-    //   expect(await erc20Locker.conversionFromAssetDecimalsTest(erc20Token.address,toWei("1"),true)).to.equal(toWei("100"));
-    // })
-
-    // it('The decimals of from is greater than that of to', async () => {
-    //   await erc20Locker.bindAssetHash(erc20Token.address,erc20Token2.address,6,erc20Token2.address);  
-    //   expect(await erc20Locker.conversionFromAssetDecimalsTest(erc20Token.address,toWei("1"),false)).to.equal(toWei("1000000000000"));
-    // })
-
-    // it('The decimals of from is less than that of to', async () => {
-    //   await erc20Locker.bindAssetHash(erc20Token.address,erc20Token2.address,20,erc20Token2.address);  
-    //   expect(await erc20Locker.conversionFromAssetDecimalsTest(erc20Token.address,toWei("1"),false)).to.equal(toWei("0.01"));
-    // })
-
-    it('The decimals of from is equal that of to', async () => {
-      expect(await ethLocker.conversionFromAssetDecimalsTest(AddressZero,toWei("1"),true)).to.equal(toWei("1"));
-    })
-
-    it('The decimals of from is equal that of to', async () => {
-      expect(await ethLocker.conversionFromAssetDecimalsTest(AddressZero,toWei("1"),false)).to.equal(toWei("1"));
-    })
+    await ethLocker._EthLocker_initialize(prover.address,0,wallet.address,limit.address,erc20Token.address,erc20Token.address)
 
   })
 

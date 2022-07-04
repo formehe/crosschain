@@ -23,10 +23,4 @@ contract Erc20LockerTest is ERC20Locker {
      
     }
 
-    function conversionFromAssetDecimalsTest(address _fromAssetHash,uint256 amount,bool isLock) public view returns(uint256) {
-        return conversionFromAssetDecimals(_fromAssetHash,amount,isLock);
-    }
-
-
-
 }

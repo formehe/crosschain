@@ -24,11 +24,5 @@ contract EthLockerTest is EthLocker {
 
     function ethBalance(address owner) public view returns(uint256){
         return owner.balance;
-    }
-
-    function conversionFromAssetDecimalsTest(address _fromAssetHash,uint256 amount,bool isLock) public view returns(uint256) {
-        return conversionFromAssetDecimals(_fromAssetHash,amount,isLock);
-    }
-
-        
+    }       
 }
