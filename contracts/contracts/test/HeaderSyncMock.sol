@@ -7,7 +7,7 @@ contract HeaderSyncMock{
     constructor() {
     }
     
-    function getHeaderIfHeightConfirmed(bytes memory blockHeader, uint64 height) public pure returns (bool success) {
+    function is_confirmed(bytes32 blockHash) public pure returns (bool success) {
         return true;
     }
 }
