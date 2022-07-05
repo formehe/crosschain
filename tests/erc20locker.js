@@ -386,6 +386,7 @@ describe('ERC20Locker', () => {
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('1.1234567891'),wallet3.address)).to.emit(erc20Locker,'Locked')
       .withArgs(erc20Token.address, erc20Token2.address,wallet.address,1123456,wallet3.address)
 
+      expect(await erc20Token.balanceOf(wallet.address)).to.equal(toWei('198.876544'));
       expect(await erc20Token.balanceOf(erc20Locker.address)).to.equal(toWei('1.123456'));
 
 
