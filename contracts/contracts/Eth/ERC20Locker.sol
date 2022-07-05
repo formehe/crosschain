@@ -79,8 +79,8 @@ contract ERC20Locker is IRC20Locker,Locker{
     }
 
     function conversionFromAssetAmount(address _fromAssetHash,uint256 amount,bool isLock) internal view virtual returns(uint256 transferAmount,uint256 conversionAmount){
-        uint8 toAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].fromDecimals;
-        uint8 fromAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].toDecimals;
+        uint8 fromAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].fromDecimals;
+        uint8 toAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].toDecimals;
         if(fromAssetHashDecimals > toAssetHashDecimals){
             uint8 differenceDecimals = fromAssetHashDecimals - toAssetHashDecimals;
             if(isLock){
@@ -92,7 +92,7 @@ contract ERC20Locker is IRC20Locker,Locker{
             }
         
         }
-        require(conversionAmount > 0 , "invalid the amount");
+        require(conversionAmount > 0 , "invalid the conversionAmount");
         return (transferAmount,conversionAmount);
         
     }
