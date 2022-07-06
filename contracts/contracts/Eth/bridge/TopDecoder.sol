@@ -118,7 +118,7 @@ library TopDecoder {
                             RLPDecode.RLPItem[] memory items = ls[i].toList();
                             res.blockProducers[i].publicKey.x = items[0].toUint();
                             res.blockProducers[i].publicKey.y = items[1].toUint();
-                            //res.blockProducers[i].stake = uint128(items[2].toUint());
+                            // res.blockProducers[i].stake = uint128(items[2].toUint());
                             res.blockProducers[i].publicKey.signer = address(uint160(uint256(keccak256(abi.encodePacked(res.blockProducers[i].publicKey.x, res.blockProducers[i].publicKey.y)))));
                             console.log("OptionalBlockProducers producer's publickey x:", uint(res.blockProducers[i].publicKey.x));
                             console.log("OptionalBlockProducers producer's publickey y:", uint(res.blockProducers[i].publicKey.y));

@@ -27,7 +27,7 @@ async function performLocker(){
         await locker._EthLocker_initialize(proverEth,0,deployer,limitEth,tokenTop,lockerTop)
     }else{
         locker = await ethers.getContractAt('ERC20Locker', lockerEth, signer)
-        await locker._ERC20Locker_initialize(topProver.address,0,deployer,limit.address)
+        await locker._ERC20Locker_initialize(proverEth,0,deployer,limitEth)
 
     } 
 }
