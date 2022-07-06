@@ -123,7 +123,6 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         _receipt = _parseAndConsumeProof(proofData,proofBlockHeight);
         _saveProof(_receipt.proofIndex);
         return _receipt;
-
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
@@ -144,8 +143,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         ToAddressHash memory toAddressHash = assets[fromToken];
         require(toAddressHash.lockProxyHash == contractAddress, "proxy is not bound");
 
-        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
-        TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
+        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData, proof.logIndex);
+        TopDecoder.LightClientBlock memory header = TopDecoder.decodeMiniLightClientBlock(proof.headerData);
         require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(header.inner_lite.height)),'the transaction is frozen');
         bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
@@ -162,6 +161,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
+        
         //burn
         require(topics0 == 0x4f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842, "invalid the function of topics");
         (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));

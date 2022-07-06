@@ -24,7 +24,7 @@ library MPT {
 
     function verifyTrieProof(
         MerkleProof memory data
-    ) view internal returns (bool)
+    ) pure internal returns (bool)
     {
         bytes memory node = data.proof[data.proofIndex];
         RLPDecode.Iterator memory dec = RLPDecode.toRlpItem(node).iterator();
@@ -56,7 +56,7 @@ library MPT {
 
     function verifyTrieProofBranch(
         MerkleProof memory data
-    ) view internal returns (bool)
+    ) pure internal returns (bool)
     {
         bytes memory node = data.proof[data.proofIndex];
 
@@ -85,7 +85,7 @@ library MPT {
     function verifyTrieProofLeafOrExtension(
         RLPDecode.Iterator memory dec,
         MerkleProof memory data
-    ) view internal returns (bool)
+    ) pure internal returns (bool)
     {
         bytes memory nodekey = dec.next().toBytes();
         bytes memory nodevalue = dec.next().toBytes();
@@ -107,9 +107,8 @@ library MPT {
 
         for (uint i = 1; i < nodekey.length; i++) {
             key[j] = nodekey[i] >> 4;
-            j += 1;
             key[j] = nodekey[i] & 0x0f;
-            j += 1;
+            j += 2;
         }
         
         if ((prefix == 2) || (prefix == 3)) {

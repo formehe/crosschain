@@ -18,7 +18,9 @@ contract Prover{
         EthereumDecoder.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot
     ) internal view {
-        require((keccak256(proof.logEntryData) == keccak256(EthereumDecoder.getLog(receipt.logs[proof.logIndex]))), "Log is not found");
+        console.logBytes(proof.logEntryData);
+        console.logBytes(receipt.log);
+        require((keccak256(proof.logEntryData) == keccak256(receipt.log)), "Log is not found");
 
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = receiptsRoot;
@@ -30,9 +32,8 @@ contract Prover{
         uint j;
         for (uint i = 0; i < actualKey.length; i++) {
             key[j] = actualKey[i] >> 4;
-            j += 1;
             key[j] = actualKey[i] & 0x0f;
-            j += 1;
+            j += 2;
         }
         merkleProof.key = key;
         bool valid = merkleProof.verifyTrieProof();

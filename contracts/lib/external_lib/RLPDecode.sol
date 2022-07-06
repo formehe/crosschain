@@ -315,6 +315,8 @@ library RLPDecode {
     function copy(uint src, uint dest, uint len) private pure {
         if (len == 0) return;
 
+        uint tmp = len;
+
         // copy as many word sizes as possible
         for (; len >= WORD_SIZE; len -= WORD_SIZE) {
             assembly {
@@ -330,7 +332,7 @@ library RLPDecode {
               // Copy remaining bytes
             uint mask = type(uint).max;
             if (len > 0) {
-                mask = 256 ** (WORD_SIZE - len) - 1;
+                mask = (1 << ((WORD_SIZE - len) << 3)) - 1;
             }
             assembly {
                 let srcpart := and(mload(src), not(mask)) // zero out src
