@@ -31,7 +31,7 @@ contract TopProver is Prover, ITopProver{
 
     function getAddLightClientTime(uint64 height) external override returns(uint256 time){
         bytes memory payload = abi.encodeWithSignature("blockHeights(uint64)", height);
-        (bool success, bytes memory returnData) = bridgeLight.call(payload);
+        (bool success, bytes memory returnData) = bridgeLight.staticcall(payload);
         require(success, "Height is not confirmed");
         (time) = abi.decode(returnData, (uint256));
         require(time > 0, "Height is not confirmed1");

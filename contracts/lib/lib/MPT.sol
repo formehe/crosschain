@@ -107,8 +107,9 @@ library MPT {
 
         for (uint i = 1; i < nodekey.length; i++) {
             key[j] = nodekey[i] >> 4;
+            j += 1;
             key[j] = nodekey[i] & 0x0f;
-            j += 2;
+            j += 1;
         }
         
         if ((prefix == 2) || (prefix == 3)) {

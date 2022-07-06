@@ -32,8 +32,9 @@ contract Prover{
         uint j;
         for (uint i = 0; i < actualKey.length; i++) {
             key[j] = actualKey[i] >> 4;
+            j += 1;
             key[j] = actualKey[i] & 0x0f;
-            j += 2;
+            j += 1;
         }
         merkleProof.key = key;
         bool valid = merkleProof.verifyTrieProof();
