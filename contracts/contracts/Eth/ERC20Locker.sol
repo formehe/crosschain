@@ -41,7 +41,7 @@ contract ERC20Locker is IRC20Locker,Locker{
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)
-        public
+        external
         override
         lockToken_pauseable
     {
@@ -50,7 +50,7 @@ contract ERC20Locker is IRC20Locker,Locker{
         uint256 transferAmount = amount;
         uint256 eventAmount = amount;
         if(conversionDecimalsAssets[fromAssetHash].toDecimals > 0){
-            (transferAmount,eventAmount) = conversionFromAssetAmount(fromAssetHash,amount,true);
+            (transferAmount,eventAmount) = conversionFromAssetAmount(fromAssetHash, amount, true);
         }
         require(amount != 0 && eventAmount != 0, "amount can not be 0");
         limit.checkTransferedQuota(fromAssetHash,transferAmount);    
@@ -63,7 +63,7 @@ contract ERC20Locker is IRC20Locker,Locker{
     }
 
     function unlockToken(bytes memory proofData, uint64 proofBlockHeight)
-        public
+        external
         override
         unLock_pauseable
     {   
@@ -72,7 +72,7 @@ contract ERC20Locker is IRC20Locker,Locker{
         if(conversionDecimalsAssets[result.data.toToken].toDecimals > 0){
             (transferAmount,) = conversionFromAssetAmount(result.data.toToken,transferAmount,false);
         }
-        IERC20(result.data.toToken).safeTransfer(result.data.receiver, transferAmount);
+        // IERC20(result.data.toToken).safeTransfer(result.data.receiver, transferAmount);
         emit Unlocked(result.proofIndex,transferAmount, result.data.receiver);
      
     }
@@ -97,7 +97,7 @@ contract ERC20Locker is IRC20Locker,Locker{
     }
 
     function adminTransfer(IERC20 token, address destination, uint256 amount)
-        public
+        external
         onlyRole(WITHDRAWAL_ROLE)
     {
         token.safeTransfer(destination, amount);

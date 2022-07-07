@@ -66,7 +66,7 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         (_receipt.data, contractAddress) = _parseLog(proof.logEntryData);
         require(contractAddress != address(0), "Invalid Token lock address");
         require(lockProxyHash == contractAddress, "proxy is not bound");
-        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
+        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData, proof.logIndex);
         EthereumDecoder.BlockHeader memory header = EthereumDecoder.toBlockHeader(proof.headerData);
         bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);

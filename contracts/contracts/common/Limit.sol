@@ -31,7 +31,7 @@ contract Limit is AccessControl{
         address _asset, 
         uint256 _minTransferedToken, 
         uint256 _maxTransferedToken
-    ) public onlyRole(OWNER_ROLE) {
+    ) external onlyRole(OWNER_ROLE) {
         require(_maxTransferedToken > _minTransferedToken, "max quantity of permitted token is less than the min");
         tokenQuotas[_asset].maxTransferedToken = _maxTransferedToken;
         tokenQuotas[_asset].minTransferedToken = _minTransferedToken;
@@ -39,7 +39,7 @@ contract Limit is AccessControl{
 
     function getTransferedQuota(
         address _asset
-    ) public view returns(uint256 _minTransferedToken, uint256 _maxTransferedToken) {
+    ) external view returns(uint256 _minTransferedToken, uint256 _maxTransferedToken) {
         _minTransferedToken = tokenQuotas[_asset].minTransferedToken;
         _maxTransferedToken = tokenQuotas[_asset].maxTransferedToken;
     }
@@ -56,14 +56,14 @@ contract Limit is AccessControl{
 
     function forbiden(
         bytes32 _forbiddenId
-    ) public onlyRole(FORBIDEN_ROLE) {
+    ) external onlyRole(FORBIDEN_ROLE) {
         require(forbiddens[_forbiddenId] == false, "id has been already forbidden");
         forbiddens[_forbiddenId] = true;
     }
 
     function recover(
         bytes32 _forbiddenId
-    ) public onlyRole(FORBIDEN_ROLE) {
+    ) external onlyRole(FORBIDEN_ROLE) {
         require(forbiddens[_forbiddenId], "id has not been forbidden");
         forbiddens[_forbiddenId] = false;
     }
@@ -71,14 +71,14 @@ contract Limit is AccessControl{
     function bindFrozen(
         address _asset, 
         uint _frozenDuration
-    ) public onlyRole(OWNER_ROLE){
+    ) external onlyRole(OWNER_ROLE){
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
         tokenFrozens[_asset] = _frozenDuration;
     }
 
     function getFrozen(
         address _asset
-    ) public view returns(uint) {
+    ) external view returns(uint) {
         return tokenFrozens[_asset];
     }
 

@@ -64,7 +64,7 @@ library TopDecoder {
     
     function decodeOptionalSignature(RLPDecode.RLPItem memory itemBytes)
         internal
-        view
+        pure
         returns (OptionalSignature memory res)
     {
         RLPDecode.Iterator memory it = itemBytes.iterator();
@@ -86,22 +86,22 @@ library TopDecoder {
                         idx1++;
                     }
 
-                    console.log("OptionalSignature's signature r s v:", uint(res.signature.r), uint(res.signature.s), uint(res.signature.v));
+                    // console.log("OptionalSignature's signature r s v:", uint(res.signature.r), uint(res.signature.s), uint(res.signature.v));
                 }
             } else it.next();
 
             idx++;
         }
 
-        console.log("OptionalSignature's some:", res.some);
+        // console.log("OptionalSignature's some:", res.some);
     }
 
     function decodeOptionalBlockProducers(RLPDecode.RLPItem memory itemBytes)
         internal
-        view
+        pure
         returns (OptionalBlockProducers memory res)
     {
-        console.logBytes(itemBytes.toBytes());
+        // console.logBytes(itemBytes.toBytes());
         // res.bp_hash = sha256(abi.encodePacked(itemBytes.toBytes()));
         if (itemBytes.isList()) {
             RLPDecode.Iterator memory it = itemBytes.iterator();
@@ -120,27 +120,27 @@ library TopDecoder {
                             res.blockProducers[i].publicKey.y = items[1].toUint();
                             // res.blockProducers[i].stake = uint128(items[2].toUint());
                             res.blockProducers[i].publicKey.signer = address(uint160(uint256(keccak256(abi.encodePacked(res.blockProducers[i].publicKey.x, res.blockProducers[i].publicKey.y)))));
-                            console.log("OptionalBlockProducers producer's publickey x:", uint(res.blockProducers[i].publicKey.x));
-                            console.log("OptionalBlockProducers producer's publickey y:", uint(res.blockProducers[i].publicKey.y));
-                            console.log("OptionalBlockProducers producer's stake:", uint(res.blockProducers[i].stake));
+                            // console.log("OptionalBlockProducers producer's publickey x:", uint(res.blockProducers[i].publicKey.x));
+                            // console.log("OptionalBlockProducers producer's publickey y:", uint(res.blockProducers[i].publicKey.y));
+                            // console.log("OptionalBlockProducers producer's stake:", uint(res.blockProducers[i].stake));
                         }
                     }
                 }else it.next();
 
                 idx++;
             }
-            console.log("OptionalBlockProducers epoch id:", uint(res.epochId));
+            // console.log("OptionalBlockProducers epoch id:", uint(res.epochId));
         }
     }
 
     function decodeBlockHeaderInnerLite(bytes memory itemBytes)
         internal
-        view
+        pure
         returns (BlockHeaderInnerLite memory res)
     {
         //cacl innter hash
         res.inner_hash = keccak256(abi.encodePacked(itemBytes));
-        console.logBytes(itemBytes);
+        // console.logBytes(itemBytes);
         uint byte0;
         assembly {
             byte0 := byte(0, mload(add(itemBytes, 0x20)))
@@ -162,20 +162,20 @@ library TopDecoder {
             idx++;
         }
 
-        console.log("inner header's hash:", uint(res.inner_hash));
-        console.logBytes32(res.inner_hash);
-        console.log("inner header's version:", uint(res.version));
-        console.log("inner header's height:", uint(res.height));
-        console.log("inner header's epochId:", uint(res.epoch_id));
-        console.log("inner header's timestamp:", uint(res.timestamp));
-        console.log("inner header's txs root hash:", uint(res.txs_root_hash));
-        console.log("inner header's receipts root hash:", uint(res.receipts_root_hash));
-        console.log("inner header's block merkle hash:", uint(res.block_merkle_root));
+        // console.log("inner header's hash:", uint(res.inner_hash));
+        // console.logBytes32(res.inner_hash);
+        // console.log("inner header's version:", uint(res.version));
+        // console.log("inner header's height:", uint(res.height));
+        // console.log("inner header's epochId:", uint(res.epoch_id));
+        // console.log("inner header's timestamp:", uint(res.timestamp));
+        // console.log("inner header's txs root hash:", uint(res.txs_root_hash));
+        // console.log("inner header's receipts root hash:", uint(res.receipts_root_hash));
+        // console.log("inner header's block merkle hash:", uint(res.block_merkle_root));
     }
 
-    function decodeLightClientBlock(bytes memory rlpBytes)
+    function decodeMiniLightClientBlock(bytes memory rlpBytes)
         internal
-        view
+        pure
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -183,7 +183,58 @@ library TopDecoder {
             byte0 := byte(0, mload(add(rlpBytes, 0x20)))
         }
 
-        console.logBytes(rlpBytes);
+        // console.logBytes(rlpBytes);
+
+        res.version = uint8(byte0);
+        RLPDecode.RLPItem memory bp;
+        RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpBytes, 1).iterator();
+        uint256 idx;
+        while (it.hasNext()) {
+            if (idx == 0) {
+                res.inner_lite = decodeBlockHeaderInnerLite(it.next().toBytes());
+            } else if (idx == 1) {
+                res.prev_block_hash = bytes32(it.next().toUint());
+            } else if (idx == 2) {
+                bp = it.next();
+                res.next_bps = decodeOptionalBlockProducers(bp);
+            } else {
+                it.next();
+            }
+            idx++;
+        }
+
+        bytes[] memory raw_list = new bytes[](4);
+        raw_list[0] = RLPEncode.encodeUint(res.version);
+        raw_list[1] = RLPEncode.encodeBytes(abi.encodePacked(res.inner_lite.inner_hash));
+        raw_list[2] = RLPEncode.encodeBytes(abi.encodePacked(res.prev_block_hash));
+        bytes[] memory raw_list1;
+        if (res.next_bps.some) {
+            raw_list1 = new bytes[](1);
+            raw_list1[0] = bp.toBytes();
+            raw_list[3] = RLPEncode.encodeList(raw_list1);
+        } else {
+            raw_list[3] = RLPEncode.encodeList(raw_list1);
+        }
+
+        bytes memory  hash_raw = RLPEncode.encodeList(raw_list);
+        res.block_hash = keccak256(abi.encodePacked(hash_raw));
+        // console.log("header's version:", uint(res.version));
+        // console.log("header's prev block hash:", uint(res.prev_block_hash));
+        // console.log("header's block_hash:", uint(res.block_hash));
+        // console.logBytes32(res.block_hash);
+    }
+
+    function decodeLightClientBlock(bytes memory rlpBytes)
+        internal
+        pure
+        returns (LightClientBlock memory res)
+    {
+        uint byte0;
+        assembly {
+            byte0 := byte(0, mload(add(rlpBytes, 0x20)))
+        }
+
+        // console.logBytes(rlpBytes);
 
         res.version = uint8(byte0);
         RLPDecode.RLPItem memory bp;
@@ -202,7 +253,7 @@ library TopDecoder {
                 if (sig_item.numItems() > 0) {
                     RLPDecode.RLPItem[] memory sig_ls = sig_item.toList();
                     res.approvals_after_next = new OptionalSignature[](sig_ls.length);
-                    console.logUint(sig_ls.length);
+                    // console.logUint(sig_ls.length);
                     for (uint256 i = 0; i < sig_ls.length; i++) {
                         res.approvals_after_next[i] = decodeOptionalSignature(sig_ls[i]);
                     }
@@ -227,13 +278,10 @@ library TopDecoder {
         }
 
         bytes memory  hash_raw = RLPEncode.encodeList(raw_list);
-        console.logBytes(hash_raw);
-
-        //calc innter hash
         res.block_hash = keccak256(abi.encodePacked(hash_raw));
-        console.log("header's version:", uint(res.version));
-        console.log("header's prev block hash:", uint(res.prev_block_hash));
-        console.log("header's block_hash:", uint(res.block_hash));
-        console.logBytes32(res.block_hash);
+        // console.log("header's version:", uint(res.version));
+        // console.log("header's prev block hash:", uint(res.prev_block_hash));
+        // console.log("header's block_hash:", uint(res.block_hash));
+        // console.logBytes32(res.block_hash);
     }
 }

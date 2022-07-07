@@ -55,30 +55,30 @@ library EthereumDecoder {
         bytes data;
     }
 
-    struct TransactionReceipt {
-        bytes32 transactionHash;
-        uint256 transactionIndex;
-        bytes32 blockHash;
-        uint256 blockNumber;
-        address from;
-        address to;
-        uint256 gasUsed;
-        uint256 cummulativeGasUsed;
-        address contractAddress;
-        Log[] logs;
-        uint256 status;            // root?
-        bytes logsBloom;
+    // struct TransactionReceipt {
+    //     bytes32 transactionHash;
+    //     uint256 transactionIndex;
+    //     bytes32 blockHash;
+    //     uint256 blockNumber;
+    //     address from;
+    //     address to;
+    //     uint256 gasUsed;
+    //     uint256 cummulativeGasUsed;
+    //     address contractAddress;
+    //     Log[] logs;
+    //     uint256 status;            // root?
+    //     bytes logsBloom;
 
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
+    //     uint8 v;
+    //     bytes32 r;
+    //     bytes32 s;
+    // }
 
     struct TransactionReceiptTrie {
         uint8 status;
         uint256 gasUsed;
         bytes logsBloom;
-        Log[] logs;
+        bytes log;
     }
 
     function getBlockRlpData(BlockHeader memory header) internal pure returns (bytes memory data) {
@@ -152,20 +152,20 @@ library EthereumDecoder {
         data = RLPEncode.encodeList(list);
     }
 
-    function getReceiptRlpData(TransactionReceiptTrie memory receipt) internal pure returns (bytes memory data) {
-        bytes[] memory list = new bytes[](4);
+    // function getReceiptRlpData(TransactionReceiptTrie memory receipt) internal pure returns (bytes memory data) {
+    //     bytes[] memory list = new bytes[](4);
 
-        bytes[] memory logs = new bytes[](receipt.logs.length);
-        for (uint256 i = 0; i < receipt.logs.length; i++) {
-            logs[i] = getLog(receipt.logs[i]);
-        }
+    //     bytes[] memory logs = new bytes[](receipt.logs.length);
+    //     for (uint256 i = 0; i < receipt.logs.length; i++) {
+    //         logs[i] = getLog(receipt.logs[i]);
+    //     }
 
-        list[0] = RLPEncode.encodeUint(receipt.status);
-        list[1] = RLPEncode.encodeUint(receipt.gasUsed);
-        list[2] = RLPEncode.encodeBytes(receipt.logsBloom);
-        list[3] = RLPEncode.encodeList(logs);
-        data = RLPEncode.encodeList(list);
-    }
+    //     list[0] = RLPEncode.encodeUint(receipt.status);
+    //     list[1] = RLPEncode.encodeUint(receipt.gasUsed);
+    //     list[2] = RLPEncode.encodeBytes(receipt.logsBloom);
+    //     list[3] = RLPEncode.encodeList(logs);
+    //     data = RLPEncode.encodeList(list);
+    // }
 
     function toReceiptLog(bytes memory data) internal pure returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
@@ -191,7 +191,7 @@ library EthereumDecoder {
         }
     }
 
-    function toReceipt(bytes memory data) internal pure returns (TransactionReceiptTrie memory receipt) {
+    function toReceipt(bytes memory data, uint logIndex) internal pure returns (TransactionReceiptTrie memory receipt) {
         uint byte0;
         RLPDecode.Iterator memory it;        
         assembly {
@@ -211,10 +211,8 @@ library EthereumDecoder {
             else if ( idx == 2 ) receipt.logsBloom = it.next().toBytes();
             else if ( idx == 3 ) {
                 RLPDecode.RLPItem[] memory list = it.next().toList();
-                receipt.logs = new Log[](list.length);
-                for (uint256 i = 0; i < list.length; i++) {
-                    receipt.logs[i] = toReceiptLog(list[i].toRlpBytes());
-                }
+                require(logIndex < list.length, "log index is invalid");
+                receipt.log = list[logIndex].toRlpBytes();
             }
             else it.next();
             idx++;
