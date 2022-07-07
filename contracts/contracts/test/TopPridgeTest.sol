@@ -79,15 +79,4 @@ contract TopPridgeTest is TopBridge{
             s
         ) == address(uint160(uint256(keccak256(abi.encodePacked(x,y)))));
     }
-
-    function setBlockHashes(bytes32 _hash,bool _bool) public{
-        blockHashes[_hash] = _bool;
-    }
-
-    function setBlockHeights(uint64 height,uint256 time) public{
-        blockHeights[height] = time;
-    }
-
-    
-
 }

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./IProver.sol";
+import "../codec/EthProofDecoder.sol";
+import "../../../lib/lib/EthereumDecoder.sol";
 import "../../../lib/lib/MPT.sol";
 //import "hardhat/console.sol";
 
@@ -14,17 +15,21 @@ contract Prover{
     }
 
     function _verify(
-        EthProofDecoder.Proof calldata proof, 
+        uint64 logIndex,
+        bytes memory logEntryData, 
+        uint64 reciptIndex,
+        bytes memory reciptData,
+        bytes[] memory proof,
         EthereumDecoder.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot
     ) internal view {
-        require((keccak256(proof.logEntryData) == keccak256(EthereumDecoder.getLog(receipt.logs[proof.logIndex]))), "Log is not found");
+        require((keccak256(logEntryData) == keccak256(EthereumDecoder.getLog(receipt.logs[logIndex]))), "Log is not found");
 
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = receiptsRoot;
-        merkleProof.proof = proof.proof;
-        merkleProof.expectedValue = proof.reciptData;
-        bytes memory actualKey = RLPEncode.encodeUint(proof.reciptIndex);
+        merkleProof.proof = proof;
+        merkleProof.expectedValue = reciptData;
+        bytes memory actualKey = RLPEncode.encodeUint(reciptIndex);
 
         bytes memory key = new bytes(actualKey.length << 1);
         uint j;

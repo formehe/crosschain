@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../common/ILimit.sol";
 import "../common/ERC20Mint.sol";
-import "../common/prover/IProver.sol";
 import "./verify/VerifierUpgradeable.sol";
 //import "hardhat/console.sol";
 

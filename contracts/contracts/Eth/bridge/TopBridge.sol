@@ -178,8 +178,11 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     function addLightClientBlock(bytes memory data) internal {
         //require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
         TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
-        //require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
-        require(topBlock.inner_lite.height == (maxMainHeight + 1), "height must higher than epoch block height");
+        if(uint(topBlock.inner_lite.block_merkle_root) == 0){
+            return;
+        }
+        //require(topBlock.inner_lite.height == (maxMainHeight + 1), "height must higher than epoch block height");
+        require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
         require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");
 
         Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);
@@ -206,7 +209,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         }
 
         blockHashes[topBlock.block_hash] = true;
-        blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
+        blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root; //
         blockHeights[topBlock.inner_lite.height] = block.timestamp;
 
         lastSubmitter = msg.sender;

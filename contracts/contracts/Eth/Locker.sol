@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./prover/ITopProver.sol";
-import "../common/codec/EthProofDecoder.sol";
+import "../common/codec/TopProofDecoder.sol";
 import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
 import "./bridge/TopDecoder.sol";
@@ -14,7 +14,7 @@ import "./IERC20Decimals.sol";
 
 contract Locker is Initializable,AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
-    using EthProofDecoder for Borsh.Data;
+    using TopProofDecoder for Borsh.Data;
 
     mapping(address => ToAddressHash) public assets;
     uint constant UNPAUSED_ALL = 0;
@@ -133,7 +133,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         uint64 proofBlockHeight
     ) internal returns (VerifiedReceipt memory _receipt) {
         Borsh.Data memory borshData = Borsh.from(proofData);
-        EthProofDecoder.Proof memory proof = borshData.decode();
+        TopProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();
 
         address contractAddress;
@@ -143,11 +143,14 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         address fromToken = _receipt.data.toToken;
         ToAddressHash memory toAddressHash = assets[fromToken];
         require(toAddressHash.lockProxyHash == contractAddress, "proxy is not bound");
-
         EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData);
+
         TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
-        require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(header.inner_lite.height)),'the transaction is frozen');
-        bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
+
+        require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(proof.polyBlockHeight)),'the transaction is frozen');
+
+        bytes memory reciptIndex = abi.encode(header.inner_lite.height,proof.reciptIndex);
+
         bytes32 proofIndex = keccak256(reciptIndex);
         require(limit.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
         (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash,header.block_hash);

@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
-import "../../common/prover/Prover.sol";
 import "./IEthProver.sol";
 import "../../../lib/lib/MPT.sol";
+import "../../common/prover/Prover.sol";
 //import "hardhat/console.sol";
 
 contract EthProver is Prover, IEthProver{
-
     constructor(address _bridgeLight)
     Prover(_bridgeLight) {}
       
@@ -19,7 +17,7 @@ contract EthProver is Prover, IEthProver{
         bytes32 blockHash
     ) external override returns (bool valid, string memory reason) {
         
-        _verify(proof, receipt, receiptsRoot);
+        _verify(proof.logIndex,proof.logEntryData,proof.reciptIndex,proof.reciptData,proof.proof,receipt, receiptsRoot);
         // 调用系统合约验证块头
         bytes memory payload = abi.encodeWithSignature("is_confirmed(bytes32)", blockHash);
         (bool success, bytes memory returnData) = bridgeLight.call(payload);
