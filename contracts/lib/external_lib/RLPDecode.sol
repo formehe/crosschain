@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 library RLPDecode {
     uint8 constant STRING_SHORT_START = 0x80;

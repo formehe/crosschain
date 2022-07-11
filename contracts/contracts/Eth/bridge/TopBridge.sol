@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "../../common/AdminControlledUpgradeable.sol";
 import "./ITopBridge.sol";
 import "./TopDecoder.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 import "../../../lib/external_lib/RLPDecode.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -187,7 +187,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");
 
         Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);
-        console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
+        // console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
         uint votedFor = 0;
         for (uint i = 0; i < thisEpoch.numBPs; i++) {
             TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
@@ -201,7 +201,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             }
         }
 
-        console.log("vote, num bps:", votedFor, thisEpoch.stakeThreshold);
+        // console.log("vote, num bps:", votedFor, thisEpoch.stakeThreshold);
         require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
 
         if (topBlock.next_bps.some) {
@@ -263,7 +263,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         epochs[currentEpochIdex].stakeThreshold = ((cnt << 1) + 2) / 3;
         epochs[currentEpochIdex].ownerHeight = blockHeight;
 
-        console.log("ownerHeight:", epochs[currentEpochIdex].ownerHeight);
+        // console.log("ownerHeight:", epochs[currentEpochIdex].ownerHeight);
         epochs[currentEpochIdex].epochId = epochId;
         epochs[currentEpochIdex].numBPs = cnt;
     }

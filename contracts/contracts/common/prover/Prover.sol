@@ -23,7 +23,7 @@ contract Prover{
         EthereumDecoder.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot
     ) internal view {
-        console.logBytes(receipt.log);
+        // console.logBytes(receipt.log);
         require((keccak256(logEntryData) == keccak256(receipt.log)), "Log is not found");
 
         MPT.MerkleProof memory merkleProof;

@@ -7,7 +7,6 @@ import "../common/codec/TopProofDecoder.sol";
 import "../common/Borsh.sol";
 import "../../lib/lib/EthereumDecoder.sol";
 import "./bridge/TopDecoder.sol";
-import "../common/Utils.sol";
 import "../common/ILimit.sol";
 import "../common/AdminControlledUpgradeable.sol";
 import "./IERC20Decimals.sol";
@@ -149,7 +148,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
         bytes32 proofIndex = keccak256(reciptIndex);
         require(limit.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
-        (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash,header.block_hash);
+        (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash, header.block_hash);
         require(success, "Proof should be valid");
         require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
         _receipt.proofIndex = proofIndex;

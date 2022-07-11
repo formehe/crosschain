@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
 import "../../../lib/external_lib/RLPDecode.sol";
 
@@ -279,9 +279,5 @@ library TopDecoder {
 
         bytes memory  hash_raw = RLPEncode.encodeList(raw_list);
         res.block_hash = keccak256(abi.encodePacked(hash_raw));
-        // console.log("header's version:", uint(res.version));
-        // console.log("header's prev block hash:", uint(res.prev_block_hash));
-        // console.log("header's block_hash:", uint(res.block_hash));
-        // console.logBytes32(res.block_hash);
     }
 }

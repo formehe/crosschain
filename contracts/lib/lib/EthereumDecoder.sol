@@ -30,80 +30,17 @@ library EthereumDecoder {
         uint256 baseFeePerGas;
     }
 
-    struct Account {
-        uint256 nonce;
-        uint256 balance;
-        bytes32 storageRoot;
-        bytes32 codeHash;
-    }
-
-    struct Transaction {
-        uint256 nonce;
-        uint256 gasPrice;
-        uint256 gasLimit;
-        address to;
-        uint256 value;
-        bytes data;
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
-
     struct Log {
         address contractAddress;
         bytes32[] topics;
         bytes data;
     }
 
-    // struct TransactionReceipt {
-    //     bytes32 transactionHash;
-    //     uint256 transactionIndex;
-    //     bytes32 blockHash;
-    //     uint256 blockNumber;
-    //     address from;
-    //     address to;
-    //     uint256 gasUsed;
-    //     uint256 cummulativeGasUsed;
-    //     address contractAddress;
-    //     Log[] logs;
-    //     uint256 status;            // root?
-    //     bytes logsBloom;
-
-    //     uint8 v;
-    //     bytes32 r;
-    //     bytes32 s;
-    // }
-
     struct TransactionReceiptTrie {
         uint8 status;
         uint256 gasUsed;
         bytes logsBloom;
         bytes log;
-    }
-
-    function getBlockRlpData(BlockHeader memory header) internal pure returns (bytes memory data) {
-        bytes[] memory list = new bytes[](15);
-
-        list[0] = RLPEncode.encodeBytes(abi.encodePacked(header.parentHash));
-        list[1] = RLPEncode.encodeBytes(abi.encodePacked(header.sha3Uncles));
-        list[2] = RLPEncode.encodeAddress(header.miner);
-        list[3] = RLPEncode.encodeBytes(abi.encodePacked(header.stateRoot));
-        list[4] = RLPEncode.encodeBytes(abi.encodePacked(header.transactionsRoot));
-        list[5] = RLPEncode.encodeBytes(abi.encodePacked(header.receiptsRoot));
-        list[6] = RLPEncode.encodeBytes(header.logsBloom);
-        list[7] = RLPEncode.encodeUint(header.difficulty);
-        list[8] = RLPEncode.encodeUint(header.number);
-        list[9] = RLPEncode.encodeUint(header.gasLimit);
-        list[10] = RLPEncode.encodeUint(header.gasUsed);
-        list[11] = RLPEncode.encodeUint(header.timestamp);
-        list[12] = RLPEncode.encodeBytes(header.extraData);
-        list[13] = RLPEncode.encodeBytes(abi.encodePacked(header.mixHash));
-        list[14] = RLPEncode.encodeBytes(abi.encodePacked(header.nonce));
-        if (header.baseFeePerGas != 0) {
-            list[15] = RLPEncode.encodeUint(header.baseFeePerGas);
-        }
-
-        data = RLPEncode.encodeList(list);
     }
 
     function toBlockHeader(bytes memory rlpHeader) internal pure returns (BlockHeader memory header) {
@@ -133,39 +70,6 @@ library EthereumDecoder {
         }
         header.hash = keccak256(rlpHeader);
     }
-
-    function getBlockHash(EthereumDecoder.BlockHeader memory header) internal pure returns (bytes32 hash) {
-        return keccak256(getBlockRlpData(header));
-    }
-
-    function getLog(Log memory log) internal pure returns (bytes memory data) {
-        bytes[] memory list = new bytes[](3);
-        bytes[] memory topics = new bytes[](log.topics.length);
-
-        for (uint256 i = 0; i < log.topics.length; i++) {
-            topics[i] = RLPEncode.encodeBytes(abi.encodePacked(log.topics[i]));
-        }
-
-        list[0] = RLPEncode.encodeAddress(log.contractAddress);
-        list[1] = RLPEncode.encodeList(topics);
-        list[2] = RLPEncode.encodeBytes(log.data);
-        data = RLPEncode.encodeList(list);
-    }
-
-    // function getReceiptRlpData(TransactionReceiptTrie memory receipt) internal pure returns (bytes memory data) {
-    //     bytes[] memory list = new bytes[](4);
-
-    //     bytes[] memory logs = new bytes[](receipt.logs.length);
-    //     for (uint256 i = 0; i < receipt.logs.length; i++) {
-    //         logs[i] = getLog(receipt.logs[i]);
-    //     }
-
-    //     list[0] = RLPEncode.encodeUint(receipt.status);
-    //     list[1] = RLPEncode.encodeUint(receipt.gasUsed);
-    //     list[2] = RLPEncode.encodeBytes(receipt.logsBloom);
-    //     list[3] = RLPEncode.encodeList(logs);
-    //     data = RLPEncode.encodeList(list);
-    // }
 
     function toReceiptLog(bytes memory data) internal pure returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
@@ -216,60 +120,6 @@ library EthereumDecoder {
             }
             else it.next();
             idx++;
-        }
-    }
-
-    function getTransactionRaw(Transaction memory transaction, uint256 chainId) internal pure returns (bytes memory data) {
-        bytes[] memory list = new bytes[](9);
-
-        list[0] = RLPEncode.encodeUint(transaction.nonce);
-        list[1] = RLPEncode.encodeUint(transaction.gasPrice);
-        list[2] = RLPEncode.encodeUint(transaction.gasLimit);
-        list[3] = RLPEncode.encodeAddress(transaction.to);
-        list[4] = RLPEncode.encodeUint(transaction.value);
-        list[5] = RLPEncode.encodeBytes(transaction.data);
-        list[6] = RLPEncode.encodeUint(chainId);
-        list[7] = RLPEncode.encodeUint(0);
-        list[8] = RLPEncode.encodeUint(0);
-        data = RLPEncode.encodeList(list);
-    }
-
-    function toTransaction(bytes memory data) internal pure returns (Transaction memory transaction) {
-        RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
-
-        uint idx;
-        while(it.hasNext()) {
-            if ( idx == 0 )      transaction.nonce       = it.next().toUint();
-            else if ( idx == 1 ) transaction.gasPrice        = it.next().toUint();
-            else if ( idx == 2 ) transaction.gasLimit        = it.next().toUint();
-            else if ( idx == 3 ) transaction.to        = it.next().toAddress();
-            else if ( idx == 4 ) transaction.value       = it.next().toUint();
-            else if ( idx == 5 ) transaction.data       = it.next().toBytes();
-            else if ( idx == 6 ) transaction.v       = uint8(it.next().toUint());
-            else if ( idx == 7 ) transaction.r       = bytes32(it.next().toUint());
-            else if ( idx == 8 ) transaction.s       = bytes32(it.next().toUint());
-            else it.next();
-            idx++;
-        }
-    }
-
-    function toAccount(bytes memory data) internal pure returns (Account memory account) {
-        RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
-
-        uint idx;
-        while(it.hasNext()) {
-            if ( idx == 0 )      account.nonce         = it.next().toUint();
-            else if ( idx == 1 ) account.balance       = it.next().toUint();
-            else if ( idx == 2 ) account.storageRoot   = toBytes32(it.next().toBytes());
-            else if ( idx == 3 ) account.codeHash      = toBytes32(it.next().toBytes());
-            else it.next();
-            idx++;
-        }
-    }
-
-    function toBytes32(bytes memory data) internal pure returns (bytes32 _data) {
-        assembly {
-            _data := mload(add(data, 32))
         }
     }
 }
