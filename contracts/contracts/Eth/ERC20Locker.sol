@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "../common/IRC20Locker.sol";
 import "./Locker.sol";
 
@@ -25,7 +23,7 @@ contract ERC20Locker is IRC20Locker,Locker{
         Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit);
     }
 
-    function bindAssetHash(address _fromAssetHash, address _toAssetHash,address _peerLockProxyHash) external onlyRole(OWNER_ROLE) {
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash, address _peerLockProxyHash) external onlyRole(OWNER_ROLE) {
         require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
         _bindAssetHash(_fromAssetHash,_toAssetHash,_peerLockProxyHash);
     }
@@ -74,7 +72,6 @@ contract ERC20Locker is IRC20Locker,Locker{
         }
         IERC20(result.data.toToken).safeTransfer(result.data.receiver, transferAmount);
         emit Unlocked(result.proofIndex,transferAmount, result.data.receiver);
-     
     }
 
     function conversionFromAssetAmount(address _fromAssetHash,uint256 amount,bool isLock) internal view virtual returns(uint256 transferAmount,uint256 conversionAmount){
@@ -102,5 +99,4 @@ contract ERC20Locker is IRC20Locker,Locker{
     {
         token.safeTransfer(destination, amount);
     }
-
 }

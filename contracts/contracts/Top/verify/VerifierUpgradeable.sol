@@ -72,7 +72,7 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         bytes32 proofIndex = keccak256(reciptIndex);
         require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
 
-        (bool success,) = prover.verify(proof, receipt, header.receiptsRoot,header.hash);
+        (bool success,) = prover.verify(proof, receipt, header.receiptsRoot,header.hash, header.number);
         require(success, "Proof should be valid");
         require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
         _receipt.proofIndex = proofIndex;

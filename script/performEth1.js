@@ -8,7 +8,7 @@ const {
 //perform Eth
 async function performEth(){
     await performLocker()
-    await performTopBridge()
+    // await performTopBridge()
 }
 
 async function performLocker(){

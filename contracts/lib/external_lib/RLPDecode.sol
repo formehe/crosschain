@@ -314,9 +314,6 @@ library RLPDecode {
     */
     function copy(uint src, uint dest, uint len) private pure {
         if (len == 0) return;
-
-        uint tmp = len;
-
         // copy as many word sizes as possible
         for (; len >= WORD_SIZE; len -= WORD_SIZE) {
             assembly {

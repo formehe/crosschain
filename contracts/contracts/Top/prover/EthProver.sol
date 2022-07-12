@@ -14,12 +14,13 @@ contract EthProver is Prover, IEthProver{
         EthProofDecoder.Proof calldata proof, 
         EthereumDecoder.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot,
-        bytes32 blockHash
+        bytes32 blockHash,
+        uint256 height
     ) external override returns (bool valid, string memory reason) {
         
         _verify(proof.logIndex,proof.logEntryData,proof.reciptIndex,proof.reciptData,proof.proof,receipt, receiptsRoot);
         // 调用系统合约验证块头
-        bytes memory payload = abi.encodeWithSignature("is_confirmed(bytes32)", blockHash);
+        bytes memory payload = abi.encodeWithSignature("is_confirmed(uint256,bytes32)", height, blockHash);
         (bool success, bytes memory returnData) = bridgeLight.call(payload);
         require(success, "Height is not confirmed");
 
