@@ -1,69 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-// import "hardhat/console.sol";
-import "../../../lib/external_lib/RLPEncode.sol";
-import "../../../lib/external_lib/RLPDecode.sol";
+import "../../lib/external_lib/RLPEncode.sol";
+import "../../lib/external_lib/RLPDecode.sol";
+import "./IDeserialize.sol";
 
-library TopDecoder {
+contract Deserialize is IDeserialize{
     using RLPDecode for bytes;
     using RLPDecode for uint;
     using RLPDecode for RLPDecode.RLPItem;
     using RLPDecode for RLPDecode.Iterator;
-
-    
-    struct SECP256K1PublicKey {
-        uint256 x;
-        uint256 y;
-        address signer; //additional
-    }
-
-    struct BlockProducer {
-        SECP256K1PublicKey publicKey;
-        uint128 stake;
-    }
-
-    struct OptionalBlockProducers {
-       bool some; 
-       uint64 epochId;
-       BlockProducer[] blockProducers;
-    //    bytes32 bp_hash; // Additional computable element
-    }
-
-    struct Signature {
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-    }
-
-    struct OptionalSignature {
-        bool some; //add
-        Signature signature;
-    }
-
-    struct BlockHeaderInnerLite {
-        uint8 version; //version of block header, modified
-        uint64 height; // Height of this block since the genesis block (height 0).
-        uint64 epoch_id; // Epoch start hash of this block's epoch. Used for retrieving validator information
-        uint64 timestamp; // Timestamp at which the block was built.
-        bytes32 txs_root_hash; // Hash of the next epoch block producers set
-        bytes32 receipts_root_hash; // Root of the outcomes of transactions and receipts.
-        bytes32 block_merkle_root; //all block merkle root hash
-        bytes32 inner_hash; // Additional computable element
-    }
-
-    struct LightClientBlock {
-        uint8 version; //added
-        BlockHeaderInnerLite inner_lite;
-        bytes32 prev_block_hash;
-        OptionalBlockProducers next_bps;
-        OptionalSignature[] approvals_after_next;
-        bytes32 block_hash; // Additional computable element
-    }
-
     
     function decodeOptionalSignature(RLPDecode.RLPItem memory itemBytes)
-        internal
+        private
         pure
         returns (OptionalSignature memory res)
     {
@@ -97,7 +46,7 @@ library TopDecoder {
     }
 
     function decodeOptionalBlockProducers(RLPDecode.RLPItem memory itemBytes)
-        internal
+        private
         pure
         returns (OptionalBlockProducers memory res)
     {
@@ -134,7 +83,7 @@ library TopDecoder {
     }
 
     function decodeBlockHeaderInnerLite(bytes memory itemBytes)
-        internal
+        private
         pure
         returns (BlockHeaderInnerLite memory res)
     {
@@ -174,8 +123,9 @@ library TopDecoder {
     }
 
     function decodeMiniLightClientBlock(bytes memory rlpBytes)
-        internal
+        external
         pure
+        override
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -225,8 +175,9 @@ library TopDecoder {
     }
 
     function decodeLightClientBlock(bytes memory rlpBytes)
-        internal
+        external
         pure
+        override
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -279,5 +230,85 @@ library TopDecoder {
 
         bytes memory  hash_raw = RLPEncode.encodeList(raw_list);
         res.block_hash = keccak256(abi.encodePacked(hash_raw));
+    }
+
+    function toBlockHeader(bytes memory rlpHeader) external pure override returns (BlockHeader memory header) {
+
+        RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpHeader).iterator();
+
+        uint idx;
+        while(it.hasNext()) {
+            if ( idx == 0 )      header.parentHash       = bytes32(it.next().toUint());
+            else if ( idx == 1 ) header.sha3Uncles       = bytes32(it.next().toUint());
+            else if ( idx == 2 ) header.miner            = it.next().toAddress();
+            else if ( idx == 3 ) header.stateRoot        = bytes32(it.next().toUint());
+            else if ( idx == 4 ) header.transactionsRoot = bytes32(it.next().toUint());
+            else if ( idx == 5 ) header.receiptsRoot     = bytes32(it.next().toUint());
+            else if ( idx == 6 ) header.logsBloom        = it.next().toBytes();
+            else if ( idx == 7 ) header.difficulty       = it.next().toUint();
+            else if ( idx == 8 ) header.number           = it.next().toUint();
+            else if ( idx == 9 ) header.gasLimit         = it.next().toUint();
+            else if ( idx == 10 ) header.gasUsed         = it.next().toUint();
+            else if ( idx == 11 ) header.timestamp       = it.next().toUint();
+            else if ( idx == 12 ) header.extraData       = it.next().toBytes();
+            else if ( idx == 13 ) header.mixHash         = bytes32(it.next().toUint());
+            else if ( idx == 14 ) header.nonce           = uint64(it.next().toUint());
+            else if ( idx == 15 ) header.baseFeePerGas   = it.next().toUint();
+            else it.next();
+            idx++;
+        }
+        header.hash = keccak256(rlpHeader);
+    }
+
+    function toReceiptLog(bytes memory data) external pure override returns (Log memory log) {
+        RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
+
+        uint idx;
+        while(it.hasNext()) {
+            if ( idx == 0 ) {
+                log.contractAddress = it.next().toAddress();
+            }
+            else if ( idx == 1 ) {
+                RLPDecode.RLPItem[] memory list = it.next().toList();
+                log.topics = new bytes32[](list.length);
+                for (uint256 i = 0; i < list.length; i++) {
+                    bytes32 topic = bytes32(list[i].toUint());
+                    log.topics[i] = topic;
+                }
+            }
+            else if ( idx == 2 ) {
+                log.data = it.next().toBytes();
+            }
+            else it.next();
+            idx++;
+        }
+    }
+
+    function toReceipt(bytes memory data, uint logIndex) external pure override returns (TransactionReceiptTrie memory receipt) {
+        uint byte0;
+        RLPDecode.Iterator memory it;        
+        assembly {
+            byte0 := byte(0, mload(add(data, 0x20)))
+        }
+
+        if (byte0 <= 0x7f) {
+            it = RLPDecode.toRlpItem(data, 1).iterator();
+        } else {
+            it = RLPDecode.toRlpItem(data).iterator();
+        }
+
+        uint idx;
+        while(it.hasNext()) {
+            if ( idx == 0 ) receipt.status = uint8(it.next().toUint());
+            else if ( idx == 1 ) receipt.gasUsed = it.next().toUint();
+            else if ( idx == 2 ) receipt.logsBloom = it.next().toBytes();
+            else if ( idx == 3 ) {
+                RLPDecode.RLPItem[] memory list = it.next().toList();
+                require(logIndex < list.length, "log index is invalid");
+                receipt.log = list[logIndex].toRlpBytes();
+            }
+            else it.next();
+            idx++;
+        }
     }
 }

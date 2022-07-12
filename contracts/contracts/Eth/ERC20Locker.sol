@@ -18,9 +18,10 @@ contract ERC20Locker is IRC20Locker,Locker{
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
-        ILimit limit
+        ILimit limit,
+        IDeserialize _deserializer
     ) external initializer {
-        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit);
+        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit, _deserializer);
     }
 
     function bindAssetHash(address _fromAssetHash, address _toAssetHash, address _peerLockProxyHash) external onlyRole(OWNER_ROLE) {

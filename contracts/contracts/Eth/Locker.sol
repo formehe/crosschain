@@ -5,11 +5,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./prover/ITopProver.sol";
 import "../common/codec/TopProofDecoder.sol";
 import "../common/Borsh.sol";
-import "../../lib/lib/EthereumDecoder.sol";
-import "./bridge/TopDecoder.sol";
 import "../common/ILimit.sol";
 import "../common/AdminControlledUpgradeable.sol";
 import "./IERC20Decimals.sol";
+import "../common/IDeserialize.sol";
 
 contract Locker is Initializable,AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
@@ -19,12 +18,13 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
+    IDeserialize deserializer;
 
-    ILimit public limit;
+    ILimit limit;
     //keccak256("BLACK.UN.LOCK.ROLE")
-    bytes32 constant public BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
+    bytes32 constant BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
     //keccak256("BLACK.LOCK.ROLE")
-    bytes32 constant public BLACK_LOCK_ROLE = 0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4;
+    bytes32 constant BLACK_LOCK_ROLE = 0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4;
 
     event Locked (
         address indexed fromToken,
@@ -77,12 +77,14 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
-        ILimit _limit
+        ILimit _limit,
+        IDeserialize _deserializer
     ) internal onlyInitializing{
         require(_owner != address(0));
         prover = _prover;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
         limit = _limit;
+        deserializer = _deserializer;
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSED_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
@@ -141,8 +143,9 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         address fromToken = _receipt.data.toToken;
         ToAddressHash memory toAddressHash = assets[fromToken];
         require(toAddressHash.lockProxyHash == contractAddress, "proxy is not bound");
-        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData, proof.logIndex);
-        TopDecoder.LightClientBlock memory header = TopDecoder.decodeMiniLightClientBlock(proof.headerData);
+
+        IDeserialize.TransactionReceiptTrie memory receipt = deserializer.toReceipt(proof.reciptData, proof.logIndex);
+        IDeserialize.LightClientBlock memory header = deserializer.decodeMiniLightClientBlock(proof.headerData);
         require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(proof.polyBlockHeight)),'the transaction is frozen');
         bytes memory reciptIndex = abi.encode(header.inner_lite.height,proof.reciptIndex);
 
@@ -156,8 +159,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
     function _parseLog(
         bytes memory log
-    ) private pure returns (VerifiedEvent memory _receipt, address _contractAddress) {
-        EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
+    ) private view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+        IDeserialize.Log memory logInfo = deserializer.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
         

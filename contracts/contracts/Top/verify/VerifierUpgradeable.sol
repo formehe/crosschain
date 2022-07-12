@@ -22,11 +22,12 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         VerifiedEvent data;
     }
 
+    IDeserialize deserializer;
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_BURN = 1 << 0;
     uint constant PAUSED_MINT = 1 << 1;
 
-    IEthProver internal prover;
+    IEthProver prover;
     ILimit public limiter;
     address public lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
@@ -36,12 +37,14 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         IEthProver _prover,
         address _peerLockProxyHash,
         uint64 _minBlockAcceptanceHeight,
-        ILimit _limiter
+        ILimit _limiter,
+        IDeserialize _deserializer
     ) internal onlyInitializing {
         prover = _prover;
         lockProxyHash = _peerLockProxyHash;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
         limiter = _limiter;
+        deserializer = _deserializer;
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
@@ -66,8 +69,9 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         (_receipt.data, contractAddress) = _parseLog(proof.logEntryData);
         require(contractAddress != address(0), "Invalid Token lock address");
         require(lockProxyHash == contractAddress, "proxy is not bound");
-        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData, proof.logIndex);
-        EthereumDecoder.BlockHeader memory header = EthereumDecoder.toBlockHeader(proof.headerData);
+
+        IDeserialize.TransactionReceiptTrie memory receipt = deserializer.toReceipt(proof.reciptData, proof.logIndex);
+        IDeserialize.BlockHeader memory header = deserializer.toBlockHeader(proof.headerData);
         bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
         require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
@@ -81,7 +85,7 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
     function _parseLog(
         bytes memory log
     ) internal virtual view returns (VerifiedEvent memory _receipt, address _contractAddress) {
-        EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
+        IDeserialize.Log memory logInfo = deserializer.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
         //Lock

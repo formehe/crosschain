@@ -6,8 +6,8 @@ import "../Top/ERC20MintProxy.sol";
 contract ERC20MintProxyTest is ERC20MintProxy{
     function _parseLog(
         bytes memory log
-    ) internal override pure returns (VerifiedEvent memory _receipt, address _contractAddress) {
-        EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
+    ) internal override view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+        IDeserialize.Log memory logInfo = deserializer.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
         //burn

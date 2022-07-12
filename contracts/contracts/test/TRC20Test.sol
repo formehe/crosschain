@@ -12,14 +12,15 @@ contract TRC20Test is TRC20{
         uint64 _minBlockAcceptanceHeight,
         string memory _name,
         string memory _symbol,
-        ILimit _limiter
-    ) TRC20(_prover, _peerProxyHash,_peerAssetHash,_minBlockAcceptanceHeight,_name,_symbol, _limiter) {}
+        ILimit _limiter,
+        IDeserialize _deserializer
+    ) TRC20(_prover, _peerProxyHash,_peerAssetHash,_minBlockAcceptanceHeight,_name,_symbol, _limiter, _deserializer) {}
 
 
     function _parseLog(
         bytes memory log
-    ) internal override pure returns (VerifiedEvent memory _receipt, address _contractAddress) {
-        EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
+    ) internal override view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+        IDeserialize.Log memory logInfo = deserializer.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
         require(topics0 == 0x4f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842, "invalid the function of topics");
@@ -29,7 +30,5 @@ contract TRC20Test is TRC20{
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
         _contractAddress = logInfo.contractAddress;
     }
-        
-    
 }
    

@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../common/IRC20Locker.sol";
 import "../common/ITokenLocker.sol";
 import "./Locker.sol";
-import "./Locker.sol";
 
 contract EthLocker is ITokenLocker,Locker{
     using SafeERC20 for IERC20;
@@ -18,9 +17,10 @@ contract EthLocker is ITokenLocker,Locker{
         address _owner,
         ILimit limit,
         address _toAssetHash,
-        address _peerLockProxyHash
+        address _peerLockProxyHash,
+        IDeserialize _deserializer
     ) external initializer {   
-        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit);
+        Locker._Locker_initialize(_prover, _minBlockAcceptanceHeight, _owner, limit, _deserializer);
         require(_toAssetHash != address(0) && _peerLockProxyHash != address(0) ,"both asset addresses are not to be 0");
         _bindAssetHash(address(0),_toAssetHash,_peerLockProxyHash);
 

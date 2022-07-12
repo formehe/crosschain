@@ -2,17 +2,20 @@
 pragma solidity ^0.8.0;
 
 import "../Eth/prover/TopProver.sol";
-import "../Eth/bridge/TopDecoder.sol";
 import "../common/codec/TopProofDecoder.sol";
-import "../../lib/lib/EthereumDecoder.sol";
+import "../common/IDeserialize.sol";
 
 contract TopProverTest is TopProver{
     using Borsh for Borsh.Data;
     using TopProofDecoder for Borsh.Data;
     using MPT for MPT.MerkleProof;
 
-    constructor(address _bridgeLight)
-    TopProver(_bridgeLight) {}
+    IDeserialize deserializer;
+
+    constructor(address _bridgeLight, IDeserialize _deserializer)
+    TopProver(_bridgeLight) {
+        deserializer = _deserializer;
+    }
 
     function verifyHash(bytes32 hash) public returns(bool valid, string memory reason){
         bytes memory payload = abi.encodeWithSignature("blockHashes(bytes32)", hash);
@@ -24,12 +27,12 @@ contract TopProverTest is TopProver{
         return (true, "");
     }
 
-    function verifyReceiptProof(bytes memory proofData) public returns(TopProofDecoder.Proof memory proof){
+    function verifyReceiptProof(bytes memory proofData) public view returns(TopProofDecoder.Proof memory proof){
         Borsh.Data memory borshData = Borsh.from(proofData);
         proof = borshData.decode();
         borshData.done();
 
-        TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
+        IDeserialize.LightClientBlock memory header = deserializer.decodeLightClientBlock(proof.headerData);
     
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = header.inner_lite.receipts_root_hash;
@@ -51,13 +54,12 @@ contract TopProverTest is TopProver{
        
     }
 
-    function verifyBlockProof(bytes memory proofData) public returns(TopProofDecoder.Proof memory proof){
+    function verifyBlockProof(bytes memory proofData) public view returns(TopProofDecoder.Proof memory proof){
         Borsh.Data memory borshData = Borsh.from(proofData);
         proof = borshData.decode();
         borshData.done();
 
-
-        TopDecoder.LightClientBlock memory header = TopDecoder.decodeLightClientBlock(proof.headerData);
+        IDeserialize.LightClientBlock memory header = deserializer.decodeLightClientBlock(proof.headerData);
 
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = _getBlockMerkleRoot(proof.polyBlockHeight);
@@ -80,7 +82,7 @@ contract TopProverTest is TopProver{
        
     }
 
-    function decodeProof(bytes memory proofData) public view returns( TopProofDecoder.Proof memory proof){
+    function decodeProof(bytes memory proofData) public pure returns( TopProofDecoder.Proof memory proof){
         Borsh.Data memory borshData = Borsh.from(proofData);
         proof = borshData.decode();
         borshData.done();

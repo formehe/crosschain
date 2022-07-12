@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Limit is AccessControl{
     //keccak256("OWNER.ROLE");
-    bytes32 constant public OWNER_ROLE = 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6;
+    bytes32 constant private OWNER_ROLE = 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6;
     //keccak256("FORBIDEN.ROLE");
-    bytes32 constant public FORBIDEN_ROLE = 0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d;
+    bytes32 constant private FORBIDEN_ROLE = 0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d;
 
     struct Quota{
         uint256 maxTransferedToken;
@@ -18,7 +18,7 @@ contract Limit is AccessControl{
     mapping(address => Quota) public tokenQuotas;
     mapping(bytes32 => bool) public forbiddens;
     mapping(address => uint) public tokenFrozens; // unit is seconds
-    uint public constant MAX_FROZEN_TIME = 15_552_000; //180 days
+    uint private constant MAX_FROZEN_TIME = 15_552_000; //180 days
 
     constructor(){
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
@@ -47,7 +47,7 @@ contract Limit is AccessControl{
     function checkTransferedQuota(
         address _asset,
         uint256 _amount
-    ) external {
+    ) external view {
        Quota memory  quota = tokenQuotas[_asset];
        require(quota.maxTransferedToken != 0, "quota is not exist");
        require(_amount > quota.minTransferedToken, "amount of token is underflow");

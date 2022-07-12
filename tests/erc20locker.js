@@ -50,7 +50,12 @@ describe('ERC20Locker', () => {
     console.log("bridge>>>> "  + bridge.address)
     console.log("Limit>>>> "  + limit.address)
 
-    await erc20Locker._ERC20Locker_initialize(prover.address,0,wallet.address,limit.address)
+    deserializeCon = await hre.ethers.getContractFactory("Deserialize", wallet, overrides)
+    deserializeContract = await deserializeCon.deploy()
+    console.log("+++++++++++++DeserializeContract+++++++++++++++ ", deserializeContract.address)
+    await deserializeContract.deployed()
+
+    await erc20Locker._ERC20Locker_initialize(prover.address,0,wallet.address,limit.address, deserializeContract.address)
 
   })
 

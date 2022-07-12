@@ -9,15 +9,15 @@ contract AdminControlledUpgradeable is Initializable,AccessControl {
     uint public paused;
 
     //keccak256("OWNER.ROLE");
-    bytes32 constant public OWNER_ROLE = 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6;
+    bytes32 constant internal OWNER_ROLE = 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6;
     //keccak256("CONTROLLED.ROLE")
-    bytes32 constant public CONTROLLED_ROLE = 0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de;
+    bytes32 constant internal CONTROLLED_ROLE = 0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de;
     //keccak256("WITHDRAWAL.ROLE")
-    bytes32 constant public WITHDRAWAL_ROLE = 0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443;
+    bytes32 constant internal WITHDRAWAL_ROLE = 0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443;
     //keccak256("BLACK.BURN.ROLE")
-    bytes32 constant public BLACK_BURN_ROLE = 0x644464d9d2566ad56a676295c65afc4dcee3d72dac5acd473e78e531f06e0bce;
+    bytes32 constant internal BLACK_BURN_ROLE = 0x644464d9d2566ad56a676295c65afc4dcee3d72dac5acd473e78e531f06e0bce;
     //keccak256("BLACK.MINT.ROLE")
-    bytes32 constant public BLACK_MINT_ROLE = 0xd4e43efef4d741d853f42cbb6ea70c0f7d0e722b28b900128e3706c76762edc8;
+    bytes32 constant internal BLACK_MINT_ROLE = 0xd4e43efef4d741d853f42cbb6ea70c0f7d0e722b28b900128e3706c76762edc8;
 
     function _AdminControlledUpgradeable_init(address _admin, uint flags) internal onlyInitializing {
         _grantRole(CONTROLLED_ROLE, _admin);

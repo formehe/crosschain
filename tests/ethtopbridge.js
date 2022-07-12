@@ -24,7 +24,12 @@ describe('TopPridge', () => {
 
     console.log("topBridge>>>> "  + topBridge.address)
 
-    await topBridge.initialize(1,wallet.address)
+    deserializeCon = await hre.ethers.getContractFactory("Deserialize", wallet)
+    deserializeContract = await deserializeCon.deploy()
+    console.log("+++++++++++++DeserializeContract+++++++++++++++ ", deserializeContract.address)
+    await deserializeContract.deployed()
+
+    await topBridge.initialize(1,wallet.address, deserializeContract.address)
   })
 
   describe('blockHashes', () => {

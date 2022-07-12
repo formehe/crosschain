@@ -50,10 +50,11 @@ contract ERC20MintProxy is VerifierUpgradeable {
         IEthProver _prover,
         address _peerProxyHash,
         uint64 _minBlockAcceptanceHeight,
-        ILimit _limiter
+        ILimit _limiter,
+        IDeserialize _deserializer
     ) external initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
-        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter);
+        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter, _deserializer);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
