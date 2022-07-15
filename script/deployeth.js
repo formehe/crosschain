@@ -30,6 +30,7 @@ async function deployeth() {
         from: deployer,
         skipIfAlreadyDeployed: true
     })
+
     const erc20TokenSample = await hardhat.ethers.getContractAt(
         "ERC20TokenSample",
         ERC20TokenSampleResult.address,
@@ -77,7 +78,21 @@ async function deployeth() {
       signer
     )
 
-    console.log("+++++++++++++LimitResult+++++++++++++++ ", limit.address)
+    console.log("+++++++++++++LimitResult+++++++++++++++", limit.address)
+
+    //deploy TRC20Token
+    const deserializerResult = await deploy("Deserialize", {
+      from: deployer,
+      skipIfAlreadyDeployed: true
+    })
+  
+    const deserializer = await hardhat.ethers.getContractAt(
+      "Deserialize",
+      deserializerResult.address,
+      signer
+    )
+
+    console.log("+++++++++++++Deserialize+++++++++++++++ ", deserializer.address)
 
     const TopBridgeResult = await deploy("TopBridge", {
       from: deployer,

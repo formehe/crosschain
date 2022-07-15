@@ -24,7 +24,7 @@ contract Erc20LockerTest is ERC20Locker {
      
     }
 
-    function conversionFromAssetAmountTest1(address _fromAssetHash,uint256 amount,bool isLock) public view returns(uint256 transferAmount,uint256 conversionAmount){
+    function conversionFromAssetAmountTest1(address _fromAssetHash,uint256 amount,bool isLock) public returns(uint256 transferAmount,uint256 conversionAmount){
         console.logUint(amount);
         (transferAmount,conversionAmount) = conversionFromAssetAmount(_fromAssetHash,amount,isLock);
 
@@ -33,7 +33,7 @@ contract Erc20LockerTest is ERC20Locker {
         return (transferAmount,conversionAmount);
     }
 
-    function conversionFromAssetAmountTest2(address _fromAssetHash,uint256 amount,bool isLock) public view returns(uint256 transferAmount,uint256 conversionAmount){
+    function conversionFromAssetAmountTest2(address _fromAssetHash,uint256 amount,bool isLock) public returns(uint256 transferAmount,uint256 conversionAmount){
         console.logUint(amount);
         (transferAmount,conversionAmount) = conversionFromAssetAmount(_fromAssetHash,amount,isLock);
         return (transferAmount,conversionAmount);

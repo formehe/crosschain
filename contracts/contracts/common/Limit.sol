@@ -33,6 +33,7 @@ contract Limit is AccessControl{
         uint256 _maxTransferedToken
     ) external onlyRole(OWNER_ROLE) {
         require(_maxTransferedToken > _minTransferedToken, "max quantity of permitted token is less than the min");
+        require(_maxTransferedToken < (1 << 128), "transfered token is overflow");
         tokenQuotas[_asset].maxTransferedToken = _maxTransferedToken;
         tokenQuotas[_asset].minTransferedToken = _minTransferedToken;
     }
@@ -47,7 +48,7 @@ contract Limit is AccessControl{
     function checkTransferedQuota(
         address _asset,
         uint256 _amount
-    ) external view {
+    ) external {
        Quota memory  quota = tokenQuotas[_asset];
        require(quota.maxTransferedToken != 0, "quota is not exist");
        require(_amount > quota.minTransferedToken, "amount of token is underflow");

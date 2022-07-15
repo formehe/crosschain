@@ -60,8 +60,7 @@ contract TRC20 is ERC20, VerifierUpgradeable {
     function mint(
         bytes memory proofData, 
         uint64 proofBlockHeight
-    ) external pausable (PAUSED_MINT) {
-        require(!hasRole(BLACK_MINT_ROLE, msg.sender));
+    ) external mint_pauseable {
         VerifiedReceipt memory _receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
         require(assetHash == _receipt.data.fromToken, "asset address must has been bound");
         _saveProof(_receipt.proofIndex);
@@ -73,8 +72,7 @@ contract TRC20 is ERC20, VerifierUpgradeable {
     function burn(
         uint256 amount, 
         address receiver
-    ) external pausable (PAUSED_BURN) {
-        require(!hasRole(BLACK_BURN_ROLE, msg.sender));
+    ) external burn_pauseable {
         require(receiver != address(0));
         require(amount != 0, "amount can not be 0");
         limiter.checkTransferedQuota(address(this), amount);

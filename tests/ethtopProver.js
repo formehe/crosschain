@@ -22,9 +22,13 @@ describe('TopProver', () => {
 
     const TopBridge = await hre.artifacts.readArtifact("TopBridge")
     topBridge = await deployMockContract(wallet, TopBridge.abi, overrides)
+
+    deserializeCon = await hre.ethers.getContractFactory("Deserialize", wallet)
+    deserializeContract = await deserializeCon.deploy()
+    console.log("+++++++++++++DeserializeContract+++++++++++++++ ", deserializeContract.address)
     
     const TopProver =  await hre.ethers.getContractFactory("TopProverTest", wallet, overrides)
-    topProver = await TopProver.deploy(topBridge.address)
+    topProver = await TopProver.deploy(topBridge.address, deserializeContract.address)
 
   })
 

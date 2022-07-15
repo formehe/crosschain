@@ -75,8 +75,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         IDeserialize.LightClientBlock memory topBlock = deserializer.decodeLightClientBlock(data);
 
-        require(topBlock.next_bps.some, "Initialization block must contain next_bps");
-        setBlockProducers(topBlock.next_bps.blockProducers,topBlock.next_bps.epochId, topBlock.inner_lite.height);
+        require(topBlock.inner_lite.next_bps.some, "Initialization block must contain next_bps");
+        setBlockProducers(topBlock.inner_lite.next_bps.blockProducers,topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.inner_lite.height] = block.timestamp;
@@ -130,16 +130,16 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");
 
-        Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);
+        Epoch memory thisEpoch = getValidationEpoch(topBlock.approvals.epochId);
         // console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
         uint votedFor = 0;
         for (uint i = 0; i < thisEpoch.numBPs; i++) {
-            IDeserialize.OptionalSignature memory approval = topBlock.approvals_after_next[i];
+            IDeserialize.OptionalSignature memory approval = topBlock.approvals.approvals_after_next[i];
             if (!approval.some) {
                 continue;
             }
 
-            bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
+            bool success = _checkValidatorSignature(topBlock.signature_hash, approval.signature, thisEpoch.keys[i]);
             if(success){
                 votedFor++;
             }
@@ -148,9 +148,9 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         // console.log("vote, num bps:", votedFor, thisEpoch.stakeThreshold);
         require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
 
-        if (topBlock.next_bps.some) {
-            require(topBlock.next_bps.epochId == epochs[currentEpochIdex].epochId + 1 ,"Failure of the epochId");
-            setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId, topBlock.inner_lite.height);
+        if (topBlock.inner_lite.next_bps.some) {
+            require(topBlock.inner_lite.next_bps.epochId == epochs[currentEpochIdex].epochId + 1 ,"Failure of the epochId");
+            setBlockProducers(topBlock.inner_lite.next_bps.blockProducers, topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
         }
 
         blockHashes[topBlock.block_hash] = true;

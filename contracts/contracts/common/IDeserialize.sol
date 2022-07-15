@@ -53,7 +53,6 @@ interface IDeserialize{
        bool some; 
        uint64 epochId;
        BlockProducer[] blockProducers;
-    //    bytes32 bp_hash; // Additional computable element
     }
 
     struct Signature {
@@ -67,37 +66,42 @@ interface IDeserialize{
         Signature signature;
     }
 
+    struct OptionalBlockSignatures {
+        uint64  epochId;
+        bytes32 additional_hash;
+        OptionalSignature[] approvals_after_next;
+    }
+
     struct BlockHeaderInnerLite {
-        uint8 version; //version of block header, modified
         uint64 height; // Height of this block since the genesis block (height 0).
-        uint64 epoch_id; // Epoch start hash of this block's epoch. Used for retrieving validator information
         uint64 timestamp; // Timestamp at which the block was built.
         bytes32 txs_root_hash; // Hash of the next epoch block producers set
         bytes32 receipts_root_hash; // Root of the outcomes of transactions and receipts.
         bytes32 block_merkle_root; //all block merkle root hash
-        bytes32 inner_hash; // Additional computable element
+        bytes32 prev_block_hash;
+        OptionalBlockProducers next_bps;
+        bytes32 inner_hash;// Additional computable element
     }
 
     struct LightClientBlock {
         uint8 version; //added
-        BlockHeaderInnerLite inner_lite;
-        bytes32 prev_block_hash;
-        OptionalBlockProducers next_bps;
-        OptionalSignature[] approvals_after_next;
-        bytes32 block_hash; // Additional computable element
+        BlockHeaderInnerLite    inner_lite;
+        OptionalBlockSignatures approvals;
+        bytes32                 block_hash; // Additional computable element
+        bytes32                 signature_hash; // Additional computable element
     }
 
     function decodeMiniLightClientBlock(bytes memory rlpBytes)
         external
-        pure
+        view
         returns (LightClientBlock memory res);
 
     function decodeLightClientBlock(bytes memory rlpBytes)
         external
-        pure
+        view
         returns (LightClientBlock memory res);
 
-    function toBlockHeader(bytes memory rlpHeader) external pure returns (BlockHeader memory header);
-    function toReceiptLog(bytes memory data) external pure returns (Log memory log);
-    function toReceipt(bytes memory data, uint logIndex) external pure returns (TransactionReceiptTrie memory receipt);
+    function toBlockHeader(bytes memory rlpHeader) external view returns (BlockHeader memory header);
+    function toReceiptLog(bytes memory data) external view returns (Log memory log);
+    function toReceipt(bytes memory data, uint logIndex) external view returns (TransactionReceiptTrie memory receipt);
 }

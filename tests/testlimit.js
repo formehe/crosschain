@@ -56,8 +56,12 @@ describe("Limit", function () {
 
     it('checkTransferedQuota, asset is not bound', async () => {
         await limitContract.connect(admin).bindTransferedQuota(owner.address, 50, 51)
-        await expect(limitContract.checkTransferedQuota(user.address, 50))
+        try {
+            await expect(limitContract.checkTransferedQuota(user.address, 50))
             .to.be.revertedWith('quota is not exist')
+        } catch (error) {
+            console.log(error)
+        }
     })
 
     it('checkTransferedQuota, amount is not allowed', async () => {

@@ -96,4 +96,14 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
         _contractAddress = logInfo.contractAddress;
     }
+
+    modifier mint_pauseable(){
+        require(!hasRole(BLACK_MINT_ROLE, _msgSender()) && ((paused & PAUSED_MINT) == 0),"has been pause");
+        _;
+    }
+
+    modifier burn_pauseable(){
+        require(!hasRole(BLACK_BURN_ROLE, _msgSender())&& ((paused & PAUSED_BURN) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
+        _;
+    }
 }

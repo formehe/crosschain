@@ -75,7 +75,7 @@ contract ERC20Locker is IRC20Locker,Locker{
         emit Unlocked(result.proofIndex,transferAmount, result.data.receiver);
     }
 
-    function conversionFromAssetAmount(address _fromAssetHash,uint256 amount,bool isLock) internal view virtual returns(uint256 transferAmount,uint256 conversionAmount){
+    function conversionFromAssetAmount(address _fromAssetHash,uint256 amount,bool isLock) internal virtual returns(uint256 transferAmount,uint256 conversionAmount){
         uint8 fromAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].fromDecimals;
         uint8 toAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].toDecimals;
         if(fromAssetHashDecimals > toAssetHashDecimals){

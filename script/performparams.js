@@ -7,6 +7,7 @@ const tokenEth = "0x88Fe23d733cA1552266bed3864514D06888aBC40";
 const bridgeEth = "0x55eC25608841639D914e0397FD9513168948C731"
 const proverEth = "0xe0BBA6Fb2ACDbB1f4Fa3D411D394935e4f3c8191"
 const limitEth = "0x1a2D23C8c983B473a99E8f497932185B4a4118Fc"
+const deserializeEth = "0x1a2D23C8c983B473a99E8f497932185B4a4118Fc"
 
 const minTransferedToken = 0
 const maxTransferedToken = toWei('100000000000')

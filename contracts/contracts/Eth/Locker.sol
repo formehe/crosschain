@@ -7,8 +7,8 @@ import "../common/codec/TopProofDecoder.sol";
 import "../common/Borsh.sol";
 import "../common/ILimit.sol";
 import "../common/AdminControlledUpgradeable.sol";
-import "./IERC20Decimals.sol";
 import "../common/IDeserialize.sol";
+import "./IERC20Decimals.sol";
 
 contract Locker is Initializable,AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
@@ -146,14 +146,14 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
         IDeserialize.TransactionReceiptTrie memory receipt = deserializer.toReceipt(proof.reciptData, proof.logIndex);
         IDeserialize.LightClientBlock memory header = deserializer.decodeMiniLightClientBlock(proof.headerData);
-        require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(proof.polyBlockHeight)),'the transaction is frozen');
+        require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(proof.polyBlockHeight)),'tx is frozen');
         bytes memory reciptIndex = abi.encode(header.inner_lite.height,proof.reciptIndex);
 
         bytes32 proofIndex = keccak256(reciptIndex);
-        require(limit.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
+        require(limit.forbiddens(proofIndex) == false, "tx is forbidden");
         (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash, header.block_hash);
-        require(success, "Proof should be valid");
-        require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
+        require(success, "proof is invalid");
+        require(!usedProofs[proofIndex], "proof is reused");
         _receipt.proofIndex = proofIndex;
     }
 
@@ -161,11 +161,11 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         bytes memory log
     ) private view returns (VerifiedEvent memory _receipt, address _contractAddress) {
         IDeserialize.Log memory logInfo = deserializer.toReceiptLog(log);
-        require(logInfo.topics.length == 4, "invalid the number of topics");
+        require(logInfo.topics.length == 4, "wrong number of topic");
         bytes32 topics0 = logInfo.topics[0];
         
         //burn
-        require(topics0 == 0x4f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842, "invalid the function of topics");
+        require(topics0 == 0x4f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842, "invalid signature");
         (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
         _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
@@ -174,12 +174,12 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     }
 
     modifier lockToken_pauseable(){
-        require(!hasRole(BLACK_LOCK_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
+        require(!hasRole(BLACK_LOCK_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0),"no permit");
         _;
     }
 
     modifier unLock_pauseable(){
-        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
+        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"no permit");
         _;
     }
 }

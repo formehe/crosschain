@@ -8,7 +8,7 @@ const {
 //perform Eth
 async function performEth(){
     await performLocker()
-    // await performTopBridge()
+    await performTopBridge()
 }
 
 async function performLocker(){
@@ -24,10 +24,10 @@ async function performLocker(){
     let locker
     if(!isErc20Locker){
         locker = await ethers.getContractAt('EthLocker', lockerEth, signer)
-        await locker._EthLocker_initialize(proverEth,0,deployer,limitEth,tokenTop,lockerTop)
+        await locker._EthLocker_initialize(proverEth,0,deployer,limitEth,tokenTop,lockerTop, deserializeEth)
     }else{
         locker = await ethers.getContractAt('ERC20Locker', lockerEth, signer)
-        await locker._ERC20Locker_initialize(proverEth,0,deployer,limitEth)
+        await locker._ERC20Locker_initialize(proverEth,0,deployer,limitEth, deserializeEth)
 
     } 
 }
@@ -39,8 +39,7 @@ async function performTopBridge(){
     } = await getNamedAccounts()
     const signer = await ethers.provider.getSigner(deployer)
     const bridge = await ethers.getContractAt('TopBridge', bridgeEth, signer)
-    await bridge.initialize(0,deployer)
-    
+    await bridge.initialize(0,deployer, deserializeEth)
 }
 
 performEth()

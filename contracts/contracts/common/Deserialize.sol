@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "../../lib/external_lib/RLPEncode.sol";
 import "../../lib/external_lib/RLPDecode.sol";
 import "./IDeserialize.sol";
+import "hardhat/console.sol";
 
 contract Deserialize is IDeserialize{
     using RLPDecode for bytes;
@@ -13,7 +14,7 @@ contract Deserialize is IDeserialize{
     
     function decodeOptionalSignature(RLPDecode.RLPItem memory itemBytes)
         private
-        pure
+        view
         returns (OptionalSignature memory res)
     {
         RLPDecode.Iterator memory it = itemBytes.iterator();
@@ -35,7 +36,7 @@ contract Deserialize is IDeserialize{
                         idx1++;
                     }
 
-                    // console.log("OptionalSignature's signature r s v:", uint(res.signature.r), uint(res.signature.s), uint(res.signature.v));
+                    console.log("OptionalSignature's signature r s v:", uint(res.signature.r), uint(res.signature.s), uint(res.signature.v));
                 }
             } else it.next();
 
@@ -45,13 +46,39 @@ contract Deserialize is IDeserialize{
         // console.log("OptionalSignature's some:", res.some);
     }
 
+    function decodeOptionalBlockSignatures(RLPDecode.RLPItem memory itemBytes)
+        private
+        view
+        returns (OptionalBlockSignatures memory res)
+    {
+        if (itemBytes.isList()) {
+            RLPDecode.Iterator memory it = itemBytes.iterator();
+            uint256 idx;
+            while (it.hasNext()) {
+                if (idx == 0) res.epochId = uint64(it.next().toUint());
+                else if (idx == 1) res.additional_hash = bytes32(it.next().toUint());
+                else if (idx == 2) {
+                    RLPDecode.RLPItem memory item = it.next();
+                    RLPDecode.RLPItem[] memory ls = item.toList();
+                    if (ls.length > 0) {
+                        res.approvals_after_next = new OptionalSignature[](ls.length);
+                        for (uint256 i = 0; i < ls.length; i++) {
+                            res.approvals_after_next[i] = decodeOptionalSignature(ls[i]);
+                        }
+                    }
+                }else it.next();
+
+                idx++;
+            }
+            // console.log("OptionalBlockProducers epoch id:", uint(res.epochId));
+        }
+    }
+
     function decodeOptionalBlockProducers(RLPDecode.RLPItem memory itemBytes)
         private
-        pure
+        view
         returns (OptionalBlockProducers memory res)
     {
-        // console.logBytes(itemBytes.toBytes());
-        // res.bp_hash = sha256(abi.encodePacked(itemBytes.toBytes()));
         if (itemBytes.isList()) {
             RLPDecode.Iterator memory it = itemBytes.iterator();
             uint256 idx;
@@ -67,11 +94,11 @@ contract Deserialize is IDeserialize{
                             RLPDecode.RLPItem[] memory items = ls[i].toList();
                             res.blockProducers[i].publicKey.x = items[0].toUint();
                             res.blockProducers[i].publicKey.y = items[1].toUint();
-                            // res.blockProducers[i].stake = uint128(items[2].toUint());
+                            res.blockProducers[i].stake = uint128(items[2].toUint());
                             res.blockProducers[i].publicKey.signer = address(uint160(uint256(keccak256(abi.encodePacked(res.blockProducers[i].publicKey.x, res.blockProducers[i].publicKey.y)))));
-                            // console.log("OptionalBlockProducers producer's publickey x:", uint(res.blockProducers[i].publicKey.x));
-                            // console.log("OptionalBlockProducers producer's publickey y:", uint(res.blockProducers[i].publicKey.y));
-                            // console.log("OptionalBlockProducers producer's stake:", uint(res.blockProducers[i].stake));
+                            console.log("OptionalBlockProducers producer's publickey x:", uint(res.blockProducers[i].publicKey.x));
+                            console.log("OptionalBlockProducers producer's publickey y:", uint(res.blockProducers[i].publicKey.y));
+                            console.log("OptionalBlockProducers producer's stake:", uint(res.blockProducers[i].stake));
                         }
                     }
                 }else it.next();
@@ -82,49 +109,42 @@ contract Deserialize is IDeserialize{
         }
     }
 
-    function decodeBlockHeaderInnerLite(bytes memory itemBytes)
+    function decodeBlockHeaderInnerLite(RLPDecode.RLPItem memory itemBytes)
         private
-        pure
+        view
         returns (BlockHeaderInnerLite memory res)
     {
         //cacl innter hash
-        res.inner_hash = keccak256(abi.encodePacked(itemBytes));
+        res.inner_hash = keccak256(abi.encodePacked(itemBytes.toBytes()));
         // console.logBytes(itemBytes);
-        uint byte0;
-        assembly {
-            byte0 := byte(0, mload(add(itemBytes, 0x20)))
-        }
 
-        res.version = uint8(byte0);
-        RLPDecode.Iterator memory it = RLPDecode.toRlpItem(itemBytes, 1).iterator();
-        
+        RLPDecode.Iterator memory it = itemBytes.iterator();
         uint256 idx;
         while (it.hasNext()) {
             if (idx == 0) res.height = uint64(it.next().toUint());
-            else if (idx == 1) res.epoch_id = uint64(it.next().toUint());
-            else if (idx == 2) res.timestamp = uint64(it.next().toUint());
-            else if (idx == 3) res.txs_root_hash = bytes32(it.next().toUint());
-            else if (idx == 4) res.receipts_root_hash = bytes32(it.next().toUint());
-            else if (idx == 5) res.block_merkle_root = bytes32(it.next().toUint());
+            else if (idx == 1) res.timestamp = uint64(it.next().toUint());
+            else if (idx == 2) res.txs_root_hash = bytes32(it.next().toUint());
+            else if (idx == 3) res.receipts_root_hash = bytes32(it.next().toUint());
+            else if (idx == 4) res.block_merkle_root = bytes32(it.next().toUint());
+            else if (idx == 5) res.prev_block_hash = bytes32(it.next().toUint());
+            else if (idx == 6) res.next_bps = decodeOptionalBlockProducers(it.next());
             else it.next();
 
             idx++;
         }
 
-        // console.log("inner header's hash:", uint(res.inner_hash));
-        // console.logBytes32(res.inner_hash);
-        // console.log("inner header's version:", uint(res.version));
-        // console.log("inner header's height:", uint(res.height));
-        // console.log("inner header's epochId:", uint(res.epoch_id));
-        // console.log("inner header's timestamp:", uint(res.timestamp));
-        // console.log("inner header's txs root hash:", uint(res.txs_root_hash));
-        // console.log("inner header's receipts root hash:", uint(res.receipts_root_hash));
-        // console.log("inner header's block merkle hash:", uint(res.block_merkle_root));
+        console.log("inner header's hash:", uint(res.inner_hash));
+        console.logBytes32(res.inner_hash);
+        console.log("inner header's timestamp:", uint(res.timestamp));
+        console.log("inner header's txs root hash:", uint(res.txs_root_hash));
+        console.log("inner header's receipts root hash:", uint(res.receipts_root_hash));
+        console.log("inner header's block merkle hash:", uint(res.block_merkle_root));
+        console.log("inner header's block merkle hash:", uint(res.prev_block_hash));
     }
 
     function decodeMiniLightClientBlock(bytes memory rlpBytes)
         external
-        pure
+        view
         override
         returns (LightClientBlock memory res)
     {
@@ -133,50 +153,26 @@ contract Deserialize is IDeserialize{
             byte0 := byte(0, mload(add(rlpBytes, 0x20)))
         }
 
-        // console.logBytes(rlpBytes);
-
         res.version = uint8(byte0);
-        RLPDecode.RLPItem memory bp;
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpBytes, 1).iterator();
         uint256 idx;
         while (it.hasNext()) {
             if (idx == 0) {
-                res.inner_lite = decodeBlockHeaderInnerLite(it.next().toBytes());
-            } else if (idx == 1) {
-                res.prev_block_hash = bytes32(it.next().toUint());
-            } else if (idx == 2) {
-                bp = it.next();
-                res.next_bps = decodeOptionalBlockProducers(bp);
+                res.inner_lite = decodeBlockHeaderInnerLite(it.next());
             } else {
                 it.next();
             }
             idx++;
         }
 
-        bytes[] memory raw_list = new bytes[](4);
-        raw_list[0] = RLPEncode.encodeUint(res.version);
-        raw_list[1] = RLPEncode.encodeBytes(abi.encodePacked(res.inner_lite.inner_hash));
-        raw_list[2] = RLPEncode.encodeBytes(abi.encodePacked(res.prev_block_hash));
-        bytes[] memory raw_list1;
-        if (res.next_bps.some) {
-            raw_list1 = new bytes[](1);
-            raw_list1[0] = bp.toBytes();
-            raw_list[3] = RLPEncode.encodeList(raw_list1);
-        } else {
-            raw_list[3] = RLPEncode.encodeList(raw_list1);
-        }
-
-        bytes memory  hash_raw = RLPEncode.encodeList(raw_list);
-        res.block_hash = keccak256(abi.encodePacked(hash_raw));
-        // console.log("header's version:", uint(res.version));
-        // console.log("header's prev block hash:", uint(res.prev_block_hash));
-        // console.log("header's block_hash:", uint(res.block_hash));
-        // console.logBytes32(res.block_hash);
+        res.block_hash = keccak256(abi.encodePacked(res.version, res.inner_lite.inner_hash));
+        console.log("header's version:", uint(res.version));
+        console.log("header's block_hash:", uint(res.block_hash));
     }
 
     function decodeLightClientBlock(bytes memory rlpBytes)
         external
-        pure
+        view
         override
         returns (LightClientBlock memory res)
     {
@@ -188,51 +184,24 @@ contract Deserialize is IDeserialize{
         // console.logBytes(rlpBytes);
 
         res.version = uint8(byte0);
-        RLPDecode.RLPItem memory bp;
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpBytes, 1).iterator();
         uint256 idx;
         while (it.hasNext()) {
             if (idx == 0) {
-                res.inner_lite = decodeBlockHeaderInnerLite(it.next().toBytes());
+                res.inner_lite = decodeBlockHeaderInnerLite(it.next());
             } else if (idx == 1) {
-                res.prev_block_hash = bytes32(it.next().toUint());
-            } else if (idx == 2) {
-                bp = it.next();
-                res.next_bps = decodeOptionalBlockProducers(bp);
-            } else if (idx == 3) {
-                RLPDecode.RLPItem memory sig_item = it.next();
-                if (sig_item.numItems() > 0) {
-                    RLPDecode.RLPItem[] memory sig_ls = sig_item.toList();
-                    res.approvals_after_next = new OptionalSignature[](sig_ls.length);
-                    // console.logUint(sig_ls.length);
-                    for (uint256 i = 0; i < sig_ls.length; i++) {
-                        res.approvals_after_next[i] = decodeOptionalSignature(sig_ls[i]);
-                    }
-                }
+                res.approvals = decodeOptionalBlockSignatures(it.next());
             } else {
                 it.next();
             }
             idx++;
         }
 
-        bytes[] memory raw_list = new bytes[](4);
-        raw_list[0] = RLPEncode.encodeUint(res.version);
-        raw_list[1] = RLPEncode.encodeBytes(abi.encodePacked(res.inner_lite.inner_hash));
-        raw_list[2] = RLPEncode.encodeBytes(abi.encodePacked(res.prev_block_hash));
-        bytes[] memory raw_list1;
-        if (res.next_bps.some) {
-            raw_list1 = new bytes[](1);
-            raw_list1[0] = bp.toBytes();
-            raw_list[3] = RLPEncode.encodeList(raw_list1);
-        } else {
-            raw_list[3] = RLPEncode.encodeList(raw_list1);
-        }
-
-        bytes memory  hash_raw = RLPEncode.encodeList(raw_list);
-        res.block_hash = keccak256(abi.encodePacked(hash_raw));
+        res.block_hash = keccak256(abi.encodePacked(res.version, res.inner_lite.inner_hash));
+        res.signature_hash = keccak256(abi.encodePacked(res.block_hash, res.approvals.epochId, res.approvals.additional_hash));
     }
 
-    function toBlockHeader(bytes memory rlpHeader) external pure override returns (BlockHeader memory header) {
+    function toBlockHeader(bytes memory rlpHeader) external view override returns (BlockHeader memory header) {
 
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpHeader).iterator();
 
@@ -260,7 +229,7 @@ contract Deserialize is IDeserialize{
         header.hash = keccak256(rlpHeader);
     }
 
-    function toReceiptLog(bytes memory data) external pure override returns (Log memory log) {
+    function toReceiptLog(bytes memory data) external view override returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
 
         uint idx;
@@ -284,7 +253,7 @@ contract Deserialize is IDeserialize{
         }
     }
 
-    function toReceipt(bytes memory data, uint logIndex) external pure override returns (TransactionReceiptTrie memory receipt) {
+    function toReceipt(bytes memory data, uint logIndex) external view override returns (TransactionReceiptTrie memory receipt) {
         uint byte0;
         RLPDecode.Iterator memory it;        
         assembly {
