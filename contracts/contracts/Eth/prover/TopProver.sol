@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "../../common/prover/Prover.sol";
 import "./ITopProver.sol";
 import "../../../lib/lib/MPT.sol";
-import "../../common/IDeserialize.sol";
+import "../../common/Deserialize.sol";
 
 contract TopProver is Prover, ITopProver{
     using MPT for MPT.MerkleProof;
@@ -13,7 +13,7 @@ contract TopProver is Prover, ITopProver{
 
     function verify(
         TopProofDecoder.Proof calldata proof, 
-        IDeserialize.TransactionReceiptTrie calldata receipt, 
+        Deserialize.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot, bytes32 blockHash
     ) external view override returns (bool valid, string memory reason) {
         _verify(proof.logEntryData,proof.reciptIndex,proof.reciptData,proof.reciptProof,receipt, receiptsRoot);
@@ -42,7 +42,7 @@ contract TopProver is Prover, ITopProver{
         require(valid, "Fail to verify1");
     }
 
-    function getAddLightClientTime(uint64 height) external view override returns(uint256 time){
+    function getAddLightClientTime(uint64 height) external override returns(uint256 time){
         bytes memory payload = abi.encodeWithSignature("blockHeights(uint64)", height);
         (bool success, bytes memory returnData) = bridgeLight.staticcall(payload);
         require(success, "Height is not confirmed");

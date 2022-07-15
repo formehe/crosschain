@@ -28,10 +28,9 @@ contract TRC20 is ERC20, VerifierUpgradeable {
         uint64 _minBlockAcceptanceHeight,
         string memory _name,
         string memory _symbol,
-        ILimit _limiter,
-        IDeserialize _deserializer
+        ILimit _limiter
     ) ERC20(_name, _symbol) {
-        _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight, _limiter, _deserializer);
+        _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight, _limiter);
     }
 
     function _TRC20_init (
@@ -39,8 +38,7 @@ contract TRC20 is ERC20, VerifierUpgradeable {
         address _peerProxyHash,
         address _peerAssetHash,
         uint64 _minBlockAcceptanceHeight,
-        ILimit _limiter,
-        IDeserialize _deserializer
+        ILimit _limiter
     ) private initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
         require(_peerAssetHash != address(0), "peer asset can not be zero");
@@ -53,7 +51,7 @@ contract TRC20 is ERC20, VerifierUpgradeable {
 
         _grantRole(OWNER_ROLE, msg.sender);
 
-        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter, _deserializer);
+        VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
     }
 

@@ -37,13 +37,29 @@ async function deployeth() {
         signer
     )
     console.log("+++++++++++++ERC20TokenSample+++++++++++++++ ", erc20TokenSample.address)
+
+    const deserializeResult = await deploy("Deserialize", {
+      from: deployer,
+      skipIfAlreadyDeployed: true
+    })
+
+    const deserialize = await hardhat.ethers.getContractAt(
+      "Deserialize",
+      deserializeResult.address,
+      signer
+    )
+    console.log("+++++++++++++deserialize+++++++++++++++", deserialize.address)
+
     let erc20Locker 
     let ethLocker
     if(isErc20Locker){
         //deploy ERC20Locker
         const ERC20LockerResult = await deploy("ERC20Locker", {
             from: deployer,
-            skipIfAlreadyDeployed: true
+            skipIfAlreadyDeployed: true,
+            libraries: {
+              Deserialize:deserialize.address
+            }
         })
         erc20Locker = await hardhat.ethers.getContractAt(
             "ERC20Locker",
@@ -57,7 +73,10 @@ async function deployeth() {
         //deploy EthLocker
         const EthLockerResult = await deploy("EthLocker", {
             from: deployer,
-            skipIfAlreadyDeployed: true
+            skipIfAlreadyDeployed: true,
+            libraries: {
+              Deserialize:deserialize.address
+            }
         })
         ethLocker = await hardhat.ethers.getContractAt(
             "EthLocker",
@@ -80,23 +99,26 @@ async function deployeth() {
 
     console.log("+++++++++++++LimitResult+++++++++++++++", limit.address)
 
-    //deploy TRC20Token
-    const deserializerResult = await deploy("Deserialize", {
-      from: deployer,
-      skipIfAlreadyDeployed: true
-    })
+    // //deploy TRC20Token
+    // const deserializerResult = await deploy("Deserialize", {
+    //   from: deployer,
+    //   skipIfAlreadyDeployed: true
+    // })
   
-    const deserializer = await hardhat.ethers.getContractAt(
-      "Deserialize",
-      deserializerResult.address,
-      signer
-    )
+    // const deserializer = await hardhat.ethers.getContractAt(
+    //   "Deserialize",
+    //   deserializerResult.address,
+    //   signer
+    // )
 
-    console.log("+++++++++++++Deserialize+++++++++++++++ ", deserializer.address)
+    // console.log("+++++++++++++Deserialize+++++++++++++++ ", deserializer.address)
 
     const TopBridgeResult = await deploy("TopBridge", {
       from: deployer,
-      skipIfAlreadyDeployed: true
+      skipIfAlreadyDeployed: true,
+      libraries: {
+        Deserialize:deserialize.address
+      }
     })
   
     const topBridge = await hardhat.ethers.getContractAt(

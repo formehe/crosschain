@@ -18,13 +18,28 @@ describe('EthLocker', () => {
     [wallet, wallet2,wallet3] = await hardhat.ethers.getSigners()
     provider = hardhat.ethers.provider
 
+    deserializeCon = await ethers.getContractFactory("Deserialize");
+    deserialize = await deserializeCon.deploy();
+    await deserialize.deployed();
+
     const Erc20token =  await hre.ethers.getContractFactory("ERC20Mintable", wallet, overrides)
     erc20Token = await Erc20token.deploy('ERC20Mintable', 'et')
 
-    const EthLockerResult =  await hre.ethers.getContractFactory("EthLockerTest", wallet, overrides)
+    const EthLockerResult =  await hre.ethers.getContractFactory("EthLockerTest", {
+      gasLimit: 9500000,
+      signer: wallet,
+      libraries: {
+        Deserialize:deserialize.address
+      }
+    })
     ethLocker = await EthLockerResult.deploy()
 
-    const TopBridge = await hre.artifacts.readArtifact("TopBridge")
+    const TopBridge = await hre.artifacts.readArtifact("TopBridge", {
+      libraries: {
+        Deserialize:deserialize.address
+      }
+    })
+    
     bridge = await deployMockContract(wallet, TopBridge.abi, overrides)
 
     const TopProver = await hre.ethers.getContractFactory("TopProver", wallet, overrides)
@@ -43,13 +58,8 @@ describe('EthLocker', () => {
     console.log("bridge>>>> "  + bridge.address)
     console.log("Limit>>>> "  + limit.address)
 
-    deserializeCon = await hre.ethers.getContractFactory("Deserialize", wallet, overrides)
-    deserializeContract = await deserializeCon.deploy()
-    console.log("+++++++++++++DeserializeContract+++++++++++++++ ", deserializeContract.address)
-    await deserializeContract.deployed()
 
-
-    await ethLocker._EthLocker_initialize(prover.address,0,wallet.address,limit.address,erc20Token.address,erc20Token.address, deserializeContract.address)
+    await ethLocker._EthLocker_initialize(prover.address,0,wallet.address,limit.address,erc20Token.address,erc20Token.address)
 
   })
 

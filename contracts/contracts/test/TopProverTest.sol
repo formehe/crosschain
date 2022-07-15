@@ -3,18 +3,16 @@ pragma solidity ^0.8.0;
 
 import "../Eth/prover/TopProver.sol";
 import "../common/codec/TopProofDecoder.sol";
-import "../common/IDeserialize.sol";
+import "../common/Deserialize.sol";
 
 contract TopProverTest is TopProver{
     using Borsh for Borsh.Data;
     using TopProofDecoder for Borsh.Data;
     using MPT for MPT.MerkleProof;
 
-    IDeserialize deserializer;
 
-    constructor(address _bridgeLight, IDeserialize _deserializer)
+    constructor(address _bridgeLight)
     TopProver(_bridgeLight) {
-        deserializer = _deserializer;
     }
 
     function verifyHash(bytes32 hash) public returns(bool valid, string memory reason){
@@ -32,7 +30,7 @@ contract TopProverTest is TopProver{
         proof = borshData.decode();
         borshData.done();
 
-        IDeserialize.LightClientBlock memory header = deserializer.decodeLightClientBlock(proof.headerData);
+        Deserialize.LightClientBlock memory header = Deserialize.decodeLightClientBlock(proof.headerData);
     
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = header.inner_lite.receipts_root_hash;
@@ -59,7 +57,7 @@ contract TopProverTest is TopProver{
         proof = borshData.decode();
         borshData.done();
 
-        IDeserialize.LightClientBlock memory header = deserializer.decodeLightClientBlock(proof.headerData);
+        Deserialize.LightClientBlock memory header = Deserialize.decodeLightClientBlock(proof.headerData);
 
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = _getBlockMerkleRoot(proof.polyBlockHeight);
@@ -82,7 +80,7 @@ contract TopProverTest is TopProver{
        
     }
 
-    function decodeProof(bytes memory proofData) public pure returns( TopProofDecoder.Proof memory proof){
+    function decodeProof(bytes memory proofData) public view returns( TopProofDecoder.Proof memory proof){
         Borsh.Data memory borshData = Borsh.from(proofData);
         proof = borshData.decode();
         borshData.done();

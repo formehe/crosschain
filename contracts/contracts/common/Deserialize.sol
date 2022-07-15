@@ -3,15 +3,101 @@ pragma solidity ^0.8.0;
 
 import "../../lib/external_lib/RLPEncode.sol";
 import "../../lib/external_lib/RLPDecode.sol";
-import "./IDeserialize.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
-contract Deserialize is IDeserialize{
+library Deserialize{
     using RLPDecode for bytes;
     using RLPDecode for uint;
     using RLPDecode for RLPDecode.RLPItem;
     using RLPDecode for RLPDecode.Iterator;
     
+    struct BlockHeader {
+        bytes32 hash;
+        bytes32 parentHash;
+        bytes32 sha3Uncles;  // ommersHash
+        address miner;       // beneficiary
+        bytes32 stateRoot;
+        bytes32 transactionsRoot;
+        bytes32 receiptsRoot;
+        bytes logsBloom;
+        uint256 difficulty;
+        uint256 number;
+        uint256 gasLimit;
+        uint256 gasUsed;
+        uint256 timestamp;
+        bytes extraData;
+        bytes32 mixHash;
+        uint64 nonce;
+        uint256 totalDifficulty;
+        uint256 baseFeePerGas;
+    }
+
+    struct Log {
+        address contractAddress;
+        bytes32[] topics;
+        bytes data;
+    }
+
+    struct TransactionReceiptTrie {
+        uint8 status;
+        uint256 gasUsed;
+        bytes logsBloom;
+        bytes log;
+    }
+
+    struct SECP256K1PublicKey {
+        uint256 x;
+        uint256 y;
+        address signer; //additional
+    }
+
+    struct BlockProducer {
+        SECP256K1PublicKey publicKey;
+        uint128 stake;
+    }
+
+    struct OptionalBlockProducers {
+       bool some; 
+       uint64 epochId;
+       BlockProducer[] blockProducers;
+    }
+
+    struct Signature {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+    }
+
+    struct OptionalSignature {
+        bool some; //add
+        Signature signature;
+    }
+
+    struct OptionalBlockSignatures {
+        uint64  epochId;
+        OptionalSignature[] approvals_after_next;
+    }
+
+    struct BlockHeaderInnerLite {
+        uint64 height; // Height of this block since the genesis block (height 0).
+        uint64 timestamp; // Timestamp at which the block was built.
+        bytes32 txs_root_hash; // Hash of the next epoch block producers set
+        bytes32 receipts_root_hash; // Root of the outcomes of transactions and receipts.
+        bytes32 block_merkle_root; //all block merkle root hash
+        bytes32 prev_block_hash;
+        OptionalBlockProducers next_bps;
+        bytes32 inner_hash;// Additional computable element
+    }
+
+    struct LightClientBlock {
+        uint8 version; //added
+        BlockHeaderInnerLite    inner_lite;
+        OptionalBlockSignatures approvals;
+        bytes32 additional_hash;
+        bytes32                 block_hash; // Additional computable element
+        bytes32                 signature_hash; // Additional computable element
+    }
+
     function decodeOptionalSignature(RLPDecode.RLPItem memory itemBytes)
         private
         view
@@ -36,7 +122,7 @@ contract Deserialize is IDeserialize{
                         idx1++;
                     }
 
-                    console.log("OptionalSignature's signature r s v:", uint(res.signature.r), uint(res.signature.s), uint(res.signature.v));
+                    // console.log("OptionalSignature's signature r s v:", uint(res.signature.r), uint(res.signature.s), uint(res.signature.v));
                 }
             } else it.next();
 
@@ -56,8 +142,7 @@ contract Deserialize is IDeserialize{
             uint256 idx;
             while (it.hasNext()) {
                 if (idx == 0) res.epochId = uint64(it.next().toUint());
-                else if (idx == 1) res.additional_hash = bytes32(it.next().toUint());
-                else if (idx == 2) {
+                else if (idx == 1) {
                     RLPDecode.RLPItem memory item = it.next();
                     RLPDecode.RLPItem[] memory ls = item.toList();
                     if (ls.length > 0) {
@@ -66,11 +151,11 @@ contract Deserialize is IDeserialize{
                             res.approvals_after_next[i] = decodeOptionalSignature(ls[i]);
                         }
                     }
-                }else it.next();
+                }
+                else it.next();
 
                 idx++;
             }
-            // console.log("OptionalBlockProducers epoch id:", uint(res.epochId));
         }
     }
 
@@ -79,6 +164,7 @@ contract Deserialize is IDeserialize{
         view
         returns (OptionalBlockProducers memory res)
     {
+        // console.logBytes(itemBytes.toBytes());
         if (itemBytes.isList()) {
             RLPDecode.Iterator memory it = itemBytes.iterator();
             uint256 idx;
@@ -94,11 +180,9 @@ contract Deserialize is IDeserialize{
                             RLPDecode.RLPItem[] memory items = ls[i].toList();
                             res.blockProducers[i].publicKey.x = items[0].toUint();
                             res.blockProducers[i].publicKey.y = items[1].toUint();
-                            res.blockProducers[i].stake = uint128(items[2].toUint());
                             res.blockProducers[i].publicKey.signer = address(uint160(uint256(keccak256(abi.encodePacked(res.blockProducers[i].publicKey.x, res.blockProducers[i].publicKey.y)))));
-                            console.log("OptionalBlockProducers producer's publickey x:", uint(res.blockProducers[i].publicKey.x));
-                            console.log("OptionalBlockProducers producer's publickey y:", uint(res.blockProducers[i].publicKey.y));
-                            console.log("OptionalBlockProducers producer's stake:", uint(res.blockProducers[i].stake));
+                            // console.log("OptionalBlockProducers producer's publickey x:", uint(res.blockProducers[i].publicKey.x));
+                            // console.log("OptionalBlockProducers producer's publickey y:", uint(res.blockProducers[i].publicKey.y));
                         }
                     }
                 }else it.next();
@@ -115,7 +199,7 @@ contract Deserialize is IDeserialize{
         returns (BlockHeaderInnerLite memory res)
     {
         //cacl innter hash
-        res.inner_hash = keccak256(abi.encodePacked(itemBytes.toBytes()));
+        res.inner_hash = keccak256(abi.encodePacked(itemBytes.toRlpBytes()));
         // console.logBytes(itemBytes);
 
         RLPDecode.Iterator memory it = itemBytes.iterator();
@@ -133,19 +217,22 @@ contract Deserialize is IDeserialize{
             idx++;
         }
 
-        console.log("inner header's hash:", uint(res.inner_hash));
-        console.logBytes32(res.inner_hash);
-        console.log("inner header's timestamp:", uint(res.timestamp));
-        console.log("inner header's txs root hash:", uint(res.txs_root_hash));
-        console.log("inner header's receipts root hash:", uint(res.receipts_root_hash));
-        console.log("inner header's block merkle hash:", uint(res.block_merkle_root));
-        console.log("inner header's block merkle hash:", uint(res.prev_block_hash));
+        // console.log("inner header's hash:", uint(res.inner_hash));
+        // console.logBytes32(res.inner_hash);
+        // console.log("inner header's timestamp:", uint(res.timestamp));
+        // console.log("inner header's txs root hash:", uint(res.txs_root_hash));
+        // console.logBytes32(res.txs_root_hash);
+        // console.log("inner header's receipts root hash:", uint(res.receipts_root_hash));
+        // console.logBytes32(res.receipts_root_hash);
+        // console.log("inner header's block merkle hash:", uint(res.block_merkle_root));
+        // console.logBytes32(res.block_merkle_root);
+        // console.log("inner header's preview hash:", uint(res.prev_block_hash));
+        // console.logBytes32(res.prev_block_hash);
     }
 
     function decodeMiniLightClientBlock(bytes memory rlpBytes)
         external
         view
-        override
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -166,14 +253,13 @@ contract Deserialize is IDeserialize{
         }
 
         res.block_hash = keccak256(abi.encodePacked(res.version, res.inner_lite.inner_hash));
-        console.log("header's version:", uint(res.version));
-        console.log("header's block_hash:", uint(res.block_hash));
+        // console.log("header's version:", uint(res.version));
+        // console.log("header's block_hash:", uint(res.block_hash));
     }
 
     function decodeLightClientBlock(bytes memory rlpBytes)
         external
         view
-        override
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -191,17 +277,23 @@ contract Deserialize is IDeserialize{
                 res.inner_lite = decodeBlockHeaderInnerLite(it.next());
             } else if (idx == 1) {
                 res.approvals = decodeOptionalBlockSignatures(it.next());
-            } else {
+            } else if (idx == 2) {
+                res.additional_hash = bytes32(it.next().toUint());
+            }
+            else {
                 it.next();
             }
             idx++;
         }
 
         res.block_hash = keccak256(abi.encodePacked(res.version, res.inner_lite.inner_hash));
-        res.signature_hash = keccak256(abi.encodePacked(res.block_hash, res.approvals.epochId, res.approvals.additional_hash));
+        // console.logBytes32(res.block_hash);
+        // console.logBytes(abi.encodePacked(res.block_hash, res.approvals.epochId, res.additional_hash));
+        res.signature_hash = keccak256(abi.encodePacked(res.block_hash, res.approvals.epochId, res.additional_hash));
+        // console.logBytes32(res.signature_hash);
     }
 
-    function toBlockHeader(bytes memory rlpHeader) external view override returns (BlockHeader memory header) {
+    function toBlockHeader(bytes memory rlpHeader) external view returns (BlockHeader memory header) {
 
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpHeader).iterator();
 
@@ -229,7 +321,7 @@ contract Deserialize is IDeserialize{
         header.hash = keccak256(rlpHeader);
     }
 
-    function toReceiptLog(bytes memory data) external view override returns (Log memory log) {
+    function toReceiptLog(bytes memory data) external view returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
 
         uint idx;
@@ -253,7 +345,7 @@ contract Deserialize is IDeserialize{
         }
     }
 
-    function toReceipt(bytes memory data, uint logIndex) external view override returns (TransactionReceiptTrie memory receipt) {
+    function toReceipt(bytes memory data, uint logIndex) external view returns (TransactionReceiptTrie memory receipt) {
         uint byte0;
         RLPDecode.Iterator memory it;        
         assembly {

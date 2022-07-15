@@ -11,20 +11,20 @@ contract TopPridgeTest is TopBridge{
 
     
     /// @dev Parse a single
-    function decodeLightClientBlock(bytes memory data) view public returns(IDeserialize.LightClientBlock memory){
-        IDeserialize.LightClientBlock memory topBlock = deserializer.decodeLightClientBlock(data);
+    function decodeLightClientBlock(bytes memory data) view public returns(Deserialize.LightClientBlock memory){
+        Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
         //TopDecoder.LightClientBlock memory topBlock;
          return topBlock;
     }
 
     
     /// @dev Parsing multiple
-    function decodeLightClientBlocks(bytes memory rlpBytes) view public returns(IDeserialize.LightClientBlock[] memory){
-        IDeserialize.LightClientBlock[] memory clientBlocks = new IDeserialize.LightClientBlock[](10);
+    function decodeLightClientBlocks(bytes memory rlpBytes) view public returns(Deserialize.LightClientBlock[] memory){
+        Deserialize.LightClientBlock[] memory clientBlocks = new Deserialize.LightClientBlock[](10);
         RLPDecode.Iterator memory it = rlpBytes.toRlpItem().iterator();
         uint j = 0;
         while (it.hasNext()) {
-            IDeserialize.LightClientBlock memory topBlock = deserializer.decodeLightClientBlock(it.next().toBytes());
+            Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(it.next().toBytes());
             clientBlocks[j] = topBlock;
             j = j + 1;
         }
@@ -52,7 +52,7 @@ contract TopPridgeTest is TopBridge{
     } 
 
     function addEpochsTest(bytes memory data) public{
-        IDeserialize.LightClientBlock memory topBlock = deserializer.decodeLightClientBlock(data);
+        Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
         setBlockProducers(topBlock.inner_lite.next_bps.blockProducers, topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
     }
 

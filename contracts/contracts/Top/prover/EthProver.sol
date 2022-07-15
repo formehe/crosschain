@@ -12,7 +12,7 @@ contract EthProver is Prover, IEthProver{
     using MPT for MPT.MerkleProof;
     function verify(
         EthProofDecoder.Proof calldata proof, 
-        IDeserialize.TransactionReceiptTrie calldata receipt, 
+        Deserialize.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot,
         bytes32 blockHash,
         uint256 height

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "../../common/codec/EthProofDecoder.sol";
-import "../../common/IDeserialize.sol";
+import "../../common/Deserialize.sol";
 interface IEthProver {
 
-    function verify(EthProofDecoder.Proof calldata proof, IDeserialize.TransactionReceiptTrie calldata receipt, bytes32 receiptsRoot, bytes32 blockHash, uint256 height) external returns(bool valid, string memory reason);
+    function verify(EthProofDecoder.Proof calldata proof, Deserialize.TransactionReceiptTrie calldata receipt, bytes32 receiptsRoot, bytes32 blockHash, uint256 height) external returns(bool valid, string memory reason);
 }

@@ -7,7 +7,7 @@ import "../common/codec/TopProofDecoder.sol";
 import "../common/Borsh.sol";
 import "../common/ILimit.sol";
 import "../common/AdminControlledUpgradeable.sol";
-import "../common/IDeserialize.sol";
+import "../common/Deserialize.sol";
 import "./IERC20Decimals.sol";
 
 contract Locker is Initializable,AdminControlledUpgradeable{
@@ -18,9 +18,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
-    IDeserialize deserializer;
 
-    ILimit limit;
+    ILimit public limit;
     //keccak256("BLACK.UN.LOCK.ROLE")
     bytes32 constant BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
     //keccak256("BLACK.LOCK.ROLE")
@@ -77,14 +76,12 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
-        ILimit _limit,
-        IDeserialize _deserializer
+        ILimit _limit
     ) internal onlyInitializing{
         require(_owner != address(0));
         prover = _prover;
         minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
         limit = _limit;
-        deserializer = _deserializer;
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSED_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
@@ -144,8 +141,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         ToAddressHash memory toAddressHash = assets[fromToken];
         require(toAddressHash.lockProxyHash == contractAddress, "proxy is not bound");
 
-        IDeserialize.TransactionReceiptTrie memory receipt = deserializer.toReceipt(proof.reciptData, proof.logIndex);
-        IDeserialize.LightClientBlock memory header = deserializer.decodeMiniLightClientBlock(proof.headerData);
+        Deserialize.TransactionReceiptTrie memory receipt = Deserialize.toReceipt(proof.reciptData, proof.logIndex);
+        Deserialize.LightClientBlock memory header = Deserialize.decodeMiniLightClientBlock(proof.headerData);
         require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(proof.polyBlockHeight)),'tx is frozen');
         bytes memory reciptIndex = abi.encode(header.inner_lite.height,proof.reciptIndex);
 
@@ -160,7 +157,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     function _parseLog(
         bytes memory log
     ) private view returns (VerifiedEvent memory _receipt, address _contractAddress) {
-        IDeserialize.Log memory logInfo = deserializer.toReceiptLog(log);
+        Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "wrong number of topic");
         bytes32 topics0 = logInfo.topics[0];
         

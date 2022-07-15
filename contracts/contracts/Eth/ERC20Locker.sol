@@ -18,10 +18,9 @@ contract ERC20Locker is IRC20Locker,Locker{
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
-        ILimit limit,
-        IDeserialize _deserializer
+        ILimit limit
     ) external initializer {
-        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit, _deserializer);
+        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit);
     }
 
     function bindAssetHash(address _fromAssetHash, address _toAssetHash, address _peerLockProxyHash) external onlyRole(OWNER_ROLE) {
@@ -75,7 +74,7 @@ contract ERC20Locker is IRC20Locker,Locker{
         emit Unlocked(result.proofIndex,transferAmount, result.data.receiver);
     }
 
-    function conversionFromAssetAmount(address _fromAssetHash,uint256 amount,bool isLock) internal virtual returns(uint256 transferAmount,uint256 conversionAmount){
+    function conversionFromAssetAmount(address _fromAssetHash,uint256 amount,bool isLock) internal view virtual returns(uint256 transferAmount,uint256 conversionAmount){
         uint8 fromAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].fromDecimals;
         uint8 toAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].toDecimals;
         if(fromAssetHashDecimals > toAssetHashDecimals){

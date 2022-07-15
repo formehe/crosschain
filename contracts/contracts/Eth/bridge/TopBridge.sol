@@ -8,7 +8,7 @@ import "./ITopBridge.sol";
 import "../../../lib/external_lib/RLPDecode.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "../../common/IDeserialize.sol";
+import "../../common/Deserialize.sol";
 
 contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     using RLPDecode for bytes;
@@ -38,12 +38,11 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     mapping(uint64 => bytes32) public blockMerkleRoots;
     mapping(uint64 => uint256) public blockHeights;
     mapping(address => uint256) public balanceOf;
-    IDeserialize deserializer;
 
     struct Epoch {
         uint64 epochId;
         uint numBPs;
-        IDeserialize.SECP256K1PublicKey[MAX_BLOCK_PRODUCERS] keys;
+        Deserialize.SECP256K1PublicKey[MAX_BLOCK_PRODUCERS] keys;
         bytes32[MAX_BLOCK_PRODUCERS / 2] packedStakes;
         uint256 stakeThreshold;
         uint64 ownerHeight;
@@ -53,12 +52,10 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     
     function initialize(
         uint256 _lockEthAmount,
-        address _owner,
-        IDeserialize _deserializer
+        address _owner
     ) external initializer {
         require(_owner != address(0));
         lockEthAmount = _lockEthAmount;
-        deserializer = _deserializer;
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSE_ALL ^ 0xff);
 
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
@@ -73,7 +70,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         require(!initialized, "Wrong initialization stage");
         initialized = true;
 
-        IDeserialize.LightClientBlock memory topBlock = deserializer.decodeLightClientBlock(data);
+        Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
 
         require(topBlock.inner_lite.next_bps.some, "Initialization block must contain next_bps");
         setBlockProducers(topBlock.inner_lite.next_bps.blockProducers,topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
@@ -99,8 +96,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     function _checkValidatorSignature(
         bytes32 block_hash,
-        IDeserialize.Signature memory signature,
-        IDeserialize.SECP256K1PublicKey memory publicKey
+        Deserialize.Signature memory signature,
+        Deserialize.SECP256K1PublicKey memory publicKey
     ) internal pure returns(bool) {
         uint8  _v = signature.v + (signature.v < 27 ? 27 : 0);
         bytes memory signatureBytes = abi.encodePacked(signature.r,signature.s,_v);
@@ -121,7 +118,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     function addLightClientBlock(bytes memory data) internal {
         //require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
-        IDeserialize.LightClientBlock memory topBlock = deserializer.decodeLightClientBlock(data);
+        Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
         if(uint(topBlock.inner_lite.receipts_root_hash) != 0){
             return;
         }
@@ -134,7 +131,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         // console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
         uint votedFor = 0;
         for (uint i = 0; i < thisEpoch.numBPs; i++) {
-            IDeserialize.OptionalSignature memory approval = topBlock.approvals.approvals_after_next[i];
+            Deserialize.OptionalSignature memory approval = topBlock.approvals.approvals_after_next[i];
             if (!approval.some) {
                 continue;
             }
@@ -161,7 +158,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         maxMainHeight = topBlock.inner_lite.height;
     }
 
-    function setBlockProducers(IDeserialize.BlockProducer[] memory src,uint64 epochId, uint64 blockHeight) internal {
+    function setBlockProducers(Deserialize.BlockProducer[] memory src,uint64 epochId, uint64 blockHeight) internal {
         uint cnt = src.length;        
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
         if (currentEpochIdex == (epochs.length - 1)) {
