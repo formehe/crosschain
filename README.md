@@ -187,6 +187,8 @@
  
   **方法**:绑定top端的资产及跨链合约
 
+  **权限**：OWNER_ROLE权限
+
   **参数**：
 
   _fromAssetHash：eth端的token地址
@@ -517,6 +519,8 @@
  **(4),function bindAssetHash(address localAssetHash, address peerAssetHash)** 
 
   **方法**：绑定eth端的资产
+
+  **权限**：OWNER_ROLE权限
 
   **参数**：
 
