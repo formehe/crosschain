@@ -231,7 +231,7 @@ library Deserialize{
     }
 
     function decodeMiniLightClientBlock(bytes memory rlpBytes)
-        external
+        internal
         view
         returns (LightClientBlock memory res)
     {
@@ -258,7 +258,7 @@ library Deserialize{
     }
 
     function decodeLightClientBlock(bytes memory rlpBytes)
-        external
+        internal
         view
         returns (LightClientBlock memory res)
     {
@@ -293,7 +293,7 @@ library Deserialize{
         // console.logBytes32(res.signature_hash);
     }
 
-    function toBlockHeader(bytes memory rlpHeader) external view returns (BlockHeader memory header) {
+    function toBlockHeader(bytes memory rlpHeader) internal view returns (BlockHeader memory header) {
 
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpHeader).iterator();
 
@@ -321,7 +321,7 @@ library Deserialize{
         header.hash = keccak256(rlpHeader);
     }
 
-    function toReceiptLog(bytes memory data) external view returns (Log memory log) {
+    function toReceiptLog(bytes memory data) internal view returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
 
         uint idx;
@@ -345,7 +345,7 @@ library Deserialize{
         }
     }
 
-    function toReceipt(bytes memory data, uint logIndex) external view returns (TransactionReceiptTrie memory receipt) {
+    function toReceipt(bytes memory data, uint logIndex) internal view returns (TransactionReceiptTrie memory receipt) {
         uint byte0;
         RLPDecode.Iterator memory it;        
         assembly {
