@@ -8,7 +8,6 @@ var Tx = require("ethereumjs-tx").Transaction
 
 const networks  = require('../hardhat.networks')
 const network = networks.topTest
-const chainId = network.chainId
 const gasLimit = 4000000;
 
 const web3 = new Web3(new Web3.providers.HttpProvider(network.url));
@@ -90,9 +89,10 @@ async function sendTransaction(deployer,data){
     var count = await web3.eth.getTransactionCount(fromAddr);
     var gasPrice = await web3.eth.getGasPrice();
     console.log("+++++++++++++gasPrice+++++++++++++++ ",web3.utils.toHex(gasPrice))
-
-    var privateKey = new Buffer.from(network.accounts[0], 'hex');
-
+    
+    var clearPrefixPri = network.accounts[0].replace('0x','')
+    var privateKey = new Buffer.from(clearPrefixPri, 'hex');
+    const chainId = await web3.eth.getChainId()
     var rawTx = {
         'from': fromAddr,
         'nonce': web3.utils.toHex(count),
