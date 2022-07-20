@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "../codec/EthProofDecoder.sol";
-import "../../../lib/lib/EthereumDecoder.sol";
+import "../Deserialize.sol";
 import "../../../lib/lib/MPT.sol";
+import "../../../lib/external_lib/RLPEncode.sol";
 //import "hardhat/console.sol";
 
 contract Prover{
@@ -15,14 +16,13 @@ contract Prover{
     }
 
     function _verify(
-        uint64 logIndex,
         bytes memory logEntryData, 
         uint64 reciptIndex,
         bytes memory reciptData,
         bytes[] memory proof,
-        EthereumDecoder.TransactionReceiptTrie calldata receipt, 
+        Deserialize.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot
-    ) internal view {
+    ) internal pure {
         // console.logBytes(receipt.log);
         require((keccak256(logEntryData) == keccak256(receipt.log)), "Log is not found");
 

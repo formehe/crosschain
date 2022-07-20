@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "../../common/codec/TopProofDecoder.sol";
-import "../../../lib/lib/EthereumDecoder.sol";
+import "../../common/Deserialize.sol";
 interface ITopProver {
     function verify( TopProofDecoder.Proof calldata proof, 
-        EthereumDecoder.TransactionReceiptTrie calldata receipt, 
+        Deserialize.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot,bytes32 blockHash) 
     external returns(bool valid, string memory reason);
 

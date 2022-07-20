@@ -128,6 +128,10 @@ describe("ERC20MintProxy", function () {
 
         zeroAccount = "0x0000000000000000000000000000000000000000"
 
+        const deserializeCon = await ethers.getContractFactory("Deserialize");
+        const deserialize = await deserializeCon.deploy();
+        await deserialize.deployed();
+
         //deploy ERC20
         erc20SampleCon = await ethers.getContractFactory("ERC20TokenSample", deployer)
         erc20Sample = await erc20SampleCon.deploy()
@@ -158,18 +162,38 @@ describe("ERC20MintProxy", function () {
         await topProveContract.deployed()
 
         //deploy mint contract
-        mintContractCon = await ethers.getContractFactory("ERC20MintProxyTest", admin)
+        try {
+            mintContractCon = await ethers.getContractFactory("ERC20MintProxyTest", {
+                signer: admin,
+                libraries: {
+                    Deserialize: deserialize.address,
+                },
+            })    
+        } catch (error) {
+            console.log(error)
+        }
+        
         mintContract = await mintContractCon.deploy()
         console.log("+++++++++++++mintContract+++++++++++++++ ", mintContract.address)
         await mintContract.deployed()
 
         //deploy mint contract1
-        mintContractCon1 = await ethers.getContractFactory("ERC20MintProxyTest", admin)
+        mintContractCon1 = await ethers.getContractFactory("ERC20MintProxyTest", {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address,
+            },
+        })
         mintContract1 = await mintContractCon1.deploy()
         console.log("+++++++++++++MintContract1+++++++++++++++ ", mintContract1.address)
         await mintContract1.deployed()
 
-        mintContractCon2 = await ethers.getContractFactory("ERC20MintProxyTest", admin)
+        mintContractCon2 = await ethers.getContractFactory("ERC20MintProxyTest", {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address
+            }
+        })
         mintContract2 = await mintContractCon2.deploy()
         console.log("+++++++++++++MintContract2+++++++++++++++ ", mintContract2.address)
         await mintContract2.deployed()
@@ -181,6 +205,7 @@ describe("ERC20MintProxy", function () {
 
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+
 
         await mintContract.initialize(topProveContract.address, mintContract1.address, 1000, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
@@ -390,6 +415,10 @@ describe("TRC20", function () {
         await erc20Sample.deployed()
         console.log("+++++++++++++Erc20Sample+++++++++++++++ ", erc20Sample.address)
 
+        deserializeCon = await ethers.getContractFactory("Deserialize");
+        deserialize = await deserializeCon.deploy();
+        await deserialize.deployed();
+
         //deploy ERC20
         erc20SampleCon1 = await ethers.getContractFactory("ERC20TokenSample", deployer)
         erc20Sample1 = await erc20SampleCon1.deploy()
@@ -421,7 +450,12 @@ describe("TRC20", function () {
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
 
         //deploy mint contract
-        mintContractCon = await ethers.getContractFactory("ERC20MintProxyTest", admin)
+        mintContractCon = await ethers.getContractFactory("ERC20MintProxyTest", {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address
+            }
+        })
         mintContract = await mintContractCon.deploy()
         console.log("+++++++++++++mintContract+++++++++++++++ ", mintContract.address)
         await mintContract.deployed()
@@ -429,7 +463,12 @@ describe("TRC20", function () {
 
     it('burn success, the mint asset must be bound', async () => {
         //deploy TRC20
-        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test",  {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address
+            }
+        })
         TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample1.address, 1, "hhh", "hhh", limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
@@ -468,7 +507,12 @@ describe("TRC20", function () {
 
     it('burn success, the mint proxy must be bound', async () => {
         //burn
-        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test",  {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address
+            }
+        })
         TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
@@ -505,7 +549,12 @@ describe("TRC20", function () {
 
     it('burn success, repeat mint', async () => {
         //burn
-        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test",  {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address
+            }
+        })
         TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
@@ -546,7 +595,12 @@ describe("TRC20", function () {
 
     it('burn success, mint success', async () => {
         //burn
-        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test",  {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address
+            }
+        })
         TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
@@ -588,7 +642,12 @@ describe("TRC20", function () {
     
     it('burn amount exceeds balance', async () => {
         //burn
-        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test",  {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address
+            }
+        })
         TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)
         await limitContract.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
@@ -630,7 +689,12 @@ describe("TRC20", function () {
 
     it('burn success', async () => {
         //burn
-        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test", admin)
+        TRC20ContractCon1 = await ethers.getContractFactory("TRC20Test",  {
+            signer: admin,
+            libraries: {
+                Deserialize: deserialize.address
+            }
+        })
         TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
         await limitContract.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
         console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)

@@ -5,10 +5,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./prover/ITopProver.sol";
 import "../common/codec/TopProofDecoder.sol";
 import "../common/Borsh.sol";
-import "../../lib/lib/EthereumDecoder.sol";
-import "./bridge/TopDecoder.sol";
 import "../common/ILimit.sol";
 import "../common/AdminControlledUpgradeable.sol";
+import "../common/Deserialize.sol";
 import "./IERC20Decimals.sol";
 
 contract Locker is Initializable,AdminControlledUpgradeable{
@@ -22,9 +21,9 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
     ILimit public limit;
     //keccak256("BLACK.UN.LOCK.ROLE")
-    bytes32 constant public BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
+    bytes32 constant BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
     //keccak256("BLACK.LOCK.ROLE")
-    bytes32 constant public BLACK_LOCK_ROLE = 0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4;
+    bytes32 constant BLACK_LOCK_ROLE = 0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4;
 
     event Locked (
         address indexed fromToken,
@@ -141,28 +140,29 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         address fromToken = _receipt.data.toToken;
         ToAddressHash memory toAddressHash = assets[fromToken];
         require(toAddressHash.lockProxyHash == contractAddress, "proxy is not bound");
-        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData, proof.logIndex);
-        TopDecoder.LightClientBlock memory header = TopDecoder.decodeMiniLightClientBlock(proof.headerData);
-        require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(proof.polyBlockHeight)),'the transaction is frozen');
+
+        Deserialize.TransactionReceiptTrie memory receipt = Deserialize.toReceipt(proof.reciptData, proof.logIndex);
+        Deserialize.LightClientBlock memory header = Deserialize.decodeMiniLightClientBlock(proof.headerData);
+        require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(proof.polyBlockHeight)),'tx is frozen');
         bytes memory reciptIndex = abi.encode(header.inner_lite.height,proof.reciptIndex);
 
         bytes32 proofIndex = keccak256(reciptIndex);
-        require(limit.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
+        require(limit.forbiddens(proofIndex) == false, "tx is forbidden");
         (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash, header.block_hash);
-        require(success, "Proof should be valid");
-        require(!usedProofs[proofIndex], "The burn event proof cannot be reused");
+        require(success, "proof is invalid");
+        require(!usedProofs[proofIndex], "proof is reused");
         _receipt.proofIndex = proofIndex;
     }
 
     function _parseLog(
         bytes memory log
-    ) private pure returns (VerifiedEvent memory _receipt, address _contractAddress) {
-        EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
-        require(logInfo.topics.length == 4, "invalid the number of topics");
+    ) private view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+        Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
+        require(logInfo.topics.length == 4, "wrong number of topic");
         bytes32 topics0 = logInfo.topics[0];
         
         //burn
-        require(topics0 == 0x4f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842, "invalid the function of topics");
+        require(topics0 == 0x4f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842, "invalid signature");
         (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
         _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
@@ -171,12 +171,12 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     }
 
     modifier lockToken_pauseable(){
-        require(!hasRole(BLACK_LOCK_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
+        require(!hasRole(BLACK_LOCK_ROLE,_msgSender()) && ((paused & PAUSED_LOCK) == 0),"no permit");
         _;
     }
 
     modifier unLock_pauseable(){
-        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
+        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"no permit");
         _;
     }
 }

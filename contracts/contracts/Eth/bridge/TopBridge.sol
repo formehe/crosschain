@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 
 import "../../common/AdminControlledUpgradeable.sol";
 import "./ITopBridge.sol";
-import "./TopDecoder.sol";
 // import "hardhat/console.sol";
 import "../../../lib/external_lib/RLPDecode.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "../../common/Deserialize.sol";
 
 contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     using RLPDecode for bytes;
@@ -17,13 +17,13 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     using RLPDecode for RLPDecode.Iterator;
 
     // Assumed to be even and to not exceed 256.
-    uint constant MAX_BLOCK_PRODUCERS = 100;
-    uint constant UNPAUSE_ALL = 0;
-    uint constant PAUSED_DEPOSIT = 1;
-    uint constant PAUSED_WITHDRAW = 2;
-    uint constant PAUSED_ADD_BLOCK = 4;
-    uint constant PAUSED_CHALLENGE = 8;
-    uint constant PAUSED_VERIFY = 16;
+    uint constant private MAX_BLOCK_PRODUCERS = 100;
+    uint constant private UNPAUSE_ALL = 0;
+    uint constant private PAUSED_DEPOSIT = 1;
+    uint constant private PAUSED_WITHDRAW = 2;
+    uint constant private PAUSED_ADD_BLOCK = 4;
+    uint constant private PAUSED_CHALLENGE = 8;
+    uint constant private PAUSED_VERIFY = 16;
 
     // Whether the contract was initialized.
     bool public initialized;
@@ -42,13 +42,13 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     struct Epoch {
         uint64 epochId;
         uint numBPs;
-        TopDecoder.SECP256K1PublicKey[MAX_BLOCK_PRODUCERS] keys;
+        Deserialize.SECP256K1PublicKey[MAX_BLOCK_PRODUCERS] keys;
         bytes32[MAX_BLOCK_PRODUCERS / 2] packedStakes;
         uint256 stakeThreshold;
         uint64 ownerHeight;
     }
     
-    bytes32 constant public ADDBLOCK_ROLE = 0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86;
+    bytes32 constant private ADDBLOCK_ROLE = 0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86;
     
     function initialize(
         uint256 _lockEthAmount,
@@ -66,27 +66,14 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     }
 
-    // function deposit() public payable override pausable(PAUSED_DEPOSIT) {
-    //     require(msg.value == lockEthAmount && balanceOf[msg.sender] == 0);
-    //     balanceOf[msg.sender] = msg.value;
-    // }
-
-    // function withdraw() public override pausable(PAUSED_WITHDRAW) {
-    //     require(msg.sender != lastSubmitter);
-    //     uint amount = balanceOf[msg.sender];
-    //     require(amount != 0);
-    //     balanceOf[msg.sender] = 0;
-    //     payable(msg.sender).transfer(amount);
-    // }
-
     function initWithBlock(bytes memory data) public override onlyRole(OWNER_ROLE) {
         require(!initialized, "Wrong initialization stage");
         initialized = true;
 
-        TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
+        Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
 
-        require(topBlock.next_bps.some, "Initialization block must contain next_bps");
-        setBlockProducers(topBlock.next_bps.blockProducers,topBlock.next_bps.epochId, topBlock.inner_lite.height);
+        require(topBlock.inner_lite.next_bps.some, "Initialization block must contain next_bps");
+        setBlockProducers(topBlock.inner_lite.next_bps.blockProducers,topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
         blockHashes[topBlock.block_hash] = true;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.inner_lite.height] = block.timestamp;
@@ -109,8 +96,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
     function _checkValidatorSignature(
         bytes32 block_hash,
-        TopDecoder.Signature memory signature,
-        TopDecoder.SECP256K1PublicKey memory publicKey
+        Deserialize.Signature memory signature,
+        Deserialize.SECP256K1PublicKey memory publicKey
     ) internal pure returns(bool) {
         uint8  _v = signature.v + (signature.v < 27 ? 27 : 0);
         bytes memory signatureBytes = abi.encodePacked(signature.r,signature.s,_v);
@@ -129,55 +116,9 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         }
     }
 
-    // function addLightClientBlock(bytes memory data) internal {
-    //     //  require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
-    //     TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
-    //     require(topBlock.inner_lite.height >= (maxMainHeight + 1),"height error");
-
-    //     Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);
-    //     require(topBlock.approvals_after_next.length >= thisEpoch.numBPs, "Approval list is too short");
-
-    //     uint256 votedFor = 0;
-    //     for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i != cnt; ++i) {
-    //         bytes32 stakes = thisEpoch.packedStakes[i >> 1];
-    //         if (topBlock.approvals_after_next[i].some) {
-    //             votedFor += uint128(bytes16(stakes));
-    //         }
-
-    //         if (++i == cnt) {
-    //             break;
-    //         }
-    //         if (topBlock.approvals_after_next[i].some) {
-    //             votedFor += uint128(uint256(stakes));
-    //         }
-    //     }
-
-    //     require(topBlock.approvals_after_next.length > thisEpoch.stakeThreshold, "Too few approvals");
-        
-    //     for ((uint i, uint cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
-    //         TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
-    //         if (approval.some) {
-    //            bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
-    //            require(success);
-    //         }
-    //     }
-
-    //     if (topBlock.next_bps.some) {
-    //         setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId);
-    //     }
-
-    //     blockHashes[topBlock.block_hash] = true;
-    //     blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
-    //     blockHeights[topBlock.inner_lite.height] = true;
-
-    //     lastSubmitter = msg.sender;
-    //     maxMainHeight = topBlock.inner_lite.height;
-    // }
-
-
     function addLightClientBlock(bytes memory data) internal {
         //require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
-        TopDecoder.LightClientBlock memory topBlock = TopDecoder.decodeLightClientBlock(data);
+        Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
         if(uint(topBlock.inner_lite.receipts_root_hash) != 0){
             return;
         }
@@ -186,16 +127,16 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
 
         require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");
 
-        Epoch memory thisEpoch = getValidationEpoch(topBlock.inner_lite.epoch_id);
+        Epoch memory thisEpoch = getValidationEpoch(topBlock.approvals.epochId);
         // console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
         uint votedFor = 0;
         for (uint i = 0; i < thisEpoch.numBPs; i++) {
-            TopDecoder.OptionalSignature memory approval = topBlock.approvals_after_next[i];
+            Deserialize.OptionalSignature memory approval = topBlock.approvals.approvals_after_next[i];
             if (!approval.some) {
                 continue;
             }
 
-            bool success = _checkValidatorSignature(topBlock.block_hash, approval.signature, thisEpoch.keys[i]);
+            bool success = _checkValidatorSignature(topBlock.signature_hash, approval.signature, thisEpoch.keys[i]);
             if(success){
                 votedFor++;
             }
@@ -204,9 +145,9 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         // console.log("vote, num bps:", votedFor, thisEpoch.stakeThreshold);
         require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
 
-        if (topBlock.next_bps.some) {
-            require(topBlock.next_bps.epochId == epochs[currentEpochIdex].epochId + 1 ,"Failure of the epochId");
-            setBlockProducers(topBlock.next_bps.blockProducers, topBlock.next_bps.epochId, topBlock.inner_lite.height);
+        if (topBlock.inner_lite.next_bps.some) {
+            require(topBlock.inner_lite.next_bps.epochId == epochs[currentEpochIdex].epochId + 1 ,"Failure of the epochId");
+            setBlockProducers(topBlock.inner_lite.next_bps.blockProducers, topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
         }
 
         blockHashes[topBlock.block_hash] = true;
@@ -217,35 +158,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         maxMainHeight = topBlock.inner_lite.height;
     }
 
-    // function setBlockProducers(TopDecoder.BlockProducer[] memory src,uint64 epochId) internal {
-    //     Epoch memory epoch;
-    //     uint cnt = src.length;
-    //     require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
-    //     epoch.epochId = epochId;
-    //     epoch.numBPs = cnt;
-    //     unchecked {
-    //         for (uint i = 0; i < cnt; i++) {
-    //             epoch.keys[i] = src[i].publicKey;
-    //         }
-    //         uint256 totalStake = 0; // Sum of uint128, can't be too big.
-    //         for (uint i = 0; i != cnt; ++i) {
-    //             uint128 stake1 = src[i].stake;
-    //             totalStake += stake1;
-    //             if (++i == cnt) {
-    //                 epoch.packedStakes[i >> 1] = bytes32(bytes16(stake1));
-    //                 break;
-    //             }
-    //             uint128 stake2 = src[i].stake;
-    //             totalStake += stake2;
-    //             epoch.packedStakes[i >> 1] = bytes32(uint256(bytes32(bytes16(stake1))) + stake2);
-    //         }
-    //         epoch.stakeThreshold = (totalStake * 2 + 2) / 3;
-
-    //     }
-    //     addEpochs(epoch);
-    // }
-
-    function setBlockProducers(TopDecoder.BlockProducer[] memory src,uint64 epochId, uint64 blockHeight) internal {
+    function setBlockProducers(Deserialize.BlockProducer[] memory src,uint64 epochId, uint64 blockHeight) internal {
         uint cnt = src.length;        
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
         if (currentEpochIdex == (epochs.length - 1)) {

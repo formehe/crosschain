@@ -40,7 +40,6 @@ async function performTopBridge(){
     const signer = await ethers.provider.getSigner(deployer)
     const bridge = await ethers.getContractAt('TopBridge', bridgeEth, signer)
     await bridge.initialize(0,deployer)
-    
 }
 
 performEth()

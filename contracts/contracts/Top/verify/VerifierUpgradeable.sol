@@ -26,7 +26,7 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
     uint constant PAUSED_BURN = 1 << 0;
     uint constant PAUSED_MINT = 1 << 1;
 
-    IEthProver internal prover;
+    IEthProver public prover;
     ILimit public limiter;
     address public lockProxyHash;
     uint64 private minBlockAcceptanceHeight;
@@ -66,8 +66,9 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         (_receipt.data, contractAddress) = _parseLog(proof.logEntryData);
         require(contractAddress != address(0), "Invalid Token lock address");
         require(lockProxyHash == contractAddress, "proxy is not bound");
-        EthereumDecoder.TransactionReceiptTrie memory receipt = EthereumDecoder.toReceipt(proof.reciptData, proof.logIndex);
-        EthereumDecoder.BlockHeader memory header = EthereumDecoder.toBlockHeader(proof.headerData);
+
+        Deserialize.TransactionReceiptTrie memory receipt = Deserialize.toReceipt(proof.reciptData, proof.logIndex);
+        Deserialize.BlockHeader memory header = Deserialize.toBlockHeader(proof.headerData);
         bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
         bytes32 proofIndex = keccak256(reciptIndex);
         require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
@@ -81,7 +82,7 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
     function _parseLog(
         bytes memory log
     ) internal virtual view returns (VerifiedEvent memory _receipt, address _contractAddress) {
-        EthereumDecoder.Log memory logInfo = EthereumDecoder.toReceiptLog(log);
+        Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
         //Lock
@@ -91,5 +92,15 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
         _contractAddress = logInfo.contractAddress;
+    }
+
+    modifier mint_pauseable(){
+        require(!hasRole(BLACK_MINT_ROLE, _msgSender()) && ((paused & PAUSED_MINT) == 0),"has been pause");
+        _;
+    }
+
+    modifier burn_pauseable(){
+        require(!hasRole(BLACK_BURN_ROLE, _msgSender())&& ((paused & PAUSED_BURN) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"has been pause");
+        _;
     }
 }

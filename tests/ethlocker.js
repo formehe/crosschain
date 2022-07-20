@@ -18,13 +18,28 @@ describe('EthLocker', () => {
     [wallet, wallet2,wallet3] = await hardhat.ethers.getSigners()
     provider = hardhat.ethers.provider
 
+    deserializeCon = await ethers.getContractFactory("Deserialize");
+    deserialize = await deserializeCon.deploy();
+    await deserialize.deployed();
+
     const Erc20token =  await hre.ethers.getContractFactory("ERC20Mintable", wallet, overrides)
     erc20Token = await Erc20token.deploy('ERC20Mintable', 'et')
 
-    const EthLockerResult =  await hre.ethers.getContractFactory("EthLockerTest", wallet, overrides)
+    const EthLockerResult =  await hre.ethers.getContractFactory("EthLockerTest", {
+      gasLimit: 9500000,
+      signer: wallet,
+      libraries: {
+        Deserialize:deserialize.address
+      }
+    })
     ethLocker = await EthLockerResult.deploy()
 
-    const TopBridge = await hre.artifacts.readArtifact("TopBridge")
+    const TopBridge = await hre.artifacts.readArtifact("TopBridge", {
+      libraries: {
+        Deserialize:deserialize.address
+      }
+    })
+    
     bridge = await deployMockContract(wallet, TopBridge.abi, overrides)
 
     const TopProver = await hre.ethers.getContractFactory("TopProver", wallet, overrides)
@@ -42,6 +57,7 @@ describe('EthLocker', () => {
     console.log("prover>>>> "  + prover.address)
     console.log("bridge>>>> "  + bridge.address)
     console.log("Limit>>>> "  + limit.address)
+
 
     await ethLocker._EthLocker_initialize(prover.address,0,wallet.address,limit.address,erc20Token.address,erc20Token.address)
 
@@ -68,11 +84,13 @@ describe('EthLocker', () => {
   //lockToken
   describe('lockToken', () => {
     it('no have bind token', async () => {
+       await ethLocker.adminPause(0)
        await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address)).to.be.revertedWith('quota is not exist')
     })
   
     it('Inconsistent quantity', async () => {
       //await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
+      await ethLocker.adminPause(0)
       await limit.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
       await expect(ethLocker.lockToken(AddressZero,toWei('2'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('transferred ether is not equal to amount!')
 
@@ -95,19 +113,9 @@ describe('EthLocker', () => {
 
       await ethLocker.revokeRole('0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de',wallet.address)
       expect(await ethLocker.hasRole('0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de',wallet.address)).to.equal(false);
-      await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('has been pause')
+      await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('no permit')
 
 
-    })
-
-    it('pause and have permissions', async () => {
-      //await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
-      await ethLocker.adminPause(1)
-      expect(await ethLocker.paused()).to.equal(1);
-      await limit.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
-      await ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})
-
-      expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('1'))
     })
     
     it('settings can pass', async () => {
@@ -149,7 +157,7 @@ describe('EthLocker', () => {
     it('account set blacklist', async () => {
       await ethLocker.grantRole('0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4',wallet.address)
       expect(await ethLocker.hasRole('0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4',wallet.address)).to.equal(true);
-      await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('has been pause')
+      await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address,{value:toWei('1')})).to.be.revertedWith('no permit')
 
     })
   })
