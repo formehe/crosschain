@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "../external_lib/RLPDecode.sol";
-// import "hardhat/console.sol";
+import "../../contracts/common/Utils.sol";
+import "hardhat/console.sol";
 /*
     Documentation:
     - https://eth.wiki/en/fundamentals/patricia-tree
@@ -24,7 +25,7 @@ library MPT {
 
     function verifyTrieProof(
         MerkleProof memory data
-    ) pure internal returns (bool)
+    ) view internal returns (bool)
     {
         bytes memory node = data.proof[data.proofIndex];
         RLPDecode.Iterator memory dec = RLPDecode.toRlpItem(node).iterator();
@@ -56,7 +57,7 @@ library MPT {
 
     function verifyTrieProofBranch(
         MerkleProof memory data
-    ) pure internal returns (bool)
+    ) view internal returns (bool)
     {
         bytes memory node = data.proof[data.proofIndex];
 
@@ -68,10 +69,10 @@ library MPT {
         }
         else {
             uint256 index = uint256(uint8(data.key[data.keyIndex]));
-            bytes memory _newExpectedRoot = RLPDecode.toRlpItem(node).toList()[index].toBytes();
+            RLPDecode.RLPItem memory _newExpectedRoot = RLPDecode.toRlpItem(node).toList()[index].toBytesItem();
 
-            if (!(_newExpectedRoot.length == 0)) {
-                data.expectedRoot = b2b32(_newExpectedRoot);
+            if (!(_newExpectedRoot.len == 0)) {
+                data.expectedRoot = _b2b32(_newExpectedRoot.memPtr);
                 data.keyIndex += 1;
                 data.proofIndex += 1;
                 return verifyTrieProof(data);
@@ -85,10 +86,10 @@ library MPT {
     function verifyTrieProofLeafOrExtension(
         RLPDecode.Iterator memory dec,
         MerkleProof memory data
-    ) pure internal returns (bool)
+    ) view internal returns (bool)
     {
         bytes memory nodekey = dec.next().toBytes();
-        bytes memory nodevalue = dec.next().toBytes();
+        RLPDecode.RLPItem memory nodevalue = dec.next().toBytesItem();
         uint256 prefix;
         assembly {
             let first := shr(248, mload(add(nodekey, 32)))
@@ -96,38 +97,29 @@ library MPT {
         }
 
         bytes memory key;
-        uint j;
-        if ((prefix & 0x1 == 0) && (nodekey.length > 1 )) { 
-            key = new bytes((nodekey.length - 1) << 1);
-        } else if (prefix & 0x1 == 0x1) {
-            key = new bytes(((nodekey.length - 1) << 1) + 1);
-            key[j] = nodekey[0] & 0x0f;
-            j += 1;
-        }
-
-        for (uint i = 1; i < nodekey.length; i++) {
-            key[j] = nodekey[i] >> 4;
-            j += 1;
-            key[j] = nodekey[i] & 0x0f;
-            j += 1;
+        if (prefix & 0x1 == 0) {
+            key = expandKeyEven(nodekey);
+        } else {
+            key = expandKeyEven(nodekey);
         }
         
         if ((prefix == 2) || (prefix == 3)) {
             // leaf odd
-            bytes memory actualKey = sliceTransform(key, 32, key.length, false);
-            bytes memory restKey = sliceTransform(data.key, 32 + data.keyIndex, data.key.length - data.keyIndex, false);
-            if (keccak256(data.expectedValue) == keccak256(nodevalue)) {
+            bytes memory actualKey = sliceTransform(key, 32, key.length);
+            bytes memory restKey = sliceTransform(data.key, 32 + data.keyIndex, data.key.length - data.keyIndex);
+
+            if (keccak256(data.expectedValue) == Utils.keccak256Raw(nodevalue.memPtr, nodevalue.len)) {
                 if (keccak256(actualKey) == keccak256(restKey)) return true;
             }
         }
         else if ((prefix == 0) || (prefix == 1)) {
             // extension even
-            bytes memory shared_nibbles = sliceTransform(key, 32, key.length, false);
-            bytes memory restKey = sliceTransform(data.key, 32 + data.keyIndex, key.length, false);
+            bytes memory shared_nibbles = sliceTransform(key, 32, key.length);
+            bytes memory restKey = sliceTransform(data.key, 32 + data.keyIndex, key.length);
             if (
                 keccak256(shared_nibbles) == keccak256(restKey)
             ) {
-                data.expectedRoot = b2b32(nodevalue);
+                data.expectedRoot = _b2b32(nodevalue.memPtr);
                 data.keyIndex += key.length;
                 data.proofIndex += 1;
                 return verifyTrieProof(data);
@@ -140,17 +132,22 @@ library MPT {
         else return false;
     }
 
-    function b2b32(bytes memory data) pure internal returns(bytes32 part) {
+    // function b2b32(bytes memory data) pure internal returns(bytes32 part) {
+    //     assembly {
+    //         part := mload(add(data, 32))
+    //     }
+    // }
+
+    function _b2b32(uint data) pure internal returns(bytes32 part) {
         assembly {
-            part := mload(add(data, 32))
+            part := mload(data)
         }
     }
 
     function sliceTransform(
         bytes memory data,
         uint256 start,
-        uint256 length,
-        bool removeFirstNibble
+        uint256 length
     )
         pure internal returns(bytes memory)
     {
@@ -162,15 +159,6 @@ library MPT {
         bytes memory newdata = new bytes(length);
         assembly {
             source := add(start, data)
-
-            if removeFirstNibble {
-                mstore(
-                    add(newdata, pos),
-                    shr(4, shl(4, mload(add(source, pos))))
-                )
-                si := 1
-                pos := add(pos, 32)
-            }
 
             for {let i := si} lt(i, slots) {i := add(i, 1)} {
                 mstore(add(newdata, pos), mload(add(source, pos)))

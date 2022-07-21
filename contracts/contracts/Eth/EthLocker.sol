@@ -35,7 +35,6 @@ contract EthLocker is ITokenLocker,Locker{
         address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         require(amount != 0, "amount cannot be zero");
-        limit.checkTransferedQuota(fromAssetHash,amount);  
         require(receiver != address(0), "receive address can not be zero");
         require(_transferToContract(amount));
         emit Locked(fromAssetHash, toAssetHash ,msg.sender, amount, receiver);

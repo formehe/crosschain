@@ -63,7 +63,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         VerifiedEvent data;
     }
 
-    ITopProver private prover;
+    ITopProver public prover;
 
     // Proofs from blocks that are below the acceptance height will be rejected.
     // If `minBlockAcceptanceHeight` value is zero - proofs from block with any height are accepted.
@@ -143,7 +143,9 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
         Deserialize.TransactionReceiptTrie memory receipt = Deserialize.toReceipt(proof.reciptData, proof.logIndex);
         Deserialize.LightClientBlock memory header = Deserialize.decodeMiniLightClientBlock(proof.headerData);
-        require(limit.checkFrozen(_receipt.data.fromToken,prover.getAddLightClientTime(proof.polyBlockHeight)),'tx is frozen');
+        uint256 time;
+        time = prover.getAddLightClientTime(proof.polyBlockHeight);
+        require(limit.checkFrozen(_receipt.data.fromToken,time),'tx is frozen');
         bytes memory reciptIndex = abi.encode(header.inner_lite.height,proof.reciptIndex);
 
         bytes32 proofIndex = keccak256(reciptIndex);

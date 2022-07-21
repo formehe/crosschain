@@ -20,9 +20,9 @@ describe('TopProver', () => {
 
     console.log("wallet>>>> "  + wallet.address)
 
-    deserializeCon = await ethers.getContractFactory("Deserialize");
-    deserialize = await deserializeCon.deploy();
-    await deserialize.deployed();
+    // deserializeCon = await ethers.getContractFactory("Deserialize");
+    // deserialize = await deserializeCon.deploy();
+    // await deserialize.deployed();
 
     const TopBridge = await hre.artifacts.readArtifact("TopBridge")
     topBridge = await deployMockContract(wallet, TopBridge.abi, overrides)
@@ -30,9 +30,9 @@ describe('TopProver', () => {
     const TopProver =  await hre.ethers.getContractFactory("TopProverTest", {
       gasLimit: 9500000,
       signer: wallet,
-      libraries: {
-        Deserialize:deserialize.address
-      }
+      // libraries: {
+      //   Deserialize:deserialize.address
+      // }
     })
     topProver = await TopProver.deploy(topBridge.address)
 
