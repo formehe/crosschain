@@ -9,14 +9,52 @@ var Tx = require("ethereumjs-tx").Transaction
 const networks  = require('../hardhat.networks')
 const network = networks.topTest
 const gasLimit = 4000000;
+let deserialize = '$'
 
 const web3 = new Web3(new Web3.providers.HttpProvider(network.url));
 
 async function deploy(){
+   await deployDeserialize()
    await deployERC20MintProxy()
    await deployEthProver()
    await deployLimit()
    await deployTopErc20Wrapper()
+}
+
+async function deployDeserialize(){
+    const { getNamedAccounts} = hardhat
+    let {
+          deployer
+    } = await getNamedAccounts()
+
+    const mintProxy = await hre.artifacts.readArtifact("Deserialize")
+    const bytecode = mintProxy.bytecode
+
+    console.log("+++++++++++++deployDeserialize+++++++++++++++ ","")
+    
+    var fromAddr = deployer;
+    var count = await web3.eth.getTransactionCount(fromAddr);
+    var gasPrice = await web3.eth.getGasPrice();
+    console.log("+++++++++++++gasPrice+++++++++++++++ ",web3.utils.toHex(gasPrice))
+    
+    var clearPrefixPri = network.accounts[0].replace('0x','')
+    var privateKey = new Buffer.from(clearPrefixPri, 'hex');
+    const chainId = await web3.eth.getChainId()
+    var rawTx = {
+        'from': fromAddr,
+        'nonce': web3.utils.toHex(count),
+        'gasPrice': web3.utils.toHex(gasPrice),
+        'gasLimit': web3.utils.toHex(gasLimit),
+        'value': '0x0',
+        'data': bytecode
+    };
+   
+    const tx = new Tx(rawTx, {chain: chainId})
+    tx.sign(privateKey);
+    var serializedTx = tx.serialize();
+    var hashTx = await web3.eth.sendSignedTransaction('0x'+serializedTx.toString('hex'));
+    console.log('contractAddress: ' + hashTx.contractAddress);
+    deserialize = hashTx.contractAddress
 }
 
 async function deployERC20MintProxy(){
@@ -26,7 +64,9 @@ async function deployERC20MintProxy(){
     } = await getNamedAccounts()
 
     const mintProxy = await hre.artifacts.readArtifact("ERC20MintProxy")
-    const bytecode = mintProxy.bytecode
+    let bytecode = mintProxy.bytecode
+    deserialize = deserialize.replace('0x','')
+    bytecode = bytecode.replace(/__\$[0-9a-f]+\$__/g, deserialize)
 
     console.log("+++++++++++++deployERC20MintProxy+++++++++++++++ ","")
     await sendTransaction(deployer,bytecode)
@@ -46,6 +86,9 @@ async function deployEthProver(){
         arguments: [bridgeTop]
     }).encodeABI()
     console.log("+++++++++++++deployEthProver+++++++++++++++ ","")
+
+    deserialize = deserialize.replace('0x','')
+    data = data.replace(/__\$[0-9a-f]+\$__/g, deserialize)
     await sendTransaction(deployer,data)
 }
 
@@ -58,10 +101,8 @@ async function deployLimit(){
     const limit = await hre.artifacts.readArtifact("Limit")
     const bytecode = limit.bytecode
     console.log("+++++++++++++deployLimit+++++++++++++++ ","")
-
     await sendTransaction(deployer,bytecode)
 }
-
 
 async function deployTopErc20Wrapper(){
     const { getNamedAccounts} = hardhat
