@@ -7,7 +7,7 @@ const hardhat = require("hardhat")
 var Tx = require("ethereumjs-tx").Transaction
 
 const networks  = require('../hardhat.networks')
-const network = networks.topTest
+const network = networks.rinkeby
 const gasLimit = 4000000;
 let deserialize = '$'
 
@@ -65,10 +65,11 @@ async function deployERC20MintProxy(){
 
     const mintProxy = await hre.artifacts.readArtifact("ERC20MintProxy")
     let bytecode = mintProxy.bytecode
-    deserialize = deserialize.replace('0x','')
-    bytecode = bytecode.replace(/__\$[0-9a-f]+\$__/g, deserialize)
-
     console.log("+++++++++++++deployERC20MintProxy+++++++++++++++ ","")
+    bytecode = linkBytecode(mintProxy,{
+        Deserialize:deserialize
+    })
+
     await sendTransaction(deployer,bytecode)
 }
 
@@ -86,9 +87,6 @@ async function deployEthProver(){
         arguments: [bridgeTop]
     }).encodeABI()
     console.log("+++++++++++++deployEthProver+++++++++++++++ ","")
-
-    deserialize = deserialize.replace('0x','')
-    data = data.replace(/__\$[0-9a-f]+\$__/g, deserialize)
     await sendTransaction(deployer,data)
 }
 
@@ -149,5 +147,29 @@ async function sendTransaction(deployer,data){
     var hashTx = await web3.eth.sendSignedTransaction('0x'+serializedTx.toString('hex'));
     console.log('contractAddress: ' + hashTx.contractAddress);
 }
+
+
+function linkBytecode(artifact, libraries){
+    let bytecode = artifact.bytecode;
+  
+    for (const [, fileReferences] of Object.entries(artifact.linkReferences)) {
+      for (const [libName, fixups] of Object.entries(fileReferences)) {
+        const addr = libraries[libName];
+        if (addr === undefined) {
+          continue;
+        }
+  
+        for (const fixup of fixups) {
+          bytecode =
+            bytecode.substr(0, 2 + fixup.start * 2) +
+            addr.substr(2) +
+            bytecode.substr(2 + (fixup.start + fixup.length) * 2);
+        }
+      }
+    }
+  
+    return bytecode;
+}
+
 
 deploy()
