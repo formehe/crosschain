@@ -16,7 +16,7 @@ contract TopProver is Prover, ITopProver{
         Deserialize.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot, bytes32 blockHash
     ) external view override returns (bool valid, string memory reason) {
-        _verify(proof.logEntryData,proof.reciptIndex,proof.reciptData,proof.reciptProof,receipt, receiptsRoot);
+        _verify(proof.logEntryData, proof.reciptIndex, proof.reciptData, proof.reciptProof, receipt, receiptsRoot);
         _verifyBlock(proof, blockHash);
         return (true, "");
     }

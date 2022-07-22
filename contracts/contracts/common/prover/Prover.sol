@@ -22,7 +22,7 @@ contract Prover{
         bytes[] memory proof,
         Deserialize.TransactionReceiptTrie calldata receipt, 
         bytes32 receiptsRoot
-    ) internal pure {
+    ) internal view {
         // console.logBytes(receipt.log);
         require((keccak256(logEntryData) == keccak256(receipt.log)), "Log is not found");
 

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../../lib/external_lib/RLPEncode.sol";
 import "../../lib/external_lib/RLPDecode.sol";
+import "./Utils.sol";
 // import "hardhat/console.sol";
 
 library Deserialize{
@@ -100,7 +101,7 @@ library Deserialize{
 
     function decodeOptionalSignature(RLPDecode.RLPItem memory itemBytes)
         private
-        view
+        pure
         returns (OptionalSignature memory res)
     {
         RLPDecode.Iterator memory it = itemBytes.iterator();
@@ -134,7 +135,7 @@ library Deserialize{
 
     function decodeOptionalBlockSignatures(RLPDecode.RLPItem memory itemBytes)
         private
-        view
+        pure
         returns (OptionalBlockSignatures memory res)
     {
         if (itemBytes.isList()) {
@@ -161,7 +162,7 @@ library Deserialize{
 
     function decodeOptionalBlockProducers(RLPDecode.RLPItem memory itemBytes)
         private
-        view
+        pure
         returns (OptionalBlockProducers memory res)
     {
         // console.logBytes(itemBytes.toBytes());
@@ -195,11 +196,11 @@ library Deserialize{
 
     function decodeBlockHeaderInnerLite(RLPDecode.RLPItem memory itemBytes)
         private
-        view
+        pure
         returns (BlockHeaderInnerLite memory res)
     {
         //cacl innter hash
-        res.inner_hash = keccak256(abi.encodePacked(itemBytes.toRlpBytes()));
+        res.inner_hash =  Utils.keccak256Raw(itemBytes.memPtr, itemBytes.len);//keccak256(abi.encodePacked(itemBytes.toRlpBytes()));
         // console.logBytes(itemBytes);
 
         RLPDecode.Iterator memory it = itemBytes.iterator();
@@ -207,10 +208,10 @@ library Deserialize{
         while (it.hasNext()) {
             if (idx == 0) res.height = uint64(it.next().toUint());
             else if (idx == 1) res.timestamp = uint64(it.next().toUint());
-            else if (idx == 2) res.txs_root_hash = bytes32(it.next().toUint());
+            // else if (idx == 2) res.txs_root_hash = bytes32(it.next().toUint());
             else if (idx == 3) res.receipts_root_hash = bytes32(it.next().toUint());
             else if (idx == 4) res.block_merkle_root = bytes32(it.next().toUint());
-            else if (idx == 5) res.prev_block_hash = bytes32(it.next().toUint());
+            // else if (idx == 5) res.prev_block_hash = bytes32(it.next().toUint());
             else if (idx == 6) res.next_bps = decodeOptionalBlockProducers(it.next());
             else it.next();
 
@@ -231,8 +232,8 @@ library Deserialize{
     }
 
     function decodeMiniLightClientBlock(bytes memory rlpBytes)
-        external
-        view
+        internal
+        pure
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -258,8 +259,8 @@ library Deserialize{
     }
 
     function decodeLightClientBlock(bytes memory rlpBytes)
-        external
-        view
+        internal
+        pure
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -293,7 +294,7 @@ library Deserialize{
         // console.logBytes32(res.signature_hash);
     }
 
-    function toBlockHeader(bytes memory rlpHeader) external view returns (BlockHeader memory header) {
+    function toBlockHeader(bytes memory rlpHeader) internal pure returns (BlockHeader memory header) {
 
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpHeader).iterator();
 
@@ -321,7 +322,7 @@ library Deserialize{
         header.hash = keccak256(rlpHeader);
     }
 
-    function toReceiptLog(bytes memory data) external view returns (Log memory log) {
+    function toReceiptLog(bytes memory data) internal pure returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
 
         uint idx;
@@ -345,7 +346,7 @@ library Deserialize{
         }
     }
 
-    function toReceipt(bytes memory data, uint logIndex) external view returns (TransactionReceiptTrie memory receipt) {
+    function toReceipt(bytes memory data, uint logIndex) internal pure returns (TransactionReceiptTrie memory receipt) {
         uint byte0;
         RLPDecode.Iterator memory it;        
         assembly {
@@ -361,8 +362,8 @@ library Deserialize{
         uint idx;
         while(it.hasNext()) {
             if ( idx == 0 ) receipt.status = uint8(it.next().toUint());
-            else if ( idx == 1 ) receipt.gasUsed = it.next().toUint();
-            else if ( idx == 2 ) receipt.logsBloom = it.next().toBytes();
+            // else if ( idx == 1 ) receipt.gasUsed = it.next().toUint();
+            // else if ( idx == 2 ) receipt.logsBloom = it.next().toBytes();
             else if ( idx == 3 ) {
                 RLPDecode.RLPItem[] memory list = it.next().toList();
                 require(logIndex < list.length, "log index is invalid");

@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 library RLPDecode {
     uint8 constant STRING_SHORT_START = 0x80;
@@ -178,7 +178,8 @@ library RLPDecode {
 
             // shfit to the correct location if neccesary
             if lt(len, 32) {
-                result := div(result, exp(256, sub(32, len)))
+                let bits := shl(shl(3, sub(32, len)), 1)
+                result := div(result, bits)
             }
         }
 
@@ -198,6 +199,17 @@ library RLPDecode {
         }
 
         copy(item.memPtr + offset, destPtr, len);
+        return result;
+    }
+
+    function toBytesItem(RLPItem memory item) internal pure returns (RLPItem memory) {
+        require(item.len > 0, "RLPDecoder toBytes invalid length");
+
+        RLPItem memory result;
+        uint offset = _payloadOffset(item.memPtr);
+        
+        result.memPtr = item.memPtr + offset;
+        result.len = item.len - offset;
         return result;
     }
 
@@ -224,6 +236,7 @@ library RLPDecode {
     function _itemLength(uint memPtr) private pure returns (uint) {
         uint itemLen;
         uint byte0;
+
         assembly {
             byte0 := byte(0, mload(memPtr))
         }
@@ -240,7 +253,8 @@ library RLPDecode {
                 memPtr := add(memPtr, 1) // skip over the first byte
 
                 /* 32 byte word size */
-                let dataLen := div(mload(memPtr), exp(256, sub(32, byteLen))) // right shifting to get the len
+                let dataLen := div(mload(memPtr), shl(shl(3, sub(32, byteLen)), 1))
+                //let dataLen := div(mload(memPtr), exp(256, sub(32, byteLen))) // right shifting to get the len
                 itemLen := add(dataLen, add(byteLen, 1))
             }
         }
@@ -254,7 +268,8 @@ library RLPDecode {
                 let byteLen := sub(byte0, 0xf7)
                 memPtr := add(memPtr, 1)
 
-                let dataLen := div(mload(memPtr), exp(256, sub(32, byteLen))) // right shifting to the correct length
+                let dataLen := div(mload(memPtr), shl(shl(3, sub(32, byteLen)), 1))
+                // let dataLen := div(mload(memPtr), exp(256, sub(32, byteLen))) // right shifting to the correct length
                 itemLen := add(dataLen, add(byteLen, 1))
             }
         }

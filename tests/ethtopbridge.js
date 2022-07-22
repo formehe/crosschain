@@ -17,16 +17,16 @@ describe('TopPridge', () => {
     [wallet, wallet2,wallet3] = await hardhat.ethers.getSigners()
     provider = hardhat.ethers.provider
 
-    deserializeCon = await ethers.getContractFactory("Deserialize");
-    deserialize = await deserializeCon.deploy();
-    await deserialize.deployed();
+    // deserializeCon = await ethers.getContractFactory("Deserialize");
+    // deserialize = await deserializeCon.deploy();
+    // await deserialize.deployed();
 
     const TopBridge =  await hre.ethers.getContractFactory("TopPridgeTest",  {
       gasLimit: 9500000,
       signer: wallet,
-      libraries: {
-        Deserialize:deserialize.address
-      }
+      // libraries: {
+      //   Deserialize:deserialize.address
+      // }
     })
     topBridge = await TopBridge.deploy()
 

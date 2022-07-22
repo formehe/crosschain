@@ -51,10 +51,8 @@ contract ERC20Locker is IRC20Locker,Locker{
             (transferAmount,eventAmount) = conversionFromAssetAmount(fromAssetHash, amount, true);
         }
         require(amount != 0 && eventAmount != 0, "amount can not be 0");
-        require(limit.checkTransferedQuota(fromAssetHash,transferAmount),"not in the amount range");
         address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
-        
 
         IERC20(fromAssetHash).safeTransferFrom(msg.sender, address(this), transferAmount);
         emit Locked(fromAssetHash, toAssetHash, msg.sender, eventAmount, receiver);
@@ -86,11 +84,8 @@ contract ERC20Locker is IRC20Locker,Locker{
                 transferAmount =  amount * (10**differenceDecimals);
                 conversionAmount = amount;
             }
-        
         }
-        require(conversionAmount > 0 , "invalid the conversionAmount");
         return (transferAmount,conversionAmount);
-        
     }
 
     function adminTransfer(IERC20 token, address destination, uint256 amount)

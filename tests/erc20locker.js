@@ -34,17 +34,19 @@ describe('ERC20Locker', () => {
     const Erc20LockerResult =  await hre.ethers.getContractFactory("Erc20LockerTest", {
       gasLimit: 9500000,
       signer: wallet,
-      libraries: {
-        Deserialize:deserialize.address
-      }
+      // libraries: {
+      //   Deserialize:deserialize.address
+      // }
     })
     erc20Locker = await Erc20LockerResult.deploy()
 
-    const TopBridge = await hre.artifacts.readArtifact("TopBridge", {
-      libraries: {
-        Deserialize:deserialize.address
-      }
-    })
+    // const TopBridge = await hre.artifacts.readArtifact("TopBridge", {
+    //   libraries: {
+    //     Deserialize:deserialize.address
+    //   }
+    // })
+
+    const TopBridge = await hre.artifacts.readArtifact("TopBridge")
     bridge = await deployMockContract(wallet, TopBridge.abi, overrides)
 
     const TopProver = await hre.ethers.getContractFactory("TopProver", wallet, overrides)
@@ -206,62 +208,62 @@ describe('ERC20Locker', () => {
 
     })
 
-    it('There is no set lock amount limit', async () => {
-      await erc20Token.mint(wallet.address,toWei('200'))
-      await erc20Token.mint(wallet3.address,toWei('200'))
+    // it('There is no set lock amount limit', async () => {
+    //   await erc20Token.mint(wallet.address,toWei('200'))
+    //   await erc20Token.mint(wallet3.address,toWei('200'))
 
-      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+    //   expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
+    //   await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
 
-      await erc20Token.approve(erc20Locker.address,toWei('200'))
+    //   await erc20Token.approve(erc20Locker.address,toWei('200'))
     
-      await erc20Locker.adminPause(0)
+    //   await erc20Locker.adminPause(0)
 
-      expect(await erc20Locker.paused()).to.equal(0);
+    //   expect(await erc20Locker.paused()).to.equal(0);
 
-      await expect(erc20Locker.lockToken(erc20Token.address,toWei('50'),wallet3.address)).to.be.revertedWith('quota is not exist')
+    //   await expect(erc20Locker.lockToken(erc20Token.address,toWei('50'),wallet3.address)).to.be.revertedWith('quota is not exist')
 
-    })
+    // })
 
-    it('Minimum lock amount limit', async () => {
+    // it('Minimum lock amount limit', async () => {
 
-      await erc20Token.mint(wallet.address,toWei('200'))
-      await erc20Token.mint(wallet3.address,toWei('200'))
+    //   await erc20Token.mint(wallet.address,toWei('200'))
+    //   await erc20Token.mint(wallet3.address,toWei('200'))
 
-      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+    //   expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
+    //   await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
 
-      await erc20Token.approve(erc20Locker.address,toWei('200'))
+    //   await erc20Token.approve(erc20Locker.address,toWei('200'))
     
-      await erc20Locker.adminPause(0)
+    //   await erc20Locker.adminPause(0)
 
-      expect(await erc20Locker.paused()).to.equal(0);
+    //   expect(await erc20Locker.paused()).to.equal(0);
 
-      await limit.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
+    //   await limit.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
 
-      await expect(erc20Locker.lockToken(erc20Token.address,toWei('50'),wallet3.address)).to.be.revertedWith('amount of token is underflow')
+    //   await expect(erc20Locker.lockToken(erc20Token.address,toWei('50'),wallet3.address)).to.be.revertedWith('amount of token is underflow')
 
-    })
+    // })
 
-    it('Maximum lock amount limit', async () => {
+    // it('Maximum lock amount limit', async () => {
 
-      await erc20Token.mint(wallet.address,toWei('200'))
-      await erc20Token.mint(wallet3.address,toWei('200'))
+    //   await erc20Token.mint(wallet.address,toWei('200'))
+    //   await erc20Token.mint(wallet3.address,toWei('200'))
 
-      expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+    //   expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
+    //   await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
 
-      await erc20Token.approve(erc20Locker.address,toWei('200'))
+    //   await erc20Token.approve(erc20Locker.address,toWei('200'))
     
-      await erc20Locker.adminPause(0)
+    //   await erc20Locker.adminPause(0)
 
-      expect(await erc20Locker.paused()).to.equal(0);
+    //   expect(await erc20Locker.paused()).to.equal(0);
 
-      await limit.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('150'))
+    //   await limit.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('150'))
 
-      await expect(erc20Locker.lockToken(erc20Token.address,toWei('180'),wallet3.address)).to.be.revertedWith('amount of token is overflow')
+    //   await expect(erc20Locker.lockToken(erc20Token.address,toWei('180'),wallet3.address)).to.be.revertedWith('amount of token is overflow')
 
-    })
+    // })
 
     it('account set blacklist', async () => {
 
@@ -329,12 +331,6 @@ describe('ERC20Locker', () => {
       await erc20Locker.setConversionDecimalsAssets(erc20Token.address,6)
       let returenAmounts
       returenAmounts = await erc20Locker.conversionFromAssetAmountTest2(erc20Token.address,toWei('100'),true)
-      console.log("+++++")
-
-      console.log(returenAmounts)
-
-      console.log(returenAmounts[0])
-      console.log(returenAmounts[1])
       
       expect(returenAmounts[0]).to.equal(toWei('100'));
       expect(returenAmounts[1]).to.equal(toWei('0.0000000001'));
@@ -351,16 +347,18 @@ describe('ERC20Locker', () => {
 
     it('Invalid the conversionAmount', async () => {
       await erc20Locker.setConversionDecimalsAssets(erc20Token.address,6)
-      await expect(erc20Locker.conversionFromAssetAmountTest1(erc20Token.address,1,true))
-      .to.be.revertedWith('invalid the conversionAmount')
-
+      let returenAmounts = await erc20Locker.conversionFromAssetAmountTest1(erc20Token.address, 1, true)
+      expect(returenAmounts[0]).to.equal(toWei('0'));
+      expect(returenAmounts[1]).to.equal(toWei('0'));
     })
 
     it('Invalid the conversionAmount', async () => {
       await erc20Locker.setConversionDecimalsAssets(erc20Token.address,6)
-      await expect(erc20Locker.conversionFromAssetAmountTest1(erc20Token.address,toWei('0.00000001'),true))
-      .to.be.revertedWith('invalid the conversionAmount')
-
+      let returenAmounts = await erc20Locker.conversionFromAssetAmountTest1(erc20Token.address, toWei('0.00000001'), true)
+      expect(returenAmounts[0]).to.equal(toWei('0'));
+      expect(returenAmounts[1]).to.equal(toWei('0'));
+      // await expect(erc20Locker.conversionFromAssetAmountTest1(erc20Token.address, toWei('0.00000001'),true))
+      // .to.be.revertedWith('invalid the conversionAmount')
     })
 
   })

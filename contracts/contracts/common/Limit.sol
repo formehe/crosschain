@@ -46,9 +46,11 @@ contract Limit is AccessControl{
        if(quota.maxTransferedToken == 0){
          return false;
        }
+
        if(_amount > quota.minTransferedToken && _amount <= quota.maxTransferedToken){
          return true;
        }
+
        return false;
     }
 
