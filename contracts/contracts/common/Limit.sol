@@ -41,7 +41,7 @@ contract Limit is AccessControl{
     function checkTransferedQuota(
         address _asset,
         uint256 _amount
-    ) external view returns(bool)
+    ) external view returns(bool) {
        Quota memory quota = tokenQuotas[_asset];
        if(quota.maxTransferedToken == 0){
          return false;

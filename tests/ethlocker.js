@@ -87,7 +87,7 @@ describe('EthLocker', () => {
   describe('lockToken', () => {
     it('no have bind token', async () => {
        await ethLocker.adminPause(0)
-       await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address)).to.be.revertedWith('quota is not exist')
+       await expect(ethLocker.lockToken(AddressZero,toWei('1'),wallet3.address)).to.be.revertedWith('transferred ether is not equal to amount')
     })
   
     it('Inconsistent quantity', async () => {

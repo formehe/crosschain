@@ -25,7 +25,7 @@ contract TopProverTest is TopProver{
         return (true, "");
     }
 
-    function verifyReceiptProof(bytes memory proofData) public view returns(TopProofDecoder.Proof memory proof){
+    function verifyReceiptProof(bytes memory proofData) public returns(TopProofDecoder.Proof memory proof){
         Borsh.Data memory borshData = Borsh.from(proofData);
         proof = borshData.decode();
         borshData.done();
