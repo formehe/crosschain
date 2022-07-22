@@ -7,7 +7,7 @@ const hardhat = require("hardhat")
 var Tx = require("ethereumjs-tx").Transaction
 
 const networks  = require('../hardhat.networks')
-const network = networks.rinkeby
+const network = networks.topTest
 const gasLimit = 4000000;
 let deserialize = '$'
 
