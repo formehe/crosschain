@@ -330,10 +330,20 @@ describe('ERC20Locker', () => {
     it('The normal conversion is lock', async () => {
       await erc20Locker.setConversionDecimalsAssets(erc20Token.address,6)
       let returenAmounts
+<<<<<<< HEAD
       try {
         returenAmounts = await erc20Locker.conversionFromAssetAmountTest2(erc20Token.address,toWei('100'),true)
       } catch (error) {
       }
+=======
+      returenAmounts = await erc20Locker.conversionFromAssetAmountTest2(erc20Token.address,toWei('100'),true)
+      console.log("+++++")
+
+      console.log(returenAmounts)
+
+      console.log(returenAmounts[0])
+      console.log(returenAmounts[1])
+>>>>>>> 22bac2904b8b5a02fff67b938face1707b7e3ff3
       
       expect(returenAmounts[0]).to.equal(toWei('100'));
       expect(returenAmounts[1]).to.equal(toWei('0.0000000001'));

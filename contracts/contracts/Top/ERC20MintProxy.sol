@@ -87,7 +87,7 @@ contract ERC20MintProxy is VerifierUpgradeable {
         require(!hasRole(BLACK_BURN_ROLE, msg.sender));
         require((Address.isContract(localAssetHash)) && (receiver != address(0)));
         require(amount != 0, "amount can not be 0");
-        limiter.checkTransferedQuota(localAssetHash, amount);
+        require(limiter.checkTransferedQuota(localAssetHash,amount),"not in the amount range");
         ProxiedAsset memory peerAsset = assets[localAssetHash];
         require(peerAsset.existed, "asset address must has been bound");
         ERC20Mint(localAssetHash).burnFrom(msg.sender, amount);

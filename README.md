@@ -112,7 +112,7 @@
   **方法**：锁定资产
 
   **权限**：
-  1,当前合约没有暂停 || sender在CONTROLLED_ROLE权限角色里
+  1,当前合约没有暂停
   2,sender不在BLACK_LOCK_ROLE权限角色黑名单里
 
   **补充说明**：

@@ -56,18 +56,15 @@ describe("Limit", function () {
 
     it('checkTransferedQuota, asset is not bound', async () => {
         await limitContract.connect(admin).bindTransferedQuota(owner.address, 50, 51)
-        try {
-            await expect(limitContract.checkTransferedQuota(user.address, 50))
-            .to.be.revertedWith('quota is not exist')
-        } catch (error) {
-            console.log(error)
-        }
+        let value = await limitContract.checkTransferedQuota(user.address, 50)
+        expect(value).to.equal(false);
+    
     })
 
     it('checkTransferedQuota, amount is not allowed', async () => {
         await limitContract.connect(admin).bindTransferedQuota(owner.address, 50, 60)
-        await expect(limitContract.checkTransferedQuota(owner.address, 50))
-            .to.be.revertedWith('flow')
+        let value = await limitContract.checkTransferedQuota(owner.address, 50)
+        expect(value).to.equal(false);
     })
 
     it('black tx list only for owner', async () => {

@@ -2,7 +2,7 @@ const hardhat = require("hardhat")
 const {ethers} = require("hardhat");
 
 const {
-    isErc20Locker,lockerEth,tokenEth,limitEth,proverEth,bridgeEth,lockerTop,tokenTop,minTransferedToken,maxTransferedToken,bridgeEthAddBolckAdmin,topInitBlock
+    isErc20Locker,lockerEth,limitEth,proverEth,bridgeEth,lockerTop,tokenTop
 } = require('./performparams')
 
 //perform Eth

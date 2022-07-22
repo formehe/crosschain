@@ -41,12 +41,17 @@ contract Limit is AccessControl{
     function checkTransferedQuota(
         address _asset,
         uint256 _amount
-    ) external {
-       Quota memory  quota = tokenQuotas[_asset];
-       
-       require(quota.maxTransferedToken != 0, "quota is not exist");
-       require(_amount > quota.minTransferedToken, "amount of token is underflow");
-       require(_amount <= quota.maxTransferedToken, "amount of token is overflow");
+    ) external view returns(bool)
+       Quota memory quota = tokenQuotas[_asset];
+       if(quota.maxTransferedToken == 0){
+         return false;
+       }
+
+       if(_amount > quota.minTransferedToken && _amount <= quota.maxTransferedToken){
+         return true;
+       }
+
+       return false;
     }
 
     function forbiden(

@@ -53,7 +53,6 @@ contract ERC20Locker is IRC20Locker,Locker{
         require(amount != 0 && eventAmount != 0, "amount can not be 0");
         address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
-        
 
         IERC20(fromAssetHash).safeTransferFrom(msg.sender, address(this), transferAmount);
         emit Locked(fromAssetHash, toAssetHash, msg.sender, eventAmount, receiver);
@@ -85,7 +84,6 @@ contract ERC20Locker is IRC20Locker,Locker{
                 transferAmount =  amount * (10**differenceDecimals);
                 conversionAmount = amount;
             }
-        
         }
         return (transferAmount,conversionAmount);
     }

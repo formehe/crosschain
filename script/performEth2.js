@@ -2,7 +2,7 @@ const hardhat = require("hardhat")
 const {ethers} = require("hardhat");
 
 const {
-    isErc20Locker,lockerEth,tokenEth,limitEth,proverEth,bridgeEth,lockerTop,tokenTop,minTransferedToken,maxTransferedToken,bridgeEthAddBolckAdmin,topInitBlock
+    isErc20Locker,lockerEth,tokenEth,limitEth,bridgeEth,lockerTop,tokenTop,minTransferedTokenEth,maxTransferedTokenEth,bridgeEthAddBolckAdmin,topInitBlock
 } = require('./performparams')
 
 //perform Eth
@@ -40,7 +40,7 @@ async function performLimit(){
     } = await getNamedAccounts()
     const signer = await ethers.provider.getSigner(deployer)
     const limit = await ethers.getContractAt('Limit', limitEth, signer)
-    await limit.bindTransferedQuota(tokenEth,minTransferedToken,maxTransferedToken)
+    await limit.bindTransferedQuota(tokenEth,minTransferedTokenEth,maxTransferedTokenEth)
 }
 
 async function performTopBridge(){
