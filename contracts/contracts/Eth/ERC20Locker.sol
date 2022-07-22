@@ -87,9 +87,7 @@ contract ERC20Locker is IRC20Locker,Locker{
             }
         
         }
-        require(conversionAmount > 0 , "invalid the conversionAmount");
         return (transferAmount,conversionAmount);
-        
     }
 
     function adminTransfer(IERC20 token, address destination, uint256 amount)

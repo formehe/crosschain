@@ -31,11 +31,11 @@ contract EthLocker is ITokenLocker,Locker{
         payable
         lockToken_pauseable
     {
-        require(fromAssetHash == address(0), "from asset address must be zero");
+        // require(fromAssetHash == address(0), "from asset address must be zero");
         address toAssetHash = assets[fromAssetHash].assetHash;
         require(toAssetHash != address(0), "empty illegal toAssetHash");
         require(amount != 0, "amount cannot be zero");
-        require(receiver != address(0), "receive address can not be zero");
+        // require(receiver != address(0), "receive address can not be zero");
         require(_transferToContract(amount));
         emit Locked(fromAssetHash, toAssetHash ,msg.sender, amount, receiver);
     }
@@ -53,7 +53,6 @@ contract EthLocker is ITokenLocker,Locker{
 
     //The unit of amount is gwei
     function _transferToContract(uint256 amount) private returns (bool) {
-        require(msg.value != 0, "transferred ether cannot be zero!");
         require(msg.value == amount, "transferred ether is not equal to amount!");
         return true;
     }

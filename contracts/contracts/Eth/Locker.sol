@@ -145,7 +145,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         Deserialize.LightClientBlock memory header = Deserialize.decodeMiniLightClientBlock(proof.headerData);
         uint256 time;
         time = prover.getAddLightClientTime(proof.polyBlockHeight);
-        require(limit.checkFrozen(_receipt.data.fromToken,time),'tx is frozen');
+        require(limit.checkFrozen(_receipt.data.fromToken, time),'tx is frozen');
         bytes memory reciptIndex = abi.encode(header.inner_lite.height,proof.reciptIndex);
 
         bytes32 proofIndex = keccak256(reciptIndex);
@@ -158,7 +158,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
     function _parseLog(
         bytes memory log
-    ) private view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+    ) private pure returns (VerifiedEvent memory _receipt, address _contractAddress) {
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "wrong number of topic");
         bytes32 topics0 = logInfo.topics[0];

@@ -52,7 +52,7 @@ contract TopProverTest is TopProver{
        
     }
 
-    function verifyBlockProof(bytes memory proofData) public view returns(TopProofDecoder.Proof memory proof){
+    function verifyBlockProof(bytes memory proofData) public returns(TopProofDecoder.Proof memory proof){
         Borsh.Data memory borshData = Borsh.from(proofData);
         proof = borshData.decode();
         borshData.done();
@@ -80,7 +80,7 @@ contract TopProverTest is TopProver{
        
     }
 
-    function decodeProof(bytes memory proofData) public view returns( TopProofDecoder.Proof memory proof){
+    function decodeProof(bytes memory proofData) public pure returns( TopProofDecoder.Proof memory proof){
         Borsh.Data memory borshData = Borsh.from(proofData);
         proof = borshData.decode();
         borshData.done();

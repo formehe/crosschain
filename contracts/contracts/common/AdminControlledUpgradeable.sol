@@ -37,7 +37,7 @@ contract AdminControlledUpgradeable is Initializable,AccessControl {
         paused = flags;
     }
 
-    function renounceRole(bytes32 role, address account) public override {
+    function renounceRole(bytes32 role, address account) public pure override {
         require(false, "not support");
     }
 }

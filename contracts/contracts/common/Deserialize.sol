@@ -101,7 +101,7 @@ library Deserialize{
 
     function decodeOptionalSignature(RLPDecode.RLPItem memory itemBytes)
         private
-        view
+        pure
         returns (OptionalSignature memory res)
     {
         RLPDecode.Iterator memory it = itemBytes.iterator();
@@ -135,7 +135,7 @@ library Deserialize{
 
     function decodeOptionalBlockSignatures(RLPDecode.RLPItem memory itemBytes)
         private
-        view
+        pure
         returns (OptionalBlockSignatures memory res)
     {
         if (itemBytes.isList()) {
@@ -162,7 +162,7 @@ library Deserialize{
 
     function decodeOptionalBlockProducers(RLPDecode.RLPItem memory itemBytes)
         private
-        view
+        pure
         returns (OptionalBlockProducers memory res)
     {
         // console.logBytes(itemBytes.toBytes());
@@ -196,7 +196,7 @@ library Deserialize{
 
     function decodeBlockHeaderInnerLite(RLPDecode.RLPItem memory itemBytes)
         private
-        view
+        pure
         returns (BlockHeaderInnerLite memory res)
     {
         //cacl innter hash
@@ -233,7 +233,7 @@ library Deserialize{
 
     function decodeMiniLightClientBlock(bytes memory rlpBytes)
         internal
-        view
+        pure
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -260,7 +260,7 @@ library Deserialize{
 
     function decodeLightClientBlock(bytes memory rlpBytes)
         internal
-        view
+        pure
         returns (LightClientBlock memory res)
     {
         uint byte0;
@@ -294,7 +294,7 @@ library Deserialize{
         // console.logBytes32(res.signature_hash);
     }
 
-    function toBlockHeader(bytes memory rlpHeader) internal view returns (BlockHeader memory header) {
+    function toBlockHeader(bytes memory rlpHeader) internal pure returns (BlockHeader memory header) {
 
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(rlpHeader).iterator();
 
@@ -322,7 +322,7 @@ library Deserialize{
         header.hash = keccak256(rlpHeader);
     }
 
-    function toReceiptLog(bytes memory data) internal view returns (Log memory log) {
+    function toReceiptLog(bytes memory data) internal pure returns (Log memory log) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(data).iterator();
 
         uint idx;
@@ -346,7 +346,7 @@ library Deserialize{
         }
     }
 
-    function toReceipt(bytes memory data, uint logIndex) internal view returns (TransactionReceiptTrie memory receipt) {
+    function toReceipt(bytes memory data, uint logIndex) internal pure returns (TransactionReceiptTrie memory receipt) {
         uint byte0;
         RLPDecode.Iterator memory it;        
         assembly {

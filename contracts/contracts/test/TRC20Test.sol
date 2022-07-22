@@ -18,7 +18,7 @@ contract TRC20Test is TRC20{
 
     function _parseLog(
         bytes memory log
-    ) internal override view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+    ) internal override pure returns (VerifiedEvent memory _receipt, address _contractAddress) {
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];

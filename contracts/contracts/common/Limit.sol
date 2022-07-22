@@ -38,18 +38,12 @@ contract Limit is AccessControl{
         tokenQuotas[_asset].minTransferedToken = _minTransferedToken;
     }
 
-    function getTransferedQuota(
-        address _asset
-    ) external view returns(uint256 _minTransferedToken, uint256 _maxTransferedToken) {
-        _minTransferedToken = tokenQuotas[_asset].minTransferedToken;
-        _maxTransferedToken = tokenQuotas[_asset].maxTransferedToken;
-    }
-
     function checkTransferedQuota(
         address _asset,
         uint256 _amount
     ) external {
        Quota memory  quota = tokenQuotas[_asset];
+       
        require(quota.maxTransferedToken != 0, "quota is not exist");
        require(_amount > quota.minTransferedToken, "amount of token is underflow");
        require(_amount <= quota.maxTransferedToken, "amount of token is overflow");
@@ -75,12 +69,6 @@ contract Limit is AccessControl{
     ) external onlyRole(OWNER_ROLE){
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
         tokenFrozens[_asset] = _frozenDuration;
-    }
-
-    function getFrozen(
-        address _asset
-    ) external view returns(uint) {
-        return tokenFrozens[_asset];
     }
 
     function checkFrozen(
