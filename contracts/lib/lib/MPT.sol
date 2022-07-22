@@ -97,10 +97,20 @@ library MPT {
         }
 
         bytes memory key;
-        if (prefix & 0x1 == 0) {
-            key = expandKeyEven(nodekey);
-        } else {
-            key = expandKeyEven(nodekey);
+        uint j;
+        if ((prefix & 0x1 == 0) && (nodekey.length > 1 )) { 
+            key = new bytes((nodekey.length - 1) << 1);
+        } else if (prefix & 0x1 == 0x1) {
+            key = new bytes(((nodekey.length - 1) << 1) + 1);
+            key[j] = nodekey[0] & 0x0f;
+            j += 1;
+        }
+
+        for (uint i = 1; i < nodekey.length; i++) {
+            key[j] = nodekey[i] >> 4;
+            j += 1;
+            key[j] = nodekey[i] & 0x0f;
+            j += 1;
         }
         
         if ((prefix == 2) || (prefix == 3)) {
