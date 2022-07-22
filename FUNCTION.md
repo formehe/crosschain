@@ -1,5 +1,7 @@
 ## **合约abi**
 
+## **eth**
+
 - **EthLocker.sol**
 
 **1)_EthLocker_initialize(ITopProver _prover,uint64 _minBlockAcceptanceHeight,address _owner,ILimit limit,address _toAssetHash,address _peerLockProxyHash)**
@@ -36,13 +38,11 @@
 
   **权限**：
 
-  OWNER_ROLE权限
+  CONTROLLED_ROLE权限
 
   **参数**：
 
   flags：设置的标识
-    
-  OWNER_ROLE权限
 
   设置为0则是全开启
 
@@ -355,13 +355,11 @@
 
   **权限**：
 
-  OWNER_ROLE权限
+  CONTROLLED_ROLE权限
 
   **参数**：
 
   flags：设置的标识
-    
-  OWNER_ROLE权限
 
   设置为0则是全开启
 
@@ -732,7 +730,7 @@
 
   **权限**：
     
-  OWNER_ROLE权限
+  CONTROLLED_ROLE权限权限
 
   **参数**：
 
@@ -1428,7 +1426,412 @@
   
   最小金额和最大金额  
 
+<br> 
 
+## **top**
 
+- **ERC20MintProxy.sol**
+
+**1),adminPause(uint flags)**
+
+  设置是否暂停,默认是全暂停
+
+  **权限**：
+
+  CONTROLLED_ROLE权限权限
+
+  **参数**：
+
+  flags：设置的标识
+    
+  OWNER_ROLE权限
+
+  设置为0则是全开启
+
+  设置255则全关闭
+
+  uint PAUSED_BURN = 1
+
+  设置115792089237316195423570985008687907853269984665640564039457584007913129639934只开启销毁
+
+  uint PAUSED_MINT = 2
+
+  设置115792089237316195423570985008687907853269984665640564039457584007913129639933只开启铸造
+
+<br> 
+
+**(2),function assets(address _address) returns(ProxiedAsset)** 
+
+  **方法**:资产与对端资产的绑定查询
+
+  **权限**：
+
+  无,view方法
+
+  **参数**：
+
+  _address:top端token地址
+
+  **返回**：
+
+  assetHash：eth端的资产地址
+
+  existed：top端资产是否存在
+
+<br> 
+
+**3),function bindAssetHash(address localAssetHash, address peerAssetHash)** 
+
+  **方法**：
   
+  绑定资产
+
+  **权限**：
+  
+  OWNER_ROLE权限
+
+  **参数**：
+
+  localAssetHash：top端的资产地址
+
+  peerAssetHash：eth端的资产地址
+
+<br> 
+
+**4)function burn(address localAssetHash, uint256 amount, address receiver)**
+   
+  **方法**:销毁资产
+
+  **权限**：
+
+  1,当前合约没有暂停 || sender在CONTROLLED_ROLE权限角色里
+  2,sender不在BLACK_BURN_ROLE权限角色黑名单里
+  3,收据id不在黑名
+
+  **补充说明**：
+
+  除上面权限外还会校检
+
+  (1),localAssetHash和receiver是否是空地址（localAssetHash并且合约地址）及amount是否为0
+
+  (2),localAssetHash的绑定地址是否存在（通过bindAssetHash绑定的）
+  
+  (3),amount是否在配置的锁定金额区间（满足最大最小）
+
+  (4),burnFrom（这面top代币的合约地址会有权限的校检，只有当前合约可以销毁）
+
+  **参数**：
+
+  localAssetHash：资产地址
+
+  amount：数量
+
+  receiver：接收地址
+
+<br> 
+
+**5)getRoleAdmin(bytes32 role)**
+
+  **方法**：
+
+  返回角色权限的admin
+
+  **权限**：
+
+  无,view方法
+
+  **参数**：
+
+  role：角色的bytes32
+
+  **返回**：
+
+  role admin的bytes32
+
+<br> 
+
+**6)grantRole(bytes32 role, address account)**
+
+  **方法**：
+
+  添加角色
+
+  **权限**：
+
+  角色的admin角色
+
+  **参数**：
+
+  role：角色的bytes32
+
+  account：账户地址
+
+<br>
+
+**7)hasRole(bytes32 role, address account)**
+
+  **方法**：
+
+  角色里是否存在此账户
+
+  **权限**：
+
+  无,view方法
+
+  **参数**：
+
+  role：角色的bytes32
+
+  account：账户地址
+
+  **返回**：
+
+  bool值
+
+<br>
+
+ **8)function initialize(IEthProver _prover,address _peerProxyHash,uint64 _minBlockAcceptanceHeight,ILimit _limiter)**
+
+  **方法**：
+  
+  初始化
+
+  **权限**：
+
+  只能调用一次
+
+  **参数**：
+
+  _prover：验证合约(EthProver)
+
+  _peerProxyHash(同下的方法):对端的跨链合约（如ERC20Locker合约）
+
+  _minBlockAcceptanceHeight：当前传0就行
+
+  _limiter：限制合约
+
+<br>
+
+**9)limiter()**
+
+  **方法**：
+  
+  获取限制合约
+
+  **权限**：
+
+  无,view方法
+
+  **返回**：
+
+<br>
+
+**10)lockProxyHash()**
+
+  **方法**：
+  
+  获取eth端的跨链合约
+
+  **权限**：
+
+  无,view方法
+
+  **返回**：
+
+  地址
+
+<br>
+
+**11)function mint(bytes memory proofData, uint64 proofBlockHeight)**
+   
+  **方法**:铸造资产
+
+  **权限**：
+
+  1,当前合约没有暂停
+  2,sender不在BLACK_MINT_ROLE权限角色黑名单里
+
+  **补充说明**：
+
+  除上面权限外还会校检
+
+  (1),收据验证，head验证，log验证（event事件的hash及事件参数的长度及参数的验证）
+
+  (2),是否重复解锁及解锁时长
+
+  **参数**：
+
+  proofData：证明
+
+  proofBlockHeight：高度（暂时没用传0就行）
+
+<br>  
+
+**12)paused()**
+
+  **方法**：
+
+  返回当前的状态
+
+  **权限**：
+
+  无,view方法
+
+  **返回**：
+
+  uint
+
+<br> 
+
+**13)prover()**
+
+  **方法**：
+  
+  获取TopProver地址
+
+  **权限**：
+
+  无,view方法
+
+  **返回**：
+
+  地址
+
+<br>   
+
+**14)renounceRole(bytes32 role, address account)**
+
+  **方法**：
+
+  放弃权限，原作用是移除自己在角色的权限，当前调用直接报错"not support"
+
+  **参数**：
+
+  role：角色的bytes32
+
+  account：账户地址
+
+<br>
+
+**15)revokeRole(bytes32 role, address account)**
+
+  **方法**：
+
+  移除角色里的账户
+
+  **权限**：
+
+  role的admin
+
+  **参数**：
+
+  role：角色的bytes32
+
+  account：账户地址
+
+<br>  
+
+**16)supportsInterface(bytes4 interfaceId)**
+  
+  **方法**：
+
+  查询合约是否实现了此接口
+
+  **权限**：
+
+  无,view方法
+
+  **参数**：
+
+  interfaceId： 方法id =  bytes4(keccak256('supportsInterface(bytes4)'))
+
+  **返回**：
+
+  bool值
+
+<br>
+
+**17)usedProofs(bytes32 _bytes32)**
+
+  **方法**：
+
+  判断某一收据是否已经解锁过
+
+  **权限**：
+
+  无
+
+  **参数**：
+
+  bytes32：收据id（块高 + 收据index）字节数组的keccak256  
+
+  **返回**：
+
+  如果是true则收据已经使用过，否则收据是没使用过的
+
+<br>
+
+- **EthProver.sol**
+
+**1)bridgeLight()**
+
+  **方法**：
+
+  获取top端块头同步合约
+
+  **权限**：
+
+  无,view方法
+
+  **参数**：
+
+  无
+
+  **返回**：
+
+  如果是true则收据已经使用过，否则收据是没使用过的
+
+<br>
+
+**2)verify(EthProofDecoder.Proof calldata proof,Deserialize.TransactionReceiptTrie calldata receipt, bytes32 receiptsRoot,bytes32 blockHash,uint256 height)**
+
+  **方法**：
+
+  验证收据
+
+  **权限**：
+
+  无
+
+  **参数**：
+
+  proof：EthProofDecoder.Proof 结构体
+
+  receipt：Deserialize.TransactionReceiptTrie 结构体
+
+  receiptsRoot：收据roothash
+
+  blockHash：blockhash
+
+  height：blockHeight
+
+  **返回**：
+
+  bool：收据是否通过
+
+  reason：信息
+
+<br>  
+
+- **Limit.sol**
+
+**同eth**
+
+<br> 
+
+- **TopErc20Wrapper.sol**
+
+**所有方法走的fallback，具体方法需要问c合约那面对外提供什么方法（0xff00000000000000000000000000000000000001）**
+
+
 

@@ -408,5 +408,37 @@
 **合约部署及部署后执行方法结束后,top端的eth块头同步也需要找有关人员设置下创世eth块头，这样就全部设置完毕**
 
 
+- **补充说明**
+
+  如果这面进行eth的测试那再部署EthLocker合约，limit，bridge和prover可以复用不用在调用方法
+
+
+  1)limit再次调用bindTransferedQuota()进行资产最大最小的绑定
+
+
+  c++代币合约，需要加权限（因为铸造和销毁是需要权限的）
+
+
+  如果eth那面部署了EthLocker和Erc20Locker,那这面要部署两个一样的ERC20MintProxy的合约(及再部署一个代币合约)，像limit都是通用的。
+
+
+  1)limit再次调用bindTransferedQuota()进行资产最大最小的绑定
+   
+<br> 
+
+- **基本流程**
+
+- 部署合约
+
+- 执行合约的参数配置
+
+- 双方块头开始同步
+
+- eth端锁定资产 -> top端铸造资产
+
+- top端燃烧资产 -> eth端解锁资产
+
+
+
  
 
