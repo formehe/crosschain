@@ -73,7 +73,7 @@ contract TRC20 is ERC20, VerifierUpgradeable {
     ) external burn_pauseable {
         require(receiver != address(0));
         require(amount != 0, "amount can not be 0");
-        limiter.checkTransferedQuota(address(this), amount);
+        require(limiter.checkTransferedQuota(address(this),amount),"not in the amount range");
         _burn(msg.sender, amount);
         emit Burned(address(this), assetHash, msg.sender, amount, receiver);
     }
