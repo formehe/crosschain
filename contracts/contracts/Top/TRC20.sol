@@ -68,7 +68,7 @@ contract TRC20 is ERC20, VerifierUpgradeable {
     }
     
     function burn(
-        uint256 amount, 
+        uint256 amount,
         address receiver
     ) external burn_pauseable {
         require(receiver != address(0));

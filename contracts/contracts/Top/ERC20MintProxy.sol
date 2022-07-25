@@ -67,7 +67,7 @@ contract ERC20MintProxy is VerifierUpgradeable {
     function mint(
         bytes memory proofData, 
         uint64 proofBlockHeight
-    ) external pausable (PAUSED_MINT) {
+    ) external mint_pauseable {
         require(!hasRole(BLACK_MINT_ROLE, msg.sender));   
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
         ProxiedAsset memory asset = assets[receipt.data.toToken];
@@ -83,7 +83,7 @@ contract ERC20MintProxy is VerifierUpgradeable {
         address localAssetHash, 
         uint256 amount, 
         address receiver
-    ) external pausable (PAUSED_BURN) {
+    ) external burn_pauseable {
         require(!hasRole(BLACK_BURN_ROLE, msg.sender));
         require((Address.isContract(localAssetHash)) && (receiver != address(0)));
         require(amount != 0, "amount can not be 0");
