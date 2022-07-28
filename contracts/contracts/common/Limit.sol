@@ -15,6 +15,25 @@ contract Limit is AccessControl{
         uint256 minTransferedToken;
     }
 
+    event TransferedQuotaBound (
+        address indexed asset,
+        uint256 minTransferedToken,
+        uint256 maxTransferedToken
+    );
+
+    event TxForbidden (
+        bytes32 _forbiddenId
+    );
+
+    event TxRecovered (
+        bytes32 forbiddenId
+    );
+
+    event FrozenBound (
+        address indexed asset, 
+        uint  frozenDuration
+    );
+
     mapping(address => Quota) public tokenQuotas;
     mapping(bytes32 => bool) public forbiddens;
     mapping(address => uint) public tokenFrozens; // unit is seconds
@@ -36,6 +55,7 @@ contract Limit is AccessControl{
         require(_maxTransferedToken < (1 << 128), "transfered token is overflow");
         tokenQuotas[_asset].maxTransferedToken = _maxTransferedToken;
         tokenQuotas[_asset].minTransferedToken = _minTransferedToken;
+        emit TransferedQuotaBound(_asset, _minTransferedToken, _maxTransferedToken);
     }
 
     function checkTransferedQuota(
@@ -59,6 +79,7 @@ contract Limit is AccessControl{
     ) external onlyRole(FORBIDEN_ROLE) {
         require(forbiddens[_forbiddenId] == false, "id has been already forbidden");
         forbiddens[_forbiddenId] = true;
+        emit TxForbidden(_forbiddenId);
     }
 
     function recover(
@@ -66,6 +87,7 @@ contract Limit is AccessControl{
     ) external onlyRole(FORBIDEN_ROLE) {
         require(forbiddens[_forbiddenId], "id has not been forbidden");
         forbiddens[_forbiddenId] = false;
+        emit TxRecovered(_forbiddenId);
     }
 
     function bindFrozen(
@@ -74,6 +96,7 @@ contract Limit is AccessControl{
     ) external onlyRole(OWNER_ROLE){
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
         tokenFrozens[_asset] = _frozenDuration;
+        emit FrozenBound(_asset, _frozenDuration);
     }
 
     function checkFrozen(

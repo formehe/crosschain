@@ -22,8 +22,6 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     uint constant private PAUSED_DEPOSIT = 1;
     uint constant private PAUSED_WITHDRAW = 2;
     uint constant private PAUSED_ADD_BLOCK = 4;
-    uint constant private PAUSED_CHALLENGE = 8;
-    uint constant private PAUSED_VERIFY = 16;
 
     // Whether the contract was initialized.
     bool public initialized;
