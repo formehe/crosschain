@@ -70,8 +70,6 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     uint64 private minBlockAcceptanceHeight;
     mapping(bytes32 => bool) public usedProofs;
 
-    event ConsumedProof(bytes32 indexed _receiptId);
-
     function _Locker_initialize(
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
@@ -92,12 +90,6 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
         _grantRole(OWNER_ROLE,_owner);
     } 
-
-    struct BurnResult {
-        uint128 amount;
-        address token;
-        address recipient;
-    }
 
     /// Parses the provided proof and consumes it if it's not already used.
     /// The consumed event cannot be reused for future calls.
@@ -146,7 +138,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         uint256 time;
         time = prover.getAddLightClientTime(proof.polyBlockHeight);
         require(limit.checkFrozen(_receipt.data.fromToken, time),'tx is frozen');
-        bytes memory reciptIndex = abi.encode(header.inner_lite.height,proof.reciptIndex);
+        bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
 
         bytes32 proofIndex = keccak256(reciptIndex);
         require(limit.forbiddens(proofIndex) == false, "tx is forbidden");
