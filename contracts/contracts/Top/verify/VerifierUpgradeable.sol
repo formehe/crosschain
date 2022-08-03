@@ -4,6 +4,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../common/AdminControlledUpgradeable.sol";
 import "../prover/IEthProver.sol";
 import "../../common/ILimit.sol";
+import "../../common/IERC20Decimals.sol";
 // import "hardhat/console.sol";
 abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeable {
     using Borsh for Borsh.Data;

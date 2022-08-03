@@ -8,7 +8,7 @@ import "../common/Borsh.sol";
 import "../common/ILimit.sol";
 import "../common/AdminControlledUpgradeable.sol";
 import "../common/Deserialize.sol";
-import "./IERC20Decimals.sol";
+import "../common/IERC20Decimals.sol";
 
 contract Locker is Initializable,AdminControlledUpgradeable{
     using Borsh for Borsh.Data;

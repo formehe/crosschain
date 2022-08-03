@@ -33,6 +33,12 @@ contract ERC20MintProxy is VerifierUpgradeable {
     }
 
     mapping(address => ProxiedAsset) public assets;
+    mapping(address => ConversionDecimals) public conversionDecimalsAssets;
+
+    struct ConversionDecimals{
+        uint8 fromDecimals;
+        uint8 toDecimals;
+    }
 
     function bindAssetHash(
         address localAssetHash, 
@@ -64,18 +70,48 @@ contract ERC20MintProxy is VerifierUpgradeable {
         _grantRole(OWNER_ROLE,msg.sender);
     }
 
+    function setConversionDecimalsAssets(address _fromAssetHash,uint8 _toAssetHashDecimals) external onlyRole(OWNER_ROLE) {
+        uint8 _fromAssetHashDecimals = IERC20Decimals(_fromAssetHash).decimals(); 
+        require(_fromAssetHashDecimals > 0 && _toAssetHashDecimals > 0 &&  _fromAssetHashDecimals > _toAssetHashDecimals, "invalid the decimals");
+        conversionDecimalsAssets[_fromAssetHash] = ConversionDecimals({
+            fromDecimals:_fromAssetHashDecimals,
+            toDecimals:_toAssetHashDecimals
+        });
+    }
+
+    function conversionFromAssetAmount(address _fromAssetHash,uint256 amount,bool isLock) internal view virtual returns(uint256 transferAmount,uint256 conversionAmount){
+        uint8 fromAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].fromDecimals;
+        uint8 toAssetHashDecimals = conversionDecimalsAssets[_fromAssetHash].toDecimals;
+        if(fromAssetHashDecimals > toAssetHashDecimals){
+            uint8 differenceDecimals = fromAssetHashDecimals - toAssetHashDecimals;
+            if(isLock){
+                conversionAmount =  amount / (10**differenceDecimals);
+                transferAmount = conversionAmount * (10**differenceDecimals);
+            }else{
+                transferAmount =  amount * (10**differenceDecimals);
+                conversionAmount = amount;
+            }
+        }
+        return (transferAmount,conversionAmount);
+    }
+
     function mint(
         bytes memory proofData, 
         uint64 proofBlockHeight
     ) external mint_pauseable {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proofData, proofBlockHeight);
+        uint256 transferAmount = receipt.data.amount;
+        if(conversionDecimalsAssets[receipt.data.toToken].toDecimals > 0){
+            (transferAmount,) = conversionFromAssetAmount(receipt.data.toToken, transferAmount,false);
+        }
+        
         ProxiedAsset memory asset = assets[receipt.data.toToken];
         require(asset.existed, "asset address must has been bound");
         require(asset.assetHash == receipt.data.fromToken, "invalid token to token");
 
         _saveProof(receipt.proofIndex);
-        ERC20Mint(receipt.data.toToken).mint(receipt.data.receiver, receipt.data.amount);
-        emit Minted(receipt.proofIndex, receipt.data.amount, receipt.data.receiver);
+        ERC20Mint(receipt.data.toToken).mint(receipt.data.receiver, transferAmount);
+        emit Minted(receipt.proofIndex, transferAmount, receipt.data.receiver);
     }
 
     function burn(
@@ -84,12 +120,18 @@ contract ERC20MintProxy is VerifierUpgradeable {
         address receiver
     ) external burn_pauseable {
         require((Address.isContract(localAssetHash)) && (receiver != address(0)));
-        require(amount != 0, "amount can not be 0");
-        require(limiter.checkTransferedQuota(localAssetHash,amount),"not in the amount range");
+        uint256 transferAmount = amount;
+        uint256 eventAmount = amount;
+        if(conversionDecimalsAssets[localAssetHash].toDecimals != 0){
+            (transferAmount, eventAmount) = conversionFromAssetAmount(localAssetHash, amount, true);
+        }
+
+        require(amount != 0 && eventAmount != 0, "amount can not be 0");
+        require(limiter.checkTransferedQuota(localAssetHash, transferAmount),"not in the amount range");
         ProxiedAsset memory peerAsset = assets[localAssetHash];
         require(peerAsset.existed, "asset address must has been bound");
-        ERC20Mint(localAssetHash).burnFrom(msg.sender, amount);
+        ERC20Mint(localAssetHash).burnFrom(msg.sender, transferAmount);
 
-        emit Burned(localAssetHash, peerAsset.assetHash, msg.sender, amount, receiver);
+        emit Burned(localAssetHash, peerAsset.assetHash, msg.sender, eventAmount, receiver);
     }
 }
