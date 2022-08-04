@@ -23,12 +23,12 @@ contract ERC20Locker is IRC20Locker,Locker{
         Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit);
     }
 
-    function bindAssetHash(address _fromAssetHash, address _toAssetHash, address _peerLockProxyHash) external onlyRole(OWNER_ROLE) {
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash, address _peerLockProxyHash) external onlyRole(ADMIN_ROLE) {
         require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
         _bindAssetHash(_fromAssetHash,_toAssetHash,_peerLockProxyHash);
     }
 
-    function setConversionDecimalsAssets(address _fromAssetHash,uint8 _toAssetHashDecimals) external onlyRole(OWNER_ROLE) {
+    function setConversionDecimalsAssets(address _fromAssetHash,uint8 _toAssetHashDecimals) external onlyRole(ADMIN_ROLE) {
         uint8 _fromAssetHashDecimals = IERC20Decimals(_fromAssetHash).decimals(); 
         require(_fromAssetHashDecimals > 0 && _toAssetHashDecimals > 0 &&  _fromAssetHashDecimals > _toAssetHashDecimals, "invalid the decimals");
         conversionDecimalsAssets[_fromAssetHash] = ConversionDecimals({

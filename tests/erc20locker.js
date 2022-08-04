@@ -74,11 +74,11 @@ describe('ERC20Locker', () => {
   //bindAssetHash
   describe('bindAssetHash', () => {
     it('It has permissions', async () => {
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
+      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address, erc20Token2.address);
     })
 
     it('It has no permissions', async () => {
-      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6'
+      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c'
       await expect(erc20Locker.connect(wallet2).bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address)
       ).to.be.revertedWith(msg)
     })
@@ -294,7 +294,7 @@ describe('ERC20Locker', () => {
     })
 
     it('It is not the owner', async () => {
-      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6'
+      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c'
       await expect(erc20Locker.connect(wallet2).setConversionDecimalsAssets(erc20Token.address,6))
       .to.be.revertedWith(msg)
     })
