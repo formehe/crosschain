@@ -9,6 +9,8 @@ contract Limit is AccessControl{
     bytes32 constant private OWNER_ROLE = 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6;
     //keccak256("FORBIDEN.ROLE");
     bytes32 constant private FORBIDEN_ROLE = 0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d;
+    //keccak256("ADMIN.ROLE");
+    bytes32 constant ADMIN_ROLE = 0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c;
 
     struct Quota{
         uint256 maxTransferedToken;
@@ -41,9 +43,12 @@ contract Limit is AccessControl{
 
     constructor(){
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
-        _setRoleAdmin(FORBIDEN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
+        
+        _setRoleAdmin(FORBIDEN_ROLE, ADMIN_ROLE);
+
         _grantRole(OWNER_ROLE,_msgSender());
-        _grantRole(FORBIDEN_ROLE,_msgSender());
+        _grantRole(ADMIN_ROLE,_msgSender());
     }
 
     function bindTransferedQuota(

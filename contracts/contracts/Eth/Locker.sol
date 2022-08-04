@@ -82,13 +82,15 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         limit = _limit;
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSED_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
-        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         _setRoleAdmin(WITHDRAWAL_ROLE, OWNER_ROLE);
 
-        _setRoleAdmin(BLACK_UN_LOCK_ROLE, OWNER_ROLE);
-        _setRoleAdmin(BLACK_LOCK_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_UN_LOCK_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_LOCK_ROLE, ADMIN_ROLE);
 
         _grantRole(OWNER_ROLE,_owner);
+        _grantRole(ADMIN_ROLE,_owner);
     } 
 
     /// Parses the provided proof and consumes it if it's not already used.

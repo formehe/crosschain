@@ -57,11 +57,12 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSE_ALL ^ 0xff);
 
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
-        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
-        _setRoleAdmin(ADDBLOCK_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ADDBLOCK_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
         _grantRole(OWNER_ROLE,_owner);
+        _grantRole(ADMIN_ROLE,_owner);
         _grantRole(ADDBLOCK_ROLE,_owner);
-
     }
 
     function initWithBlock(bytes memory data) public override onlyRole(OWNER_ROLE) {
