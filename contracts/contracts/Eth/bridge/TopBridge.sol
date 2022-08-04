@@ -172,7 +172,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             }
         }
 
-        epochs[currentEpochIdex].stakeThreshold = ((cnt << 1) + 2) / 3;
+        epochs[currentEpochIdex].stakeThreshold = (cnt << 1) / 3 + 1;
         epochs[currentEpochIdex].ownerHeight = blockHeight;
 
         // console.log("ownerHeight:", epochs[currentEpochIdex].ownerHeight);
