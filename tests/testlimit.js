@@ -36,6 +36,7 @@ describe("Limit", function () {
         limitContract = await limitCon.deploy()
         //erc20Sample = await erc20SampleCon.attach("0xC66AB83418C20A65C3f8e83B3d11c8C3a6097b6F")
         await limitContract.deployed()
+        limitContract.grantRole("0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d", admin.address)
         console.log("+++++++++++++Limit+++++++++++++++ ", limitContract.address)
     })
 

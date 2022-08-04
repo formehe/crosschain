@@ -62,12 +62,14 @@ contract ERC20MintProxy is VerifierUpgradeable {
         VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
-        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
 
-        _setRoleAdmin(BLACK_BURN_ROLE, OWNER_ROLE);
-        _setRoleAdmin(BLACK_MINT_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
 
-        _grantRole(OWNER_ROLE,msg.sender);
+        _grantRole(OWNER_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
     }
 
     function setConversionDecimalsAssets(address _fromAssetHash,uint8 _toAssetHashDecimals) external onlyRole(OWNER_ROLE) {
