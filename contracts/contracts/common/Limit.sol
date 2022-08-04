@@ -55,7 +55,7 @@ contract Limit is AccessControl{
         address _asset, 
         uint256 _minTransferedToken, 
         uint256 _maxTransferedToken
-    ) external onlyRole(OWNER_ROLE) {
+    ) external onlyRole(ADMIN_ROLE) {
         require(_maxTransferedToken > _minTransferedToken, "max quantity of permitted token is less than the min");
         require(_maxTransferedToken < (1 << 128), "transfered token is overflow");
         tokenQuotas[_asset].maxTransferedToken = _maxTransferedToken;
@@ -98,7 +98,7 @@ contract Limit is AccessControl{
     function bindFrozen(
         address _asset, 
         uint _frozenDuration
-    ) external onlyRole(OWNER_ROLE){
+    ) external onlyRole(ADMIN_ROLE){
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
         tokenFrozens[_asset] = _frozenDuration;
         emit FrozenBound(_asset, _frozenDuration);

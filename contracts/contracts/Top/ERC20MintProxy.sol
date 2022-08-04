@@ -43,7 +43,7 @@ contract ERC20MintProxy is VerifierUpgradeable {
     function bindAssetHash(
         address localAssetHash, 
         address peerAssetHash
-    ) external onlyRole(OWNER_ROLE) returns (bool) {
+    ) external onlyRole(ADMIN_ROLE) returns (bool) {
         // peerAssetHash may be address(0), address(0) means the native token of source chain
         require(Address.isContract(localAssetHash), "from proxy address are not to be contract address");
         assets[localAssetHash].assetHash = peerAssetHash;
@@ -72,7 +72,7 @@ contract ERC20MintProxy is VerifierUpgradeable {
         _grantRole(ADMIN_ROLE, msg.sender);
     }
 
-    function setConversionDecimalsAssets(address _fromAssetHash,uint8 _toAssetHashDecimals) external onlyRole(OWNER_ROLE) {
+    function setConversionDecimalsAssets(address _fromAssetHash,uint8 _toAssetHashDecimals) external onlyRole(ADMIN_ROLE) {
         uint8 _fromAssetHashDecimals = IERC20Decimals(_fromAssetHash).decimals(); 
         require(_fromAssetHashDecimals > 0 && _toAssetHashDecimals > 0 &&  _fromAssetHashDecimals > _toAssetHashDecimals, "invalid the decimals");
         conversionDecimalsAssets[_fromAssetHash] = ConversionDecimals({
