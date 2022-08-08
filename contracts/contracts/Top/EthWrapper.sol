@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-contract TopErc20Wrapper {
-    address constant TopErc20 = 0xff00000000000000000000000000000000000005;
+contract EthWrapper {
+    address constant Eth = 0xFF00000000000000000000000000000000000006;
 
-    string public name = "TOP Network";
-    string public symbol = "TOP";
+    string public name = "ETH";
+    string public symbol = "ETH";
     bytes1 public chain_uuid;
 
     constructor(bytes1 chain_uuid_) {
@@ -14,7 +14,7 @@ contract TopErc20Wrapper {
 
     fallback() external {
         bytes memory call_data = abi.encodePacked(chain_uuid, msg.data);
-        (bool success, bytes memory result) = TopErc20.delegatecall(call_data);
+        (bool success, bytes memory result) = Eth.delegatecall(call_data);
 
         require(success, string(result));
 
