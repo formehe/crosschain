@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-contract TopErc20Wrapper {
-    address constant TopErc20 = 0xff00000000000000000000000000000000000005;
+contract UsdcErc20Wrapper {
+    address constant TopErc20 = 0xFF00000000000000000000000000000000000008;
 
-    string public name = "TOP Network";
-    string public symbol = "TOP";
+    string public name = "Wrapped USD Coin";
+    string public symbol = "tUSDC";
     bytes1 public chain_uuid;
 
     constructor(bytes1 chain_uuid_) {
