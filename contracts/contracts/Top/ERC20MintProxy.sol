@@ -44,8 +44,8 @@ contract ERC20MintProxy is VerifierUpgradeable {
         address localAssetHash, 
         address peerAssetHash
     ) external onlyRole(ADMIN_ROLE) returns (bool) {
-        // peerAssetHash may be address(0), address(0) means the native token of source chain
         require(Address.isContract(localAssetHash), "from proxy address are not to be contract address");
+        require(assets[localAssetHash].existed == false, "can not modify the bind asset");
         assets[localAssetHash].assetHash = peerAssetHash;
         assets[localAssetHash].existed = true;
         emit AssetBound(localAssetHash, peerAssetHash);
@@ -56,25 +56,26 @@ contract ERC20MintProxy is VerifierUpgradeable {
         IEthProver _prover,
         address _peerProxyHash,
         uint64 _minBlockAcceptanceHeight,
+        address _owner,
         ILimit _limiter
     ) external initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
         VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
-        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
 
         _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
 
-        _grantRole(OWNER_ROLE, msg.sender);
+        _grantRole(OWNER_ROLE, _owner);
         _grantRole(ADMIN_ROLE, msg.sender);
     }
 
     function setConversionDecimalsAssets(address _fromAssetHash,uint8 _toAssetHashDecimals) external onlyRole(ADMIN_ROLE) {
         uint8 _fromAssetHashDecimals = IERC20Decimals(_fromAssetHash).decimals(); 
         require(_fromAssetHashDecimals > 0 && _toAssetHashDecimals > 0 &&  _fromAssetHashDecimals > _toAssetHashDecimals, "invalid the decimals");
+        require(conversionDecimalsAssets[_fromAssetHash].toDecimals == 0, "can not rebind decimal");
         conversionDecimalsAssets[_fromAssetHash] = ConversionDecimals({
             fromDecimals:_fromAssetHashDecimals,
             toDecimals:_toAssetHashDecimals

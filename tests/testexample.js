@@ -79,40 +79,6 @@ class TxProof {
     }
 }
 
-// describe("Delegated", function () {
-
-//     beforeEach(async function () {
-//         //准备必要账户
-//         [deployer, admin, miner, user, user1, redeemaccount] = await hre.ethers.getSigners()
-//         owner = deployer
-//         console.log("deployer account:", deployer.address)
-//         console.log("owner account:", owner.address)
-//         console.log("admin account:", admin.address)
-//         console.log("team account:", miner.address)
-//         console.log("user account:", user.address)
-//         console.log("redeemaccount account:", redeemaccount.address)
-        
-//         //deploy delegater
-//         delegaterCon = await ethers.getContractFactory("Delegater", deployer)
-//         delegater = await delegaterCon.deploy();
-//         //utils = await UtilsCon.attach("0x8F4ec854Dd12F1fe79500a1f53D0cbB30f9b6134")
-//         await delegater.deployed();
-//         console.log("+++++++++++++delegaterCon+++++++++++++++ ", delegater.address)
-
-//         //deploy delegated
-//         delegatedCon = await ethers.getContractFactory("Delegated", deployer)
-//         delegated = await delegatedCon.deploy();
-//         //utils = await UtilsCon.attach("0x8F4ec854Dd12F1fe79500a1f53D0cbB30f9b6134")
-//         await delegated.deployed();
-
-//         console.log("+++++++++++++delegatedCon+++++++++++++++ ", delegated.address)
-//     })
-
-//     it('delegate', async () => {
-//         delegater.connect(deployer).mint(delegated.address)
-//     })
-// })
-
 describe("ERC20MintProxy", function () {
 
     beforeEach(async function () {
@@ -199,7 +165,7 @@ describe("ERC20MintProxy", function () {
         await mintContract2.deployed()
 
         limitCon = await ethers.getContractFactory("Limit", admin)
-        limitContract = await limitCon.deploy()
+        limitContract = await limitCon.deploy(admin.address)
         console.log("+++++++++++++limitContract+++++++++++++++ ", limitContract.address)
         await limitContract.deployed()
 
@@ -207,12 +173,12 @@ describe("ERC20MintProxy", function () {
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
 
-        await mintContract.initialize(topProveContract.address, mintContract1.address, 1000, limitContract.address)
+        await mintContract.initialize(topProveContract.address, mintContract1.address, 1000, admin.address, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).adminPause(0)
-        await mintContract1.initialize(topProveContract.address, mintContract.address, 1000, limitContract.address)
+        await mintContract1.initialize(topProveContract.address, mintContract.address, 1000, admin.address, limitContract.address)
         await mintContract1.connect(admin).adminPause(0)
-        await mintContract2.initialize(topProveContract.address, mintContract1.address, 1000, limitContract.address)
+        await mintContract2.initialize(topProveContract.address, mintContract1.address, 1000, admin.address, limitContract.address)
         await mintContract2.connect(admin).adminPause(0)
     })
 
@@ -220,6 +186,18 @@ describe("ERC20MintProxy", function () {
         
         await expect(mintContract.connect(deployer).bindAssetHash(erc20Sample.address, address))
             .to.be.revertedWith('is missing role')
+    })
+
+    it('modify owner role', async () => {
+        await mintContract.connect(admin).grantRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user.address)
+        try {
+          result = await mintContract.connect(admin).grantRole('0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6', user.address)
+        } catch (error) {
+          expect(
+            error.message.indexOf('missing role') > -1
+          ).to.equal(true)
+        }
+        // .to.be.revertedWith('missing role')
     })
 
     it('the local address can not be non-contract for binding', async () => {
@@ -239,6 +217,12 @@ describe("ERC20MintProxy", function () {
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
         await expect(mintContract.burn(erc20Sample.address, 0, address))
             .to.be.revertedWith('amount can not be 0')
+    })
+
+    it('rebind asset hash', async () => {
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        await expect(mintContract.connect(admin).bindAssetHash(erc20Sample.address, address))
+            .to.be.revertedWith('can not modify the bind asset')
     })
 
     it('the asset contract of burn must be bound', async () => {
@@ -442,7 +426,7 @@ describe("TRC20", function () {
         await topProveContract.deployed()
 
         limitCon = await ethers.getContractFactory("Limit", admin)
-        limitContract = await limitCon.deploy()
+        limitContract = await limitCon.deploy(admin.address)
         console.log("+++++++++++++limitContract+++++++++++++++ ", limitContract.address)
         await limitContract.deployed()
 
@@ -469,12 +453,13 @@ describe("TRC20", function () {
             //     Deserialize: deserialize.address
             // }
         })
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample1.address, 1, "hhh", "hhh", limitContract.address)
+
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample1.address, 1, "hhh", "hhh", admin.address, limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
@@ -513,12 +498,12 @@ describe("TRC20", function () {
             //     Deserialize: deserialize.address
             // }
         })
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, address, erc20Sample.address, 1, "hhh", "hhh", admin.address, limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
@@ -555,12 +540,12 @@ describe("TRC20", function () {
             //     Deserialize: deserialize.address
             // }
         })
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", admin.address, limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
@@ -601,12 +586,12 @@ describe("TRC20", function () {
             //     Deserialize: deserialize.address
             // }
         })
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", admin.address, limitContract.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
@@ -648,14 +633,14 @@ describe("TRC20", function () {
             //     Deserialize: deserialize.address
             // }
         })
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", admin.address, limitContract.address)
         console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)
         await limitContract.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
@@ -695,14 +680,14 @@ describe("TRC20", function () {
             //     Deserialize: deserialize.address
             // }
         })
-        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", limitContract.address)
+        TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", admin.address, limitContract.address)
         await limitContract.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
         console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
         await mintContract.connect(admin).adminPause(0)
         await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)

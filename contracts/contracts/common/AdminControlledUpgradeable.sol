@@ -14,8 +14,6 @@ contract AdminControlledUpgradeable is Initializable,AccessControl {
     bytes32 constant ADMIN_ROLE = 0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c;
     //keccak256("CONTROLLED.ROLE")
     bytes32 constant CONTROLLED_ROLE = 0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de;
-    //keccak256("WITHDRAWAL.ROLE")
-    bytes32 constant WITHDRAWAL_ROLE = 0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443;
     //keccak256("BLACK.BURN.ROLE")
     bytes32 constant BLACK_BURN_ROLE = 0x644464d9d2566ad56a676295c65afc4dcee3d72dac5acd473e78e531f06e0bce;
     //keccak256("BLACK.MINT.ROLE")

@@ -54,18 +54,16 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     ) external initializer {
         require(_owner != address(0));
         lockEthAmount = _lockEthAmount;
-        AdminControlledUpgradeable._AdminControlledUpgradeable_init(_owner,UNPAUSE_ALL ^ 0xff);
+        AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSE_ALL ^ 0xff);
 
-        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         _setRoleAdmin(ADDBLOCK_ROLE, ADMIN_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
         _grantRole(OWNER_ROLE,_owner);
-        _grantRole(ADMIN_ROLE,_owner);
-        _grantRole(ADDBLOCK_ROLE,_owner);
+        _grantRole(ADMIN_ROLE, msg.sender);
     }
 
-    function initWithBlock(bytes memory data) public override onlyRole(OWNER_ROLE) {
+    function initWithBlock(bytes memory data) public override onlyRole(ADMIN_ROLE) {
         require(!initialized, "Wrong initialization stage");
         initialized = true;
 
