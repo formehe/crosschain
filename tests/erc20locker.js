@@ -53,7 +53,7 @@ describe('ERC20Locker', () => {
     prover = await TopProver.deploy(bridge.address)
 
     const Limit = await hre.ethers.getContractFactory("Limit", wallet, overrides)
-    limit = await Limit.deploy()
+    limit = await Limit.deploy(wallet.address)
 
     console.log("wallet>>>> "  + wallet.address)
     console.log("wallet2>>>> "  + wallet2.address)
@@ -86,6 +86,11 @@ describe('ERC20Locker', () => {
     it('It is bind empty address', async () => {
       await expect(erc20Locker.bindAssetHash(AddressZero, erc20Token2.address,erc20Token2.address)).to.be.revertedWith('both asset addresses are not to be 0')
 
+    })
+
+    it('rebind asset hash', async () => {
+      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address, erc20Token2.address)
+      await expect(erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address)).to.be.revertedWith('Can not modify the bind asset')
     })
   })
 
@@ -164,6 +169,18 @@ describe('ERC20Locker', () => {
         
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('no permit')
 
+    })
+
+    it('modify owner role', async () => {
+      await erc20Locker.grantRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c',wallet.address)
+      try {
+        result = await erc20Locker.grantRole('0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6',wallet.address)
+      } catch (error) {
+        expect(
+          error.message.indexOf('missing role') > -1
+        ).to.equal(true)
+      }
+      // .to.be.revertedWith('missing role')
     })
     
     it('settings can pass and have no permissions', async () => {
@@ -322,6 +339,12 @@ describe('ERC20Locker', () => {
         await expect(erc20Locker.setConversionDecimalsAssets(erc20Token.address,1000))
         .to.be.revertedWith('value out-of-bounds')
       }catch{}
+    })
+
+    it('reset decimals', async () => {
+        await erc20Locker.setConversionDecimalsAssets(erc20Token.address, 5)
+        await expect(erc20Locker.setConversionDecimalsAssets(erc20Token.address,4))
+        .to.be.revertedWith('can not rebind decima')
     })
   })
     

@@ -48,7 +48,7 @@ describe('EthLocker', () => {
     prover = await TopProver.deploy(bridge.address)
 
     const Limit = await hre.ethers.getContractFactory("Limit", wallet, overrides)
-    limit = await Limit.deploy()
+    limit = await Limit.deploy(wallet.address)
 
     console.log("wallet>>>> "  + wallet.address)
     console.log("wallet2>>>> "  + wallet2.address)
@@ -105,7 +105,6 @@ describe('EthLocker', () => {
       }catch{
         console.log("Lack of balance>>>> "  + 'Lack of balance')
       }
-      
     })
 
     it('pause and have no permissions', async () => {
@@ -164,62 +163,62 @@ describe('EthLocker', () => {
     })
   })
 
-  //adminTransfer
-  describe('adminTransfer', () => {
-    it('No initial permissions', async () => {
+//   //adminTransfer
+//   describe('adminTransfer', () => {
+//     it('No initial permissions', async () => {
 
-      //await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
-      await ethLocker.adminPause(0)
-      expect(await ethLocker.paused()).to.equal(0);
-      await limit.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
-      await ethLocker.lockToken(AddressZero,toWei('2'),wallet3.address,{value:toWei('2')})
+//       //await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
+//       await ethLocker.adminPause(0)
+//       expect(await ethLocker.paused()).to.equal(0);
+//       await limit.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
+//       await ethLocker.lockToken(AddressZero,toWei('2'),wallet3.address,{value:toWei('2')})
 
-      expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('2'))
-      let currentbalance= await ethLocker.ethBalance(wallet.address)
+//       expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('2'))
+//       let currentbalance= await ethLocker.ethBalance(wallet.address)
 
-      let msg = 'AccessControl: account ' + wallet.address.toLowerCase() + ' is missing role 0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443'
-      await expect(ethLocker.adminTransfer(wallet.address,toWei('1'))).to.be.revertedWith(msg)
-    })
+//       let msg = 'AccessControl: account ' + wallet.address.toLowerCase() + ' is missing role 0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443'
+//       await expect(ethLocker.adminTransfer(wallet.address,toWei('1'))).to.be.revertedWith(msg)
+//     })
 
-    it('have permissions', async () => {
-      //await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
-      await ethLocker.adminPause(0)
-      expect(await ethLocker.paused()).to.equal(0);
-      await limit.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
-      await ethLocker.lockToken(AddressZero,toWei('2'),wallet3.address,{value:toWei('2')})
+//     it('have permissions', async () => {
+//       //await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
+//       await ethLocker.adminPause(0)
+//       expect(await ethLocker.paused()).to.equal(0);
+//       await limit.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
+//       await ethLocker.lockToken(AddressZero,toWei('2'),wallet3.address,{value:toWei('2')})
 
-      expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('2'))
-      let currentbalance= await ethLocker.ethBalance(wallet.address)
+//       expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('2'))
+//       let currentbalance= await ethLocker.ethBalance(wallet.address)
 
-      await ethLocker.grantRole('0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443',wallet.address)
-      await ethLocker.adminTransfer(wallet.address,toWei('1'))
-      expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('1'))
+//       await ethLocker.grantRole('0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443',wallet.address)
+//       await ethLocker.adminTransfer(wallet.address,toWei('1'))
+//       expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('1'))
 
-      await ethLocker.adminTransfer(wallet.address,toWei('1'))
-      expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(0)
+//       await ethLocker.adminTransfer(wallet.address,toWei('1'))
+//       expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(0)
 
-   })
+//    })
 
-  it('remove permissions', async () => {
-      //await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
-      await ethLocker.adminPause(0)
-      expect(await ethLocker.paused()).to.equal(0);
-      await limit.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
-      await ethLocker.lockToken(AddressZero,toWei('2'),wallet3.address,{value:toWei('2')})
+//   it('remove permissions', async () => {
+//       //await ethLocker.bindAssetHash(AddressZero, erc20Token.address,erc20Token.address);
+//       await ethLocker.adminPause(0)
+//       expect(await ethLocker.paused()).to.equal(0);
+//       await limit.bindTransferedQuota(AddressZero,toWei('0.5'),toWei('4'))
+//       await ethLocker.lockToken(AddressZero,toWei('2'),wallet3.address,{value:toWei('2')})
 
-      expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('2'))
-      let currentbalance= await ethLocker.ethBalance(wallet.address)
+//       expect(await ethLocker.ethBalance(ethLocker.address)).to.equal(toWei('2'))
+//       let currentbalance= await ethLocker.ethBalance(wallet.address)
 
-      await ethLocker.grantRole('0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443',wallet.address)
+//       await ethLocker.grantRole('0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443',wallet.address)
 
-      await ethLocker.revokeRole('0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443',wallet.address)
-      expect(await ethLocker.hasRole('0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443',wallet.address)).to.equal(false);
+//       await ethLocker.revokeRole('0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443',wallet.address)
+//       expect(await ethLocker.hasRole('0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443',wallet.address)).to.equal(false);
 
-      let msg = 'AccessControl: account ' + wallet.address.toLowerCase() + ' is missing role 0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443'
-      await expect(ethLocker.adminTransfer(wallet.address,toWei('2'))).to.be.revertedWith(msg)
-  })
+//       let msg = 'AccessControl: account ' + wallet.address.toLowerCase() + ' is missing role 0x6043ff1e690758daf5caaebc8d9f958ef77877a407f4d128ba68b152ad130443'
+//       await expect(ethLocker.adminTransfer(wallet.address,toWei('2'))).to.be.revertedWith(msg)
+//   })
 
- })
+//  })
 
 
 })

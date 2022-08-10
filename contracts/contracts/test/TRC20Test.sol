@@ -12,8 +12,9 @@ contract TRC20Test is TRC20{
         uint64 _minBlockAcceptanceHeight,
         string memory _name,
         string memory _symbol,
+        address _owner,
         ILimit _limiter
-    ) TRC20(_prover, _peerProxyHash,_peerAssetHash,_minBlockAcceptanceHeight,_name,_symbol, _limiter) {}
+    ) TRC20(_prover, _peerProxyHash,_peerAssetHash,_minBlockAcceptanceHeight,_name,_symbol, _owner, _limiter) {}
 
 
     function _parseLog(

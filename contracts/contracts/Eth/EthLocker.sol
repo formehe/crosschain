@@ -21,8 +21,7 @@ contract EthLocker is ITokenLocker,Locker{
     ) external initializer {   
         Locker._Locker_initialize(_prover, _minBlockAcceptanceHeight, _owner, limit);
         require(_toAssetHash != address(0) && _peerLockProxyHash != address(0) ,"both asset addresses are not to be 0");
-        _bindAssetHash(address(0),_toAssetHash,_peerLockProxyHash);
-
+        _bindAssetHash(address(0), _toAssetHash, _peerLockProxyHash);
     }
     
     function lockToken(address fromAssetHash,uint256 amount, address receiver)
@@ -61,12 +60,5 @@ contract EthLocker is ITokenLocker,Locker{
         require(toAddress != address(0), "to asset address must not be zero");
         payable(toAddress).transfer(amount);
         return true;
-    }
-
-    function adminTransfer(address payable destination, uint amount)
-        public
-        onlyRole(WITHDRAWAL_ROLE)
-    {
-        destination.transfer(amount);
     }
 }

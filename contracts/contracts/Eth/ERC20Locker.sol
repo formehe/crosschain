@@ -31,11 +31,11 @@ contract ERC20Locker is IRC20Locker,Locker{
     function setConversionDecimalsAssets(address _fromAssetHash,uint8 _toAssetHashDecimals) external onlyRole(ADMIN_ROLE) {
         uint8 _fromAssetHashDecimals = IERC20Decimals(_fromAssetHash).decimals(); 
         require(_fromAssetHashDecimals > 0 && _toAssetHashDecimals > 0 &&  _fromAssetHashDecimals > _toAssetHashDecimals, "invalid the decimals");
+        require(conversionDecimalsAssets[_fromAssetHash].toDecimals == 0, "can not rebind decimal");
         conversionDecimalsAssets[_fromAssetHash] = ConversionDecimals({
             fromDecimals:_fromAssetHashDecimals,
             toDecimals:_toAssetHashDecimals
         });
-
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)
@@ -86,12 +86,5 @@ contract ERC20Locker is IRC20Locker,Locker{
             }
         }
         return (transferAmount,conversionAmount);
-    }
-
-    function adminTransfer(IERC20 token, address destination, uint256 amount)
-        external
-        onlyRole(WITHDRAWAL_ROLE)
-    {
-        token.safeTransfer(destination, amount);
     }
 }

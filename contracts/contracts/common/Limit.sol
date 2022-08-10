@@ -41,13 +41,12 @@ contract Limit is AccessControl{
     mapping(address => uint) public tokenFrozens; // unit is seconds
     uint private constant MAX_FROZEN_TIME = 15_552_000; //180 days
 
-    constructor(){
-        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
+    constructor(address owner){
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         
         _setRoleAdmin(FORBIDEN_ROLE, ADMIN_ROLE);
 
-        _grantRole(OWNER_ROLE,_msgSender());
+        _grantRole(OWNER_ROLE, owner);
         _grantRole(ADMIN_ROLE,_msgSender());
     }
 
@@ -58,6 +57,7 @@ contract Limit is AccessControl{
     ) external onlyRole(ADMIN_ROLE) {
         require(_maxTransferedToken > _minTransferedToken, "max quantity of permitted token is less than the min");
         require(_maxTransferedToken < (1 << 128), "transfered token is overflow");
+        require(tokenQuotas[_asset].maxTransferedToken == 0, "can not rebind transfer quota");
         tokenQuotas[_asset].maxTransferedToken = _maxTransferedToken;
         tokenQuotas[_asset].minTransferedToken = _minTransferedToken;
         emit TransferedQuotaBound(_asset, _minTransferedToken, _maxTransferedToken);
@@ -100,6 +100,7 @@ contract Limit is AccessControl{
         uint _frozenDuration
     ) external onlyRole(ADMIN_ROLE){
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
+        require(tokenFrozens[_asset] == 0, "can not rebind frozen");
         tokenFrozens[_asset] = _frozenDuration;
         emit FrozenBound(_asset, _frozenDuration);
     }

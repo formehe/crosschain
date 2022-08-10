@@ -28,9 +28,10 @@ contract TRC20 is ERC20, VerifierUpgradeable {
         uint64 _minBlockAcceptanceHeight,
         string memory _name,
         string memory _symbol,
+        address _owner,
         ILimit _limiter
     ) ERC20(_name, _symbol) {
-        _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight, _limiter);
+        _TRC20_init(_prover, _peerProxyHash, _peerAssetHash, _minBlockAcceptanceHeight, _owner, _limiter);
     }
 
     function _TRC20_init (
@@ -38,18 +39,20 @@ contract TRC20 is ERC20, VerifierUpgradeable {
         address _peerProxyHash,
         address _peerAssetHash,
         uint64 _minBlockAcceptanceHeight,
+        address _owner,
         ILimit _limiter
     ) private initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
         require(_peerAssetHash != address(0), "peer asset can not be zero");
         assetHash = _peerAssetHash;
-        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
-        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
 
-        _setRoleAdmin(BLACK_BURN_ROLE, OWNER_ROLE);
-        _setRoleAdmin(BLACK_MINT_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
 
-        _grantRole(OWNER_ROLE, msg.sender);
+        _grantRole(OWNER_ROLE, _owner);
+        _grantRole(ADMIN_ROLE, msg.sender);
 
         VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);

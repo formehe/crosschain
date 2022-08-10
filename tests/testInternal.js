@@ -18,35 +18,35 @@ const { keccak256 } = require('@ethersproject/keccak256')
 console.log(process.argv)
 
 describe("TDao", function () {
-    beforeEach(async function () {
-        //准备必要账户
-        [deployer, admin, miner, user, user1, ,user2, user3, redeemaccount] = await hre.ethers.getSigners()
-        owner = deployer
-        console.log("deployer account:", deployer.address)
-        console.log("owner account:", owner.address)
-        console.log("admin account:", admin.address)
-        console.log("team account:", miner.address)
-        console.log("user account:", user.address)
-        console.log("user1 account:", user1.address)
-        console.log("user2 account:", user2.address)
-        console.log("user3 account:", user3.address)
-        console.log("redeemaccount account:", redeemaccount.address)
+    // beforeEach(async function () {
+    //     //准备必要账户
+    //     [deployer, admin, miner, user, user1, ,user2, user3, redeemaccount] = await hre.ethers.getSigners()
+    //     owner = deployer
+    //     console.log("deployer account:", deployer.address)
+    //     console.log("owner account:", owner.address)
+    //     console.log("admin account:", admin.address)
+    //     console.log("team account:", miner.address)
+    //     console.log("user account:", user.address)
+    //     console.log("user1 account:", user1.address)
+    //     console.log("user2 account:", user2.address)
+    //     console.log("user3 account:", user3.address)
+    //     console.log("redeemaccount account:", redeemaccount.address)
 
-        zeroAccount = "0x0000000000000000000000000000000000000000"
+    //     zeroAccount = "0x0000000000000000000000000000000000000000"
 
-        //deploy Internal
-        InternalCon = await ethers.getContractFactory("Internal", deployer)
-        Internal = await InternalCon.deploy()
-        await Internal.deployed()
-    })
+    //     //deploy Internal
+    //     InternalCon = await ethers.getContractFactory("Internal", deployer)
+    //     Internal = await InternalCon.deploy()
+    //     await Internal.deployed()
+    // })
 
-    it('Internal', async () => {
-        // //deploy TRC20
-        // const tx = await tdao.connect(user1).updateTimelock("0x0000000000000000000000000000000000000000")
-        try {
-            await Internal.testStorageCall(user.address)
-        } catch (e) {
-            console.log(e)
-        }
-    })
+    // it('Internal', async () => {
+    //     // //deploy TRC20
+    //     // const tx = await tdao.connect(user1).updateTimelock("0x0000000000000000000000000000000000000000")
+    //     try {
+    //         await Internal.testStorageCall(user.address)
+    //     } catch (e) {
+    //         console.log(e)
+    //     }
+    // })
 })
