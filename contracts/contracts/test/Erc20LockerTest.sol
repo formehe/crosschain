@@ -11,6 +11,8 @@ contract Erc20LockerTest is ERC20Locker {
         unLock_pauseable
     {   
         VerifiedReceipt memory result= _verify(proofData, proofBlockHeight);
+        console.logUint(result.data.amount);
+        _checkAndRefreshWithdrawTime(result.data.toToken, result.data.amount);
         //IERC20(result.data.toToken).safeTransfer(result.data.receiver, result.data.amount);
         emit Unlocked(result.proofIndex,result.data.amount, result.data.receiver);
      

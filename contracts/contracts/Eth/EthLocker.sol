@@ -46,6 +46,7 @@ contract EthLocker is ITokenLocker,Locker{
         unLock_pauseable
     {
         VerifiedReceipt memory result = _verify(proofData, proofBlockHeight);
+        _checkAndRefreshWithdrawTime(result.data.toToken, result.data.amount);
         _transferFromContract(result.data.receiver, result.data.amount);
         emit Unlocked(result.proofIndex,result.data.amount,result.data.receiver);
     }

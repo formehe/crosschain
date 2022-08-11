@@ -68,6 +68,9 @@ contract ERC20Locker is IRC20Locker,Locker{
         if(conversionDecimalsAssets[result.data.toToken].toDecimals > 0){
             (transferAmount,) = conversionFromAssetAmount(result.data.toToken,transferAmount,false);
         }
+
+        _checkAndRefreshWithdrawTime(result.data.toToken, transferAmount);
+
         IERC20(result.data.toToken).safeTransfer(result.data.receiver, transferAmount);
         emit Unlocked(result.proofIndex,transferAmount, result.data.receiver);
     }
