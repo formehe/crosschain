@@ -63,6 +63,14 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         VerifiedEvent data;
     }
 
+    struct WithdrawHistory{
+        uint time;
+        uint256 accumulativeAmount;
+    }
+
+    mapping(address => uint256) public withdrawQuotas;
+    mapping(address => WithdrawHistory) public withdrawHistories;
+
     ITopProver public prover;
 
     // Proofs from blocks that are below the acceptance height will be rejected.
@@ -97,6 +105,29 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         bytes32 proofIndex
     ) internal {
         usedProofs[proofIndex] = true;
+    }
+
+    function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external onlyRole(ADMIN_ROLE) {
+        require(_withdrawQuota != 0, "withdraw quota can not be 0");
+        withdrawQuotas[_asset] = _withdrawQuota;
+    }
+
+    function _checkAndRefreshWithdrawTime(address _asset, uint256 amount) internal {
+        uint256 quota = withdrawQuotas[_asset];
+        require(quota != 0, "withdraw quota is not bound");
+        require(amount <= quota, "withdraw quota is not enough");
+
+        uint time = block.timestamp;
+        WithdrawHistory memory history = withdrawHistories[_asset];
+        require(time > history.time, "block time is too old");
+
+        if ((history.time == 0) || (time - history.time >= 1 days)) {
+            withdrawHistories[_asset].time = time;
+            withdrawHistories[_asset].accumulativeAmount = amount;
+        } else {
+            require (quota - history.accumulativeAmount >= amount, "today's quota is used up");
+            withdrawHistories[_asset].accumulativeAmount = history.accumulativeAmount + amount;
+        }
     }
 
     function _bindAssetHash(address _fromAssetHash,address _toAssetHash,address _peerLockProxyHash) internal{
