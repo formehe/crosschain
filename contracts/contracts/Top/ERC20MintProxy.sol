@@ -32,6 +32,14 @@ contract ERC20MintProxy is VerifierUpgradeable {
         bool    existed;
     }
 
+    struct WithdrawHistory{
+        uint time;
+        uint256 accumulativeAmount;
+    }
+
+    mapping(address => uint256) public withdrawQuotas;
+    mapping(address => WithdrawHistory) public withdrawHistories;
+
     mapping(address => ProxiedAsset) public assets;
     mapping(address => ConversionDecimals) public conversionDecimalsAssets;
 
@@ -98,6 +106,29 @@ contract ERC20MintProxy is VerifierUpgradeable {
         return (transferAmount,conversionAmount);
     }
 
+    function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external onlyRole(ADMIN_ROLE) {
+        require(_withdrawQuota != 0, "withdraw quota can not be 0");
+        withdrawQuotas[_asset] = _withdrawQuota;
+    }
+
+    function _checkAndRefreshWithdrawTime(address _asset, uint256 amount) internal {
+        uint256 quota = withdrawQuotas[_asset];
+        require(quota != 0, "withdraw quota is not bound");
+        require(amount <= quota, "withdraw quota is not enough");
+
+        uint time = block.timestamp;
+        WithdrawHistory memory history = withdrawHistories[_asset];
+        require(time > history.time, "block time is too old");
+
+        if ((history.time == 0) || (time - history.time >= 1 days)) {
+            withdrawHistories[_asset].time = time;
+            withdrawHistories[_asset].accumulativeAmount = amount;
+        } else {
+            require (quota - history.accumulativeAmount >= amount, "today's quota is used up");
+            withdrawHistories[_asset].accumulativeAmount = history.accumulativeAmount + amount;
+        }
+    }
+
     function mint(
         bytes memory proofData, 
         uint64 proofBlockHeight
@@ -112,6 +143,7 @@ contract ERC20MintProxy is VerifierUpgradeable {
         require(asset.existed, "asset address must has been bound");
         require(asset.assetHash == receipt.data.fromToken, "invalid token to token");
 
+        _checkAndRefreshWithdrawTime(receipt.data.toToken, transferAmount);
         _saveProof(receipt.proofIndex);
         ERC20Mint(receipt.data.toToken).mint(receipt.data.receiver, transferAmount);
         emit Minted(receipt.proofIndex, transferAmount, receipt.data.receiver);
