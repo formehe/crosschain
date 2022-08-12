@@ -338,6 +338,7 @@ describe("ERC20MintProxy", function () {
 
         //mint
         await mintContract1.connect(admin).bindAssetHash(erc20Sample1.address, erc20Sample.address)
+        await mintContract1.connect(admin).bindWithdrawQuota(erc20Sample1.address, 1000000000000)
         // await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
         await mintContract1.connect(user).mint(buffer, 1)
         await expect(mintContract1.connect(user).mint(buffer, 1))
@@ -370,6 +371,7 @@ describe("ERC20MintProxy", function () {
 
         //mint
         await mintContract1.connect(admin).bindAssetHash(erc20Sample1.address, erc20Sample.address)
+        await mintContract1.connect(admin).bindWithdrawQuota(erc20Sample1.address, 100000000000000)
         // await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
         await mintContract1.connect(user).mint(buffer, 1)
 
