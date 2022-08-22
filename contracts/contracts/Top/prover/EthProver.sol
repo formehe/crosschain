@@ -8,7 +8,7 @@ import "../../common/prover/Prover.sol";
 contract EthProver is Prover, IEthProver{
     constructor(address _bridgeLight)
     Prover(_bridgeLight) {}
-      
+
     using MPT for MPT.MerkleProof;
     function verify(
         EthProofDecoder.Proof calldata proof, 
@@ -17,8 +17,8 @@ contract EthProver is Prover, IEthProver{
         bytes32 blockHash,
         uint256 height
     ) external override returns (bool valid, string memory reason) {
-        
-        _verify(proof.logEntryData,proof.reciptIndex,proof.reciptData,proof.proof,receipt, receiptsRoot);
+
+        _verify(proof.logEntryData, proof.reciptIndex, proof.reciptData, proof.proof, receipt, receiptsRoot);
         // 调用系统合约验证块头
         bytes memory payload = abi.encodeWithSignature("is_confirmed(uint256,bytes32)", height, blockHash);
         (bool success, bytes memory returnData) = bridgeLight.staticcall(payload);
