@@ -2,15 +2,15 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "../../common/codec/TopProofDecoder.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "../../common/Deserialize.sol";
-import "../../Eth/prover/ITopProver.sol";
+import "../prover/IProver.sol";
 import "../factory/ITokenFactory.sol";
+import "../../common/codec/LogExtractor.sol";
 
 contract SubContractor is Initializable{
     using Borsh for Borsh.Data;
-    using TopProofDecoder for Borsh.Data;
+    using LogExtractor for Borsh.Data;
     
     struct VerifiedEvent {
         uint256 templateId;
@@ -34,7 +34,7 @@ contract SubContractor is Initializable{
     uint256 chainId;
     address proxy;
     address generalContractor;
-    ITopProver public prover;
+    IProver public prover;
     
     //templateId --- address
     mapping(uint256 => address) templateCodes;
@@ -43,7 +43,7 @@ contract SubContractor is Initializable{
     constructor() {
     }
 
-    function initialize(address generalContractor_, uint256 chainId_, address localProxy_, ITopProver prover_) external initializer {
+    function initialize(address generalContractor_, uint256 chainId_, address localProxy_, IProver prover_) external initializer {
         generalContractor = generalContractor_;
         chainId = chainId_;
         proxy = localProxy_;
@@ -89,21 +89,16 @@ contract SubContractor is Initializable{
         bytes memory proofData
     ) internal returns (VerifiedReceipt memory _receipt) {
         Borsh.Data memory borshData = Borsh.from(proofData);
-        TopProofDecoder.Proof memory proof = borshData.decode();
+        bytes memory log = borshData.decode();
         borshData.done();
 
         address contractAddress;
-        (_receipt.data, contractAddress) = _parseLog(proof.logEntryData);
+        (_receipt.data, contractAddress) = _parseLog(log);
         require(contractAddress != address(0), "general contractor address is zero");
         require(contractAddress == generalContractor, "general contractor address is error");
 
-        Deserialize.TransactionReceiptTrie memory receipt = Deserialize.toReceipt(proof.reciptData, proof.logIndex);
-        Deserialize.LightClientBlock memory header = Deserialize.decodeMiniLightClientBlock(proof.headerData);
-        bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
-
-        bytes32 proofIndex = keccak256(reciptIndex);
         // require(limit.forbiddens(proofIndex) == false, "tx is forbidden");
-        (bool success,) = prover.verify(proof, receipt, header.inner_lite.receipts_root_hash, header.block_hash);
+        (bool success, bytes32 proofIndex) = prover.verify(proofData);
         require(success, "proof is invalid");
         require(!usedProofs[proofIndex], "proof is reused");
         _receipt.proofIndex = proofIndex;

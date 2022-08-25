@@ -3,13 +3,14 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "../../Top/prover/IEthProver.sol";
+import "../prover/IProver.sol";
 import "../factory/ITokenFactory.sol";
+import "../../common/codec/LogExtractor.sol";
+import "../../common/Deserialize.sol";
 
 contract GeneralContractor is Initializable{
     using Borsh for Borsh.Data;
-    using EthProofDecoder for Borsh.Data;
+    using LogExtractor for Borsh.Data;
 
     event SubContractorIssue(
         uint256  indexed chainId,
@@ -30,7 +31,7 @@ contract GeneralContractor is Initializable{
 
     struct SubContractorInfo {
         address subContractor;
-        IEthProver prover;
+        IProver prover;
     }
 
     // address --- chainid
@@ -71,7 +72,7 @@ contract GeneralContractor is Initializable{
         chainId = chainId_;
     }
 
-    function bindSubContractor(uint256 chainId_, address subContractor_, IEthProver prover_) external {
+    function bindSubContractor(uint256 chainId_, address subContractor_, IProver prover_) external {
         require(subContractors[chainId_].subContractor == address(0), "chain has been bound");
         require(subContractor_ != address(0), "zero subcontractor address");
         subContractors[chainId_] = SubContractorInfo(subContractor_, prover_);
@@ -98,14 +99,14 @@ contract GeneralContractor is Initializable{
         require(code != address(0), "template is not exist");
 
         (bytes memory generalIssueInfo, uint256[] memory chainIds) = ITokenFactory(code).issue(issueInfo);
-        uint256 saltId = applySaltId();
-        uint256 contractGroupId = applyGroupId();
+        uint256 saltId_ = applySaltId();
+        uint256 contractGroupId_ = applyGroupId();
         _checkChains(chainIds);
-        address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, saltId);
-        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", asset, chainId, contractGroupId);
+        address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, saltId_);
+        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", asset, chainId, contractGroupId_);
         (bool success, ) = proxy.call(payload);
         require(success, "fail to bind contract group");
-        emit GeneralContractorIssue(templateId, contractGroupId, saltId, generalIssueInfo);
+        emit GeneralContractorIssue(templateId, contractGroupId_, saltId_, generalIssueInfo);
     }
 
     function _checkChains(uint256[] memory chainIds_) internal view {
@@ -137,21 +138,16 @@ contract GeneralContractor is Initializable{
         bytes memory proofData
     ) internal returns (VerifiedReceipt memory receipt_) {
         Borsh.Data memory borshData = Borsh.from(proofData);
-        EthProofDecoder.Proof memory proof = borshData.decode();
+        bytes memory log = borshData.decode();
         borshData.done();
 
         address contractAddress;
-        (receipt_.data, contractAddress) = _parseLog(proof.logEntryData);
+        (receipt_.data, contractAddress) = _parseLog(log);
         require(contractAddress != address(0), "Invalid Token lock address");
-        // require(subContractors[receipt_.data.chainId].subContractor == contractAddress, "proxy is not bound");
-
-        Deserialize.TransactionReceiptTrie memory receipt = Deserialize.toReceipt(proof.reciptData, proof.logIndex);
-        Deserialize.BlockHeader memory header = Deserialize.toBlockHeader(proof.headerData);
-        bytes memory reciptIndex = abi.encode(header.number, proof.reciptIndex);
-        bytes32 proofIndex = keccak256(reciptIndex);
+        require(subContractors[receipt_.data.chainId].subContractor == contractAddress, "proxy is not bound");
         // require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
 
-        (bool success,) = (subContractors[receipt_.data.chainId].prover).verify(proof, receipt, header.receiptsRoot,header.hash, header.number);
+        (bool success, bytes32 proofIndex) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
         require(success, "Proof should be valid");
         require(!usedProofs[receipt_.data.chainId][proofIndex], "The burn event proof cannot be reused");
         receipt_.proofIndex = proofIndex;
