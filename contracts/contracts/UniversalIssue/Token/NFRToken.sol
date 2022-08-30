@@ -3,15 +3,15 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./common/IssueCoder.sol";
+import "../common/IssueCoder.sol";
 import "./IERC3721Metadata.sol";
 
 /**
 * @dev Required interface of an ERC3721 compliant contract.
 */
-abstract contract IERC3721 is ERC721, Initializable {
+abstract contract NFRToken is ERC721, Initializable {
     struct RightsOfToken {
-        //rightType---rightId
+        //rightKind---rightId
         mapping(uint256 => uint256[]) partialRights;
     }
 
@@ -25,7 +25,7 @@ abstract contract IERC3721 is ERC721, Initializable {
     
     //rights information
     uint256 rightNums;
-    mapping(uint256 => IssueCoder.RightDesc) private rightTypes;
+    mapping(uint256 => IssueCoder.RightDesc) private rightKinds;
     
     // tokenid --- rightsOwnership
     mapping(uint256 => RightsOfToken) private tokenRights;
@@ -60,7 +60,7 @@ abstract contract IERC3721 is ERC721, Initializable {
         // symbol = symbol_;
         issuer = issuer_;
         for (uint256 i = 0; i < rights_.length; i++) {
-            rightTypes[rights_[i].id] = rights_[i].right;
+            rightKinds[rights_[i].id] = rights_[i].right;
         }
 
         if (circulation_.capOfToken != 0) {
@@ -138,6 +138,25 @@ abstract contract IERC3721 is ERC721, Initializable {
             }
         }
     }
+
+    function burn(
+        address from,
+        uint256 tokenId
+    ) external returns(uint256[] memory rightKinds_, uint256[] memory rightIds_) {
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
+        _burn(tokenId);
+        uint256 len = 0;
+        rightKinds_ = new uint256[](rightNums);
+        rightIds_ = new uint256[](rightNums);
+        for (uint i = 0; i < rightNums; i++) {
+            len = tokenRights[tokenId].partialRights[i].length;
+            for (uint j = 0; j < len; j++) {
+                _burnRight(i, tokenRights[tokenId].partialRights[i][j]);
+            }
+            rightKinds_[i] = i;
+            rightIds_[i] = tokenRights[tokenId].partialRights[i][0];
+        }
+    }
     
     /**
     * @dev Transfers Rights type `rightsId` from token type `from` to `to`.
@@ -147,14 +166,14 @@ abstract contract IERC3721 is ERC721, Initializable {
     function transferRight(
         uint256 fromTokenId,
         uint256 toTokenId,
-        uint256 rightType,
+        uint256 rightkind,
         uint256 rightId,
         bytes calldata data
     ) external {
-        require(_isRightApprovedOrOwner(_msgSender(), rightType, rightId), "no right ownership");
-        _transferRight(ownerOf(toTokenId), rightType, rightId);
-        _delRightOfToken(fromTokenId, rightType, rightId);
-        _addRightOfToken(toTokenId, rightType, rightId);
+        require(_isRightApprovedOrOwner(_msgSender(), rightkind, rightId), "no right ownership");
+        _transferRight(ownerOf(toTokenId), rightkind, rightId);
+        _delRightOfToken(fromTokenId, rightkind, rightId);
+        _addRightOfToken(toTokenId, rightkind, rightId);
     }
 
     /**
@@ -163,11 +182,11 @@ abstract contract IERC3721 is ERC721, Initializable {
     */
     function approveRight(
         address approver,
-        uint256 rightType,
+        uint256 rightkind,
         uint256 rightId
     ) external {
-        require(_isOwnerOfRight(_msgSender(), rightType, rightId), "not owner of right");
-        rights[rightType][rightId].approval = approver;
+        require(_isOwnerOfRight(_msgSender(), rightkind, rightId), "not owner of right");
+        rights[rightkind][rightId].approval = approver;
     }
 
     /**
@@ -177,13 +196,13 @@ abstract contract IERC3721 is ERC721, Initializable {
     */
     function attachRight(
         uint256 tokenId,
-        uint256 rightType,
+        uint256 rightkind,
         uint256 rightId
     ) external {
-        require(!_isRightAttached(rightType, rightId), "right has been attached");
-        require(_isRightApprovedOrOwner(_msgSender(), rightType, rightId), "can not attach");
-        _transferRight(ownerOf(tokenId), rightType, rightId);
-        _addRightOfToken(tokenId, rightType, rightId);
+        require(!_isRightAttached(rightkind, rightId), "right has been attached");
+        require(_isRightApprovedOrOwner(_msgSender(), rightkind, rightId), "can not attach");
+        _transferRight(ownerOf(tokenId), rightkind, rightId);
+        _addRightOfToken(tokenId, rightkind, rightId);
     }
     
     /**
@@ -193,24 +212,24 @@ abstract contract IERC3721 is ERC721, Initializable {
     */
     function burnRights(
         uint256 tokenId,
-        uint256 rightType,
+        uint256 rightkind,
         uint256 rightId,
         bytes calldata data
     ) external {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "no right to burn rights");
-        _delRightOfToken(tokenId, rightType, rightId);
-        _burnRight(rightType, rightId);
+        _delRightOfToken(tokenId, rightkind, rightId);
+        _burnRight(rightkind, rightId);
     }
 
-    function _isOwnerOfRight(address spender, uint256 rightType, uint256 rightId) internal view returns (bool) {
-        RightsOwnership memory ownership = rights[rightType][rightId];
+    function _isOwnerOfRight(address spender, uint256 rightkind, uint256 rightId) internal view returns (bool) {
+        RightsOwnership memory ownership = rights[rightkind][rightId];
         require(ownership.owner != address(0), "right is not existed");
 
         return (spender == ownership.owner);
     }
 
-    function _isRightApprovedOrOwner(address spender, uint256 rightType, uint256 rightId) internal view returns (bool) {     
-        RightsOwnership memory ownership = rights[rightType][rightId];
+    function _isRightApprovedOrOwner(address spender, uint256 rightkind, uint256 rightId) internal view returns (bool) {     
+        RightsOwnership memory ownership = rights[rightkind][rightId];
         require(ownership.owner != address(0), "right is not existed");
         address approver = ownership.approval;
         address owner = ownership.owner;
@@ -218,32 +237,40 @@ abstract contract IERC3721 is ERC721, Initializable {
         return ((ownership.approval == spender) || (ownership.owner == spender));
     }
 
-    function _isRightAttached(uint256 rightType, uint256 rightId) internal view returns (bool) {
-        RightsOwnership memory ownership = rights[rightType][rightId];
+    function _isRightAttached(uint256 rightkind, uint256 rightId) internal view returns (bool) {
+        RightsOwnership memory ownership = rights[rightkind][rightId];
         require(ownership.owner != address(0), "right is not existed");
         return ownership.attached;
     }
 
-    function _delRightOfToken(uint256 tokenId, uint256 rightType, uint256 rightId) internal {
+    function _delRightOfToken(uint256 tokenId, uint256 rightkind, uint256 rightId) internal {
         //cancel approved right and modify owner;
         uint256 len = 0;
-        len = tokenRights[tokenId].partialRights[rightType].length;
+        len = tokenRights[tokenId].partialRights[rightkind].length;
         for (uint i = 0; i < len; i++) {
-            if (rightId != tokenRights[tokenId].partialRights[rightType][i]) {
+            if (rightId != tokenRights[tokenId].partialRights[rightkind][i]) {
                 continue;
             }
 
-            tokenRights[tokenId].partialRights[rightType][i] = tokenRights[tokenId].partialRights[rightType][len - 1];
-            delete tokenRights[tokenId].partialRights[rightType][len - 1];
+            tokenRights[tokenId].partialRights[rightkind][i] = tokenRights[tokenId].partialRights[rightkind][len - 1];
+            delete tokenRights[tokenId].partialRights[rightkind][len - 1];
             return;
         }
 
         require(false, "right is not belong to token");
     }
 
-    function _addRightOfToken(uint256 tokenId, uint256 rightType, uint256 rightId) internal {
+    function mint(uint256 tokenId_, uint256[] memory rightKinds_, uint256[] memory rightIds_, address owner_) external {
+        // check
+        _mintToken(owner_, tokenId_);
+        for (uint256 i = 0; i < rightKinds_.length; i++) {
+            _addRightOfToken(tokenId_, rightKinds_[i], rightIds_[i]);    
+        }
+    }
+
+    function _addRightOfToken(uint256 tokenId, uint256 rightkind, uint256 rightId) internal {
         //cancel approved right and modify owner;
-        tokenRights[tokenId].partialRights[rightType].push(rightId);
+        tokenRights[tokenId].partialRights[rightkind].push(rightId);
     }
 
     function _mintToken(address owner, uint256 baseIndex, uint256 amount) internal {
@@ -261,35 +288,35 @@ abstract contract IERC3721 is ERC721, Initializable {
         _burn(tokenId);
     }
 
-    function _mintRight(address owner, uint256 rightType, uint256 baseIndex, uint256 amount) internal {
+    function _mintRight(address owner, uint256 rightkind, uint256 baseIndex, uint256 amount) internal {
         for (uint i = baseIndex; i <= baseIndex + amount; i++)
         {
-            _mintRight(owner, rightType, i);
+            _mintRight(owner, rightkind, i);
         }
     }
 
-    function _transferRight(address newOwner, uint256 rightType, uint256 rightId) internal {
-        rights[rightType][rightId] = RightsOwnership({
+    function _transferRight(address newOwner, uint256 rightkind, uint256 rightId) internal {
+        rights[rightkind][rightId] = RightsOwnership({
             attached: true,
             owner: newOwner,
             approval: address(0)
         });
     }
 
-    function _mintRight(address owner, uint256 rightType, uint256 rightId) internal {
-        RightsOwnership memory ownership = rights[rightType][rightId];
+    function _mintRight(address owner, uint256 rightkind, uint256 rightId) internal {
+        RightsOwnership memory ownership = rights[rightkind][rightId];
         require(ownership.owner == address(0), "right is exist");
-        rights[rightType][rightId] = RightsOwnership({
+        rights[rightkind][rightId] = RightsOwnership({
             attached: false,
             owner: owner,
             approval: address(0)
         });
     }
 
-    function _burnRight(uint256 rightType, uint256 rightId) internal {
-        RightsOwnership memory ownership = rights[rightType][rightId];
+    function _burnRight(uint256 rightkind, uint256 rightId) internal {
+        RightsOwnership memory ownership = rights[rightkind][rightId];
         require(ownership.owner != address(0), "right is not existed");
-        rights[rightType][rightId] = RightsOwnership({
+        rights[rightkind][rightId] = RightsOwnership({
             attached: false,
             owner: address(0),
             approval: address(0)
@@ -298,18 +325,18 @@ abstract contract IERC3721 is ERC721, Initializable {
 
     //======================== IERC3721Metadata =================================
     /** @dev Returns the Name of the Rights. */
-    function rightsName(uint256 rightType) external view returns (string memory) {
-        return rightTypes[rightType].name;
+    function rightsName(uint256 rightkind) external view returns (string memory) {
+        return rightKinds[rightkind].name;
     }
     
     /** @dev Returns the Agreement of the Rights.*/
-    function rightsAgreement(uint256 rightType) external view returns (string memory) {
-        return rightTypes[rightType].agreement;
+    function rightsAgreement(uint256 rightkind) external view returns (string memory) {
+        return rightKinds[rightkind].agreement;
     }
     
     /** @dev Returns the Uniform Resource Identifier (URI) for `rightsId` Rights.*/
-    function rightsURI(uint256 rightType) external view returns (string memory) {
-        return rightTypes[rightType].uri;
+    function rightsURI(uint256 rightkind) external view returns (string memory) {
+        return rightKinds[rightkind].uri;
     }
     
     ////////////////////////////////////////////////////////////////////////////

@@ -109,6 +109,10 @@ contract GeneralContractor is Initializable{
         emit GeneralContractorIssue(templateId, contractGroupId_, saltId_, generalIssueInfo);
     }
 
+    function expand(uint256 templateId) external {
+
+    }
+
     function _checkChains(uint256[] memory chainIds_) internal view {
         for (uint256 i = 0; i < chainIds_.length; i++) {
             require(subContractors[chainIds_[i]].subContractor != address(0), "chain is not bound");
