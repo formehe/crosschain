@@ -62,7 +62,7 @@ contract SubContractor is Initializable{
         require(code != address(0), "template is not exist");
 
         address asset = ITokenFactory(code).clone(chainId, result.data.generalIssueInfo, result.data.saltId);
-        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256)", asset, result.data.contractGroupId);
+        bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256)", asset, result.data.contractGroupId);
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
         

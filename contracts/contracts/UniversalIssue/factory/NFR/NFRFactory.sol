@@ -63,19 +63,16 @@ contract NFRFactory is ITokenFactory{
         circulationRangePerChain.baseIndexOfToken = tokenIndex;
         circulationRangePerChain.capOfToken = circulationPerChain.amountOfToken;
         circulationRangePerChain.chainId = circulationPerChain.chainId;
-        if (circulationRangePerChain.capOfToken != 0) {
-            tokenIndex += (circulationRangePerChain.capOfToken + 1);
-        }
+        circulationRangePerChain.issuer = circulationPerChain.issuer;
+        tokenIndex += circulationRangePerChain.capOfToken;
 
         circulationRangePerChain.rangeOfRights = new IssueCoder.RightRange[](circulationPerChain.circulationOfRights.length);
         for (uint256 i = 0; i < circulationPerChain.circulationOfRights.length; ++i) {
-            require(rightIds[i] == circulationPerChain.circulationOfRights[i].rightId, "right id is not exist");
-            circulationRangePerChain.rangeOfRights[i].rightId    = circulationPerChain.circulationOfRights[i].rightId;
+            require(rightIds[i] == circulationPerChain.circulationOfRights[i].id, "right id is not exist");
+            circulationRangePerChain.rangeOfRights[i].id    = circulationPerChain.circulationOfRights[i].id;
             circulationRangePerChain.rangeOfRights[i].baseIndex  = rightIndexes[i];
             circulationRangePerChain.rangeOfRights[i].cap        = circulationPerChain.circulationOfRights[i].amount;
-            if (circulationRangePerChain.rangeOfRights[i].cap != 0) {
-                rightIndexes[i] += (circulationRangePerChain.rangeOfRights[i].cap + 1);
-            }
+            rightIndexes[i] += circulationRangePerChain.rangeOfRights[i].cap;
         }
 
         return (circulationRangePerChain, rightIndexes, tokenIndex);

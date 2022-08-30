@@ -1,0 +1,242 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./IRightMetadata.sol";
+
+/**
+* @dev Required interface of an ERC3721 compliant contract.
+*/
+abstract contract Right is Initializable, IRightMetadata {
+
+    /**@dev Emitted when transferRights fired*/
+    event TransferRight(uint256 indexed from, uint256 indexed to, uint256 rightKind, uint256 indexed rightId); 
+    
+    /**@dev Emitted when approveRights fired*/
+    event ApprovalRight(address indexed from, address indexed to, uint256 rightKind, uint256 indexed rightId);
+    
+    /**@dev Emitted when createRights fired*/
+    event CreateRight(address indexed issuer, uint256 indexed rightId, string name, string agreement, string uri);
+    
+    /** @dev Emitted when burnRights fired*/
+    event BurnRight(address indexed owner, uint256 rightKind, uint256 indexed rightId);
+    
+    struct RightInfo {
+        string name;
+        string uri;
+        string agreement;
+        bool  exist;
+    }
+
+    struct RightRange {
+        uint256 minId;
+        uint256 maxId;
+    }
+
+    //store the id of right kind
+    uint256[] private _rightKindIndexes;
+    // rightKind id ---- right
+    mapping(uint256 => RightInfo) private _rightKinds;
+    mapping(uint256 => RightRange) private _rightRanges;
+    address private _owner;
+    
+    mapping(uint256 => mapping(uint256 => bool)) private _liquidPool;
+    // right kind id --- right id --- address
+    mapping(uint256 => mapping(uint256 => address)) private _owners;
+    mapping(uint256 => mapping(uint256 => address)) private _rightApprovals;
+    
+    function initialize(
+        address owner_,
+        uint256[] memory rightKindIndexes_,
+        RightInfo[] memory rigthKinds_,
+        RightRange[] memory rightRanges_
+    ) external onlyInitializing {
+        require(rightKindIndexes_.length == rigthKinds_.length, "wrong parameter");
+        require(rightKindIndexes_.length == rightRanges_.length, "wrong parameter");
+        require(owner_ != address(0), "opertion can not be 0");
+
+        for (uint256 i = 0; i < rightKindIndexes_.length; i++) {
+            _rightKindIndexes.push(rightKindIndexes_[i]);
+            rightKinds[rightKindIndexes_[i]] = rigthKinds_[i];
+            _rightRanges[rightKindIndexes_[i]] = rightRanges_[i];
+        }
+
+        _owner = owner_;
+    }
+
+    // function mintRight(uint256 rightKind_, uint256 rightId_, address owner_) external {
+    //     require(msg.sender == operation, "no permit to mint right");
+    //     require(owner_ != address(0), "no permit to mint right");
+    //     require(owners[rightKind_][rightId_] == address(0), "right is existed");
+    //     owners[rightKind_][rightId_] = owner_;
+    // }
+
+    // function burnRight(
+    //     uint256 rightKind,
+    //     uint256 rightId
+    // ) external {
+    //     require(_isApprovedOrOwner(msg.sender, rightKind, rightId), "no right to burn rights");
+    //     _burnRight(rightKind, rightId);
+    // }
+
+    // function transferRightFrom(
+    //     address from,
+    //     address to,
+    //     uint256 rightKind,
+    //     uint256 rightId
+    // ) public virtual {
+    //     //solhint-disable-next-line max-line-length
+    //     require(from != address(0), "from can not be 0");
+    //     require(_isApprovedOrOwner(msg.sender, rightKind, rightId), "transfer caller is not owner nor approved");
+    //     require(owners[rightKind][rightId] != from, "from is not the owner");
+    //     owners[rightKind][rightId] = to;
+    //     if (rightApprovals[rightKind][rightId] != address(0)) {
+    //         rightApprovals[rightKind][rightId] = address(0);
+    //     }
+    // }
+
+    /**
+    * @dev Approve Rights type `rightsId` of token to Operator.
+    * Emits an {RightsApproval} event.
+    */
+    function approveRight(
+        address approver,
+        uint256 rightKind,
+        uint256 rightId
+    ) external {
+        require(approver != address(0), "address can not be 0");
+        require(_isOwnerOfRight(msg.sender, rightKind, rightId), "not owner of right");
+        rightApprovals[rightKind][rightId] = approver;
+    }
+
+    function ownerOfRight(uint256 rightKind, uint256 rightId) public view virtual returns (address) {
+        address owner;
+        require(rightId != 0, "right id can not be 0");
+        if (_liquidPool[rightKind][rightId]) {
+            owner = _owners[rightKind][rightId];
+        } else {
+            RightRange memory range = _rightRanges[rightKind][rightId];
+            if ((rightId >= range.minId) && (rightId <= range.maxId)) {
+                owner = _owner;
+            }
+        }
+        require(owner != address(0), "ERC721: owner query for nonexistent token");
+        return owner;
+    }
+
+    // function burnRight(
+    //     uint256 rightkind,
+    //     uint256 rightId,
+    //     bytes calldata data
+    // ) external {
+    //     require(_isApprovedOrOwner(_msgSender(), rightkind, rightId), "no right to burn rights");
+    //     _burnRight(rightkind, rightId);
+    // }
+
+    // function _isOwnerOfRight(address spender, uint256 rightKind, uint256 rightId) internal view returns (bool) {     
+    //     address owner = owners[rightKind][rightId];
+    //     require(owner != address(0), "right is not existed");
+    //     return (owner == spender);
+    // }
+
+    // function _isApprovedOrOwner(address spender, uint256 rightKind, uint256 rightId) internal view returns (bool) {     
+    //     address owner = owners[rightKind][rightId];
+    //     require(owner != address(0), "right is not existed");
+    //     address approval = rightApprovals[rightKind][rightId];
+
+    //     return ((owner == spender) || (approval == spender));
+    // }
+
+    function _mintRight(address to, uint256 rightKind, uint256 rightId) internal {
+        require(to != address(0), "no permit to mint right");
+        require(_rightKinds[rightKind].exsisted, "right kind is not exist");
+        require(!_exists(rightKind, rightId), "right is existed");
+        _beforeRightTransfer(address(0), to, rightKind, rightId);
+        _owners[rightKind][rightId] = to;
+        _afterRightTransfer(address(0), to, rightKind, rightId);
+    }
+
+    function _burnRight(uint256 rightKind, uint256 rightId) internal {
+        require(_rightKinds[rightKind].exsisted, "right kind is not exist");
+        address owner = ownerOfRight(rightKind, rightId);
+        _beforeRightTransfer(owner, address(0), rightKind, rightId);
+        // Clear approvals
+        _approveRight(address(0), rightKind, rightId);
+        delete _owners[rightKind][rightId];
+        _afterRightTransfer(owner, address(0), tokenId);
+    }
+
+    function _transferRight(
+        address from,
+        address to,
+        uint256 rightKind,
+        uint256 rightId,
+    ) internal virtual {
+        require(_rightKinds[rightKind].exsisted, "right kind is not exist");
+        require(ownerOfRight(rightKind, rightId) == from, "ERC721: transfer from incorrect owner");
+        require(to != address(0), "ERC721: transfer to the zero address");
+
+        _beforeRightTransfer(from, to, rightKind, rightId);
+
+        // Clear approvals from the previous owner
+        _approveRight(address(0), rightKind, rightId);
+        _owners[rightKind][rightId] = to;
+        _afterRightTransfer(from, to, rightKind, rightId);
+    }
+
+    function _exists(uint256 rightKind, uint256 rightId) internal view virtual returns (bool) {
+        if (_liquidPool[rightKind][rightId]) {
+            return _owners[rightKind][rightId] != address(0);
+        } else {
+            RightRange memory range = _rightRanges[rightKind][rightId];
+            if ((rightId >= range.minId) && (rightId <= range.maxId)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+    * @dev Approve Rights type `rightsId` of token to Operator.
+    * Emits an {RightsApproval} event.
+    */
+    function _approveRight(
+        address to,
+        uint256 rightKind,
+        uint256 rightId
+    ) external {
+        _rightApprovals[rightKind][rightId] = to;
+        emit ApprovalRight(address indexed from, to, rightKind, rightId);
+    }
+
+    function _beforeRightTransfer(
+        address from,
+        address to,
+        uint256 rightKind,
+        uint256 rightId,
+    ) internal virtual {}
+
+    function _afterRightTransfer(
+        address from,
+        address to,
+        uint256 rightKind,
+        uint256 rightId,
+    ) internal virtual {}
+
+    //======================== IERC3721Metadata =================================
+    /** @dev Returns the Name of the Rights. */
+    function rightsName(uint256 rightKind) external view override returns (string memory) {
+        return rightKinds[rightKind].name;
+    }
+    
+    /** @dev Returns the Agreement of the Rights.*/
+    function rightsAgreement(uint256 rightKind) external view override returns (string memory) {
+        return rightKinds[rightKind].agreement;
+    }
+    
+    /** @dev Returns the Uniform Resource Identifier (URI) for `rightsId` Rights.*/
+    function rightsURI(uint256 rightKind) external view override returns (string memory) {
+        return rightKinds[rightKind].uri;
+    }
+}

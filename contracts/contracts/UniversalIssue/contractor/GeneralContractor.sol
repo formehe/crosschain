@@ -113,18 +113,18 @@ contract GeneralContractor is Initializable{
 
     }
 
-    function _checkChains(uint256[] memory chainIds_) internal view {
-        for (uint256 i = 0; i < chainIds_.length; i++) {
-            require(subContractors[chainIds_[i]].subContractor != address(0), "chain is not bound");
-        }
-    }
-
     function applySaltId() internal returns(uint256) {
         return ++saltId;
     }
 
     function applyGroupId() internal returns(uint256) {
         return ++contractGroupId;
+    }
+
+    function _checkChains(uint256[] memory chainIds_) internal view {
+        for (uint256 i = 0; i < chainIds_.length; i++) {
+            require(subContractors[chainIds_[i]].subContractor != address(0), "chain is not bound");
+        }
     }
 
     /// Parses the provided proof and consumes it if it's not already used.

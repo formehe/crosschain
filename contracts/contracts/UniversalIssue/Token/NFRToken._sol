@@ -74,12 +74,6 @@ abstract contract NFRToken is ERC721, Initializable {
         }
     }
 
-    // constructor(string memory name_, string memory symbol_, uint256 baseTokenIndex, uint256 amountOfToken) ERC721(name_, symbol_) {
-    //     for (uint256 i = baseTokenIndex; i < baseTokenIndex + amountOfToken; i++) {
-    //         _safeMint(issuer.issuer, i);
-    //     }
-    // }
-
     /**
      * @dev See {IERC721-transferFrom}.
      */
@@ -219,6 +213,22 @@ abstract contract NFRToken is ERC721, Initializable {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "no right to burn rights");
         _delRightOfToken(tokenId, rightkind, rightId);
         _burnRight(rightkind, rightId);
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
+
+    }
+
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
+        
     }
 
     function _isOwnerOfRight(address spender, uint256 rightkind, uint256 rightId) internal view returns (bool) {

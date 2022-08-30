@@ -9,11 +9,12 @@ library IssueCoder {
     using RLPDecode for RLPDecode.Iterator;
     
     struct CirculationPerRight {
-        uint256 rightId;
+        uint256 id;
         uint256 amount;
     }
 
     struct CirculationPerChain {
+        address issuer;
         uint256 chainId;
         uint256 amountOfToken;
         CirculationPerRight[] circulationOfRights;
@@ -31,7 +32,6 @@ library IssueCoder {
     }
 
     struct IssuerDesc {
-        address issuer;
         string  name;
         string  certification;
         string  agreement;
@@ -47,12 +47,13 @@ library IssueCoder {
     }
 
     struct RightRange {
-        uint256 rightId;
+        uint256 id;
         uint256 baseIndex;
         uint256 cap;
     }
 
     struct CirculationRangePerchain {
+        address issuer;
         RightRange[] rangeOfRights;
         uint256 baseIndexOfToken;
         uint256 capOfToken;
@@ -74,12 +75,11 @@ library IssueCoder {
     }
 
     function encodeIssuer(IssuerDesc memory issuer) private pure returns (bytes memory) {
-        bytes[] memory issuerInfo = new bytes[](5);
-        issuerInfo[0] = RLPEncode.encodeBytes(abi.encodePacked(issuer.issuer));
-        issuerInfo[1] = RLPEncode.encodeBytes(abi.encodePacked(issuer.name));
-        issuerInfo[2] = RLPEncode.encodeBytes(abi.encodePacked(issuer.certification));
-        issuerInfo[3] = RLPEncode.encodeBytes(abi.encodePacked(issuer.agreement));
-        issuerInfo[4] = RLPEncode.encodeBytes(abi.encodePacked(issuer.uri));
+        bytes[] memory issuerInfo = new bytes[](4);
+        issuerInfo[0] = RLPEncode.encodeBytes(abi.encodePacked(issuer.name));
+        issuerInfo[1] = RLPEncode.encodeBytes(abi.encodePacked(issuer.certification));
+        issuerInfo[2] = RLPEncode.encodeBytes(abi.encodePacked(issuer.agreement));
+        issuerInfo[3] = RLPEncode.encodeBytes(abi.encodePacked(issuer.uri));
         return RLPEncode.encodeList(issuerInfo);
     }
 
@@ -87,11 +87,10 @@ library IssueCoder {
         RLPDecode.Iterator memory it = itemBytes.iterator();
         uint idx;
         while(it.hasNext()) {
-            if ( idx == 0 )      issuer.issuer         = it.next().toAddress();
-            else if ( idx == 1 ) issuer.name           = string(it.next().toBytes());
-            else if ( idx == 2 ) issuer.certification  = string(it.next().toBytes());
-            else if ( idx == 3 ) issuer.agreement      = string(it.next().toBytes());
-            else if ( idx == 4 ) issuer.uri            = string(it.next().toBytes());
+            if ( idx == 0 ) issuer.name           = string(it.next().toBytes());
+            else if ( idx == 1 ) issuer.certification  = string(it.next().toBytes());
+            else if ( idx == 2 ) issuer.agreement      = string(it.next().toBytes());
+            else if ( idx == 3 ) issuer.uri            = string(it.next().toBytes());
             else it.next();
             idx++;
         }
@@ -149,7 +148,7 @@ library IssueCoder {
         bytes[] memory circulation = new bytes[](circulationOfRights.length);
         for (uint i = 0; i < circulationOfRights.length; i++) {
             bytes[] memory circulationOfRight = new bytes[](2);
-            circulationOfRight[0] = RLPEncode.encodeUint(circulationOfRights[i].rightId);
+            circulationOfRight[0] = RLPEncode.encodeUint(circulationOfRights[i].id);
             circulationOfRight[1] = RLPEncode.encodeUint(circulationOfRights[i].amount);
             circulation[i] = RLPEncode.encodeList(circulationOfRight);
         }
@@ -165,7 +164,7 @@ library IssueCoder {
                 RLPDecode.Iterator memory it = ls[i].iterator();
                 uint idx;
                 while(it.hasNext()) {
-                    if ( idx == 0 )      circulationOfRights[i].rightId  = it.next().toUint();
+                    if ( idx == 0 )      circulationOfRights[i].id  = it.next().toUint();
                     else if ( idx == 1 ) circulationOfRights[i].amount   = it.next().toUint();
                     else it.next();
                     idx++;
@@ -177,10 +176,11 @@ library IssueCoder {
     function encodeCirculationOfChains(CirculationPerChain[] memory circulations) private pure returns(bytes memory){
         bytes[] memory circulationOfChains = new bytes[](circulations.length);
         for (uint i = 0; i < circulations.length; i++) {
-            bytes[] memory circulationOfChain = new bytes[](3);
-            circulationOfChain[0] = RLPEncode.encodeUint(circulations[i].chainId);
-            circulationOfChain[1] = RLPEncode.encodeUint(circulations[i].amountOfToken);
-            circulationOfChain[2] = encodeCirculationOfRights(circulations[i].circulationOfRights);
+            bytes[] memory circulationOfChain = new bytes[](4);
+            circulationOfChain[0] = RLPEncode.encodeBytes(abi.encodePacked(circulations[i].issuer));
+            circulationOfChain[1] = RLPEncode.encodeUint(circulations[i].chainId);
+            circulationOfChain[2] = RLPEncode.encodeUint(circulations[i].amountOfToken);
+            circulationOfChain[3] = encodeCirculationOfRights(circulations[i].circulationOfRights);
             circulationOfChains[i] = RLPEncode.encodeList(circulationOfChain);
         }
 
@@ -195,9 +195,10 @@ library IssueCoder {
                 RLPDecode.Iterator memory it = ls[i].iterator();
                 uint idx;
                 while(it.hasNext()) {
-                    if ( idx == 0 )      circulations[i].chainId  = it.next().toUint();
-                    else if ( idx == 1 ) circulations[i].amountOfToken   = it.next().toUint();
-                    else if ( idx == 2 ) circulations[i].circulationOfRights = decodeCirculationOfRights(it.next());
+                    if ( idx == 0 )     circulations[i].issuer = it.next().toAddress();
+                    else if ( idx == 1 ) circulations[i].chainId  = it.next().toUint();
+                    else if ( idx == 2 ) circulations[i].amountOfToken   = it.next().toUint();
+                    else if ( idx == 3 ) circulations[i].circulationOfRights = decodeCirculationOfRights(it.next());
                     else it.next();
                     idx++;
                 }
@@ -209,7 +210,7 @@ library IssueCoder {
         bytes[] memory circulations = new bytes[](rangeOfRights.length);
         for (uint i = 0; i < rangeOfRights.length; i++) {
             bytes[] memory circulation = new bytes[](3);
-            circulation[0] = RLPEncode.encodeUint(rangeOfRights[i].rightId);
+            circulation[0] = RLPEncode.encodeUint(rangeOfRights[i].id);
             circulation[1] = RLPEncode.encodeUint(rangeOfRights[i].baseIndex);
             circulation[2] = RLPEncode.encodeUint(rangeOfRights[i].cap);
             circulations[i] = RLPEncode.encodeList(circulation);
@@ -226,7 +227,7 @@ library IssueCoder {
                 RLPDecode.Iterator memory it = ls[i].iterator();
                 uint idx;
                 while(it.hasNext()) {
-                    if ( idx == 0 )      rangeOfRights[i].rightId   = it.next().toUint();
+                    if ( idx == 0 )      rangeOfRights[i].id   = it.next().toUint();
                     else if ( idx == 1 ) rangeOfRights[i].baseIndex = it.next().toUint();
                     else if ( idx == 2 ) rangeOfRights[i].cap       = it.next().toUint();
                     else it.next();
@@ -239,11 +240,12 @@ library IssueCoder {
     function encodeCirculationRangeOfChains(CirculationRangePerchain[] memory circulationRangeOfChains) private pure returns(bytes memory){
         bytes[] memory circulations = new bytes[](circulationRangeOfChains.length);
         for (uint i = 0; i < circulationRangeOfChains.length; i++) {
-            bytes[] memory circulation = new bytes[](4);
-            circulation[0] = encodeCirculationRangeOfRights(circulationRangeOfChains[i].rangeOfRights);
-            circulation[1] = RLPEncode.encodeUint(circulationRangeOfChains[i].baseIndexOfToken);
-            circulation[2] = RLPEncode.encodeUint(circulationRangeOfChains[i].capOfToken);
-            circulation[3] = RLPEncode.encodeUint(circulationRangeOfChains[i].chainId);
+            bytes[] memory circulation = new bytes[](5);
+            circulation[0] = RLPEncode.encodeBytes(abi.encodePacked(circulationRangeOfChains[i].issuer));
+            circulation[1] = encodeCirculationRangeOfRights(circulationRangeOfChains[i].rangeOfRights);
+            circulation[2] = RLPEncode.encodeUint(circulationRangeOfChains[i].baseIndexOfToken);
+            circulation[3] = RLPEncode.encodeUint(circulationRangeOfChains[i].capOfToken);
+            circulation[4] = RLPEncode.encodeUint(circulationRangeOfChains[i].chainId);
             circulations[i] = RLPEncode.encodeList(circulation);
         }
 
@@ -258,10 +260,11 @@ library IssueCoder {
                 RLPDecode.Iterator memory it = ls[i].iterator();
                 uint idx;
                 while(it.hasNext()) {
-                    if ( idx == 0 )      circulations[i].rangeOfRights  = decodeCirculationRangeOfRights(it.next());
-                    else if ( idx == 1 ) circulations[i].baseIndexOfToken   = it.next().toUint();
-                    else if ( idx == 2 ) circulations[i].capOfToken = it.next().toUint();
-                    else if ( idx == 3 ) circulations[i].chainId = it.next().toUint();
+                    if ( idx == 0 )      circulations[i].issuer  = it.next().toAddress();
+                    else if ( idx == 1 )      circulations[i].rangeOfRights  = decodeCirculationRangeOfRights(it.next());
+                    else if ( idx == 2 ) circulations[i].baseIndexOfToken   = it.next().toUint();
+                    else if ( idx == 3 ) circulations[i].capOfToken = it.next().toUint();
+                    else if ( idx == 4 ) circulations[i].chainId = it.next().toUint();
                     else it.next();
                     idx++;
                 }

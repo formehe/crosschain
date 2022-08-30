@@ -8,7 +8,13 @@ import "../prover/IProver.sol";
 abstract contract IProxy {
     using Borsh for Borsh.Data;
     using LogExtractor for Borsh.Data;
-    
+
+    event PeerChainBound(
+        uint256 chainId,
+        address prover,
+        address proxy
+    );
+
     struct VerifiedEvent {
         uint256 fromChain;
         uint256 toChain;
@@ -34,6 +40,7 @@ abstract contract IProxy {
         require (prover_ != address(0), "address of prover can not be 0");
         require (peerProxy_ != address(0), "address of proxy can not be 0");
         peers[chainId_] = PeerChainInfo(prover_, peerProxy_);
+        emit PeerChainBound(chainId_, prover_, peerProxy_);
     }
 
     function _parseAndConsumeProof(

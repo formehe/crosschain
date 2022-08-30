@@ -57,23 +57,24 @@ contract EdgeProxy is IProxy,Initializable{
         require(receipt.data.toChain == chainId, "not to mine");
         
         // call contract
-        (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds) = 
-            abi.decode(receipt.data.burnInfo, (address, uint256,uint256[],uint256[]));
-        bytes memory codes = abi.encodeWithSignature("mint(uint256,uint256[],uint256[],address)", tokenId, rightKinds, rightIds, receiver);
+        (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 
+            abi.decode(receipt.data.burnInfo, (address, uint256,uint256[],uint256[], bytes));
+        bytes memory codes = abi.encodeWithSignature("mint(uint256,uint256[],uint256[],bytes,address)", tokenId, rightKinds, rightIds, additional, receiver);
         (bool success,) = (receipt.data.asset).call(codes);
         require(success, "fail to mint");
         _saveProof(receipt.data.fromChain, receipt.proofIndex);
     }
 
     function burnTo(uint256 toChainId, address asset, address receiver, uint256 tokenId) external {
+        require(receiver != address(0), "invalid parameter");
         uint256 groupId = assets[asset].groupId;
         require(groupId != 0, "asset is not bind");
 
-        bytes memory codes = abi.encodeWithSignature("burn(address,uint256)", msg.sender, tokenId);
+        bytes memory codes = abi.encodeWithSignature("burn(uint256)", tokenId);
         (bool success, bytes memory result) = asset.call(codes);
         require(success, "fail to burn");
-        (uint256[] memory rightKinds, uint256[] memory rightIds) = abi.decode(result, (uint256[],uint256[]));
-        bytes memory value = abi.encode(tokenId, rightKinds, rightIds);
+        (uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = abi.decode(result, (uint256[],uint256[],bytes));
+        bytes memory value = abi.encode(receiver, tokenId, rightKinds, rightIds, additional);
         emit CrossTokenBurned(chainId, toChainId, groupId, asset, value);
     }
 
