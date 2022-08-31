@@ -202,7 +202,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     }
 
     modifier unLock_pauseable(){
-        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"no permit");
+        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0),"no permit");
         _;
     }
 }

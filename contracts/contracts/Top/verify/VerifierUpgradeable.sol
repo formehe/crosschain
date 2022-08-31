@@ -96,7 +96,7 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
     }
 
     modifier mint_pauseable(){
-        require(!hasRole(BLACK_MINT_ROLE, _msgSender())&& ((paused & PAUSED_MINT) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"no permit");
+        require(!hasRole(BLACK_MINT_ROLE, _msgSender())&& ((paused & PAUSED_MINT) == 0),"no permit");
         _;
     }
 

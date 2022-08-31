@@ -111,4 +111,8 @@ contract Limit is AccessControl{
     ) external view returns(bool) {
         return block.timestamp >= _timestamp + tokenFrozens[_asset];
     }
+
+    function renounceRole(bytes32 role, address account) public pure override {
+        require(false, "not support");
+    }
 }
