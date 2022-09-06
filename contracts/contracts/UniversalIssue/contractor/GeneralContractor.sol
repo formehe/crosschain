@@ -34,15 +34,17 @@ contract GeneralContractor is Initializable{
         IProver prover;
     }
 
-    // address --- chainid
-    mapping(uint256 => SubContractorInfo) subContractors;
-    mapping(uint256 => address[]) contractGroupMember;
-    mapping(uint256 => address) templateCodes;
+    // chainId --- chainid
+    mapping(uint256 => SubContractorInfo) public subContractors;
+    // groupid --- template address
+    mapping(uint256 => address[]) public contractGroupMember;
+    //templateId --- template address
+    mapping(uint256 => address) public templateCodes;
 
     uint256 public chainId;
     uint256 public saltId;
-    uint256 contractGroupId;
-    address proxy;
+    uint256 public contractGroupId;
+    address public proxy;
     mapping(uint256 => mapping(bytes32 => bool)) public usedProofs;
     //templateId --- address
 
@@ -89,6 +91,9 @@ contract GeneralContractor is Initializable{
     function bindContractGroup(bytes memory proof) external {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         contractGroupMember[receipt.data.contractGroupId].push(receipt.data.asset);
+        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId);
+        (bool success,) = proxy.call(payload);
+        require(success, "fail to bind contract group");
         _saveProof(receipt.data.chainId, receipt.proofIndex);
 
         emit SubContractorIssue(receipt.data.chainId, receipt.data.contractGroupId, receipt.data.asset);
@@ -102,15 +107,15 @@ contract GeneralContractor is Initializable{
         uint256 saltId_ = applySaltId();
         uint256 contractGroupId_ = applyGroupId();
         _checkChains(chainIds);
-        address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, saltId_);
+        address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, saltId_, proxy);
         bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", asset, chainId, contractGroupId_);
         (bool success, ) = proxy.call(payload);
         require(success, "fail to bind contract group");
         emit GeneralContractorIssue(templateId, contractGroupId_, saltId_, generalIssueInfo);
     }
 
-    function expand(uint256 templateId) external {
-
+    function expand(uint256 groupId, uint256 chainId, address issuer) external {
+        
     }
 
     function applySaltId() internal returns(uint256) {
@@ -123,7 +128,9 @@ contract GeneralContractor is Initializable{
 
     function _checkChains(uint256[] memory chainIds_) internal view {
         for (uint256 i = 0; i < chainIds_.length; i++) {
-            require(subContractors[chainIds_[i]].subContractor != address(0), "chain is not bound");
+            if (chainIds_[i] != chainId) {
+                require(subContractors[chainIds_[i]].subContractor != address(0), "chain is not bound");
+            }
         }
     }
 
@@ -143,7 +150,7 @@ contract GeneralContractor is Initializable{
     ) internal returns (VerifiedReceipt memory receipt_) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         bytes memory log = borshData.decode();
-        borshData.done();
+        // borshData.done();
 
         address contractAddress;
         (receipt_.data, contractAddress) = _parseLog(log);

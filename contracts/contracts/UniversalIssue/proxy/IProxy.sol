@@ -60,7 +60,6 @@ abstract contract IProxy {
     function _parseBurnProofLog(bytes memory proof) private view returns (VerifiedEvent memory receipt_, address contractAddress_) {
         Borsh.Data memory borshData = Borsh.from(proof);
         bytes memory log = borshData.decode();
-        borshData.done();
         
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");

@@ -3,12 +3,13 @@ pragma solidity ^0.8.0;
 
 import "../../common/IssueCoder.sol";
 import "../ITokenFactory.sol";
+import "hardhat/console.sol";
 
 contract NFRFactory is ITokenFactory{
     constructor(address code) ITokenFactory(code) {  
     }
 
-    function initialize(uint256 chainId, address code, bytes memory rangeOfIssue) internal override initializer{
+    function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal override initializer{
         IssueCoder.GeneralIssueInfo memory generalIssue = IssueCoder.decodeGeneralIssueInfo(rangeOfIssue);
         IssueCoder.CirculationRangePerchain memory circulationPerChain;
         for (uint256 i = 0; i < generalIssue.issueRangeOfChains.length; i++) {
@@ -19,8 +20,8 @@ contract NFRFactory is ITokenFactory{
             circulationPerChain = generalIssue.issueRangeOfChains[i];
         }
 
-        bytes memory payload = abi.encodeWithSignature("initialize(string,string,IssueCoder.RightDescWithId[],IssueCoder.IssuerDesc,IssueCoder.CirculationRangePerchain)", 
-            generalIssue.name, generalIssue.symbol, generalIssue.rights, generalIssue.issuer, circulationPerChain);
+        bytes memory payload = abi.encodeWithSignature("initialize(address,string,string,(uint256,(string,string,string))[],(string,string,string,string),(address,(uint256,uint256,uint256)[],uint256,uint256,uint256))", 
+            minter, generalIssue.name, generalIssue.symbol, generalIssue.rights, generalIssue.issuer, circulationPerChain);
         (bool success, bytes memory returnData) = code.call(payload);
         require(success, "fail to initialize template code");
     }
@@ -51,6 +52,7 @@ contract NFRFactory is ITokenFactory{
             chainIds[i] = issueInfo.issueOfChains[i].chainId;
         }
 
+        console.logBytes(IssueCoder.encodeGeneralIssueInfo(issueWithRange));
         return (IssueCoder.encodeGeneralIssueInfo(issueWithRange), chainIds);
     }
 

@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "hardhat/console.sol";
 
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
@@ -90,6 +91,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
                 owner = _owner;
             }
         }
+        console.logAddress(owner);
         require(owner != address(0), "ERC721: owner query for nonexistent token");
         return owner;
     }
@@ -325,7 +327,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
 
         _balances[to] += 1;
         _owners[tokenId] = to;
-
+        console.log("============");
+        console.logAddress(to);
+        
         emit Transfer(address(0), to, tokenId);
 
         _afterTokenTransfer(address(0), to, tokenId);
@@ -345,13 +349,10 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         address owner = ownerOf(tokenId);
 
         _beforeTokenTransfer(owner, address(0), tokenId);
-
         // Clear approvals
         _approve(address(0), tokenId);
-
         _balances[owner] -= 1;
         delete _owners[tokenId];
-
         emit Transfer(owner, address(0), tokenId);
 
         _afterTokenTransfer(owner, address(0), tokenId);
@@ -467,9 +468,6 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         address to,
         uint256 tokenId
     ) internal virtual {
-        if (!_liquidPool[tokenId]) {
-            _liquidPool[tokenId] = true;
-        }
     }
 
     /**
@@ -487,5 +485,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         address from,
         address to,
         uint256 tokenId
-    ) internal virtual {}
+    ) internal virtual {
+        if (!_liquidPool[tokenId]) {
+            _liquidPool[tokenId] = true;
+        }
+    }
 }

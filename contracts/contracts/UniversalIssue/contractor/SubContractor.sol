@@ -7,6 +7,7 @@ import "../../common/Deserialize.sol";
 import "../prover/IProver.sol";
 import "../factory/ITokenFactory.sol";
 import "../../common/codec/LogExtractor.sol";
+import "hardhat/console.sol";
 
 contract SubContractor is Initializable{
     using Borsh for Borsh.Data;
@@ -61,7 +62,7 @@ contract SubContractor is Initializable{
         address code =  templateCodes[result.data.templateId];
         require(code != address(0), "template is not exist");
 
-        address asset = ITokenFactory(code).clone(chainId, result.data.generalIssueInfo, result.data.saltId);
+        address asset = ITokenFactory(code).clone(chainId, result.data.generalIssueInfo, result.data.saltId, proxy);
         bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256)", asset, result.data.contractGroupId);
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
@@ -90,7 +91,7 @@ contract SubContractor is Initializable{
     ) internal returns (VerifiedReceipt memory _receipt) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         bytes memory log = borshData.decode();
-        borshData.done();
+        // borshData.done();
 
         address contractAddress;
         (_receipt.data, contractAddress) = _parseLog(log);

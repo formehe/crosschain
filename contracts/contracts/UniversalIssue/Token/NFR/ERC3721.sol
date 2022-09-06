@@ -6,6 +6,7 @@ import "./Issuer.sol";
 import "./Right.sol";
 import "./ERC721Chunk.sol";
 import "../../common/IssueCoder.sol";
+import "hardhat/console.sol";
 
 /**
 * @dev Required interface of an ERC3721 compliant contract.
@@ -29,6 +30,7 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         IssueCoder.CirculationRangePerchain memory circulation_
     ) external initializer {
         minter = minter_;
+        console.log("===================");
         ERC721Chunk.initialize(name_, symbol_, issuer_.uri, circulation_.baseIndexOfToken, circulation_.baseIndexOfToken + circulation_.capOfToken, circulation_.issuer);
         Issuer.initialize(issuer_.name, issuer_.certification, issuer_.agreement, issuer_.uri);
         Right.initialize(circulation_.issuer, rights_, circulation_.rangeOfRights);
@@ -86,7 +88,7 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
     function attachAddtional(uint256 tokenId, bytes memory additional) external virtual {
         require(additional.length != 0, "invalid parameter");
         address owner = ownerOf(tokenId);
-        require(owner == issuer(tokenId), "only issuer can add additional of token ");
+        require(owner == issuer(tokenId), "only issuer can add additional of token");
         require(_tokenExtension[tokenId].length == 0, "additional of token has been bound");
         _tokenExtension[tokenId] = additional;
     }

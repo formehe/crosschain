@@ -48,7 +48,7 @@ contract CoreProxy is IProxy,Initializable{
         uint256 chainId_,
         uint256 contractGroupId_
     ) external {
-        require(msg.sender == generalContractor, "just general contractor can bind");
+        require(msg.sender == generalContractor, "only for general contractor");
         require(asset_ != address(0), "from proxy address are not to be contract address");
         require(contractGroupId_ != 0, "contract group id can not be 0");
 
@@ -86,7 +86,7 @@ contract CoreProxy is IProxy,Initializable{
         require(receiver != address(0), "invalid parameter");
         require(toChainId != chainId, "only support cross chain tx");
         uint256 groupId = assets[asset].groupId;
-        require(groupId != 0, "asset is not bind");
+        require(groupId != 0, "asset is not bound");
         address toAsset = contractGroupMember[groupId][toChainId];
         require(toAsset != address(0), "to asset can not be 0");
         // call contract

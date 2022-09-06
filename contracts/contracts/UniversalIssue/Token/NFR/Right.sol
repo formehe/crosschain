@@ -12,7 +12,6 @@ abstract contract Right is Initializable, IRightMetadata {
     event RightAttached(uint256 indexed rightKind, uint256 indexed rightId);
     event RightBurned(uint256 indexed rightKind, uint256 indexed rightId);
     event RightMinted(uint256 indexed rightKind, uint256 indexed rightId);
-
     
     struct RightInfo {
         string name;
