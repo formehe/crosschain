@@ -60,16 +60,17 @@ describe("Limit", function () {
     it('bind transfered quota fail because of min is bigger than max', async () => {
         await expect(limitContract.connect(admin).bindTransferedQuota(user.address, 100, 50))
             .to.be.revertedWith('is less than the min')
-    }) 
+    })
 
     it('bind transfered success', async () => {
         await limitContract.connect(admin).bindTransferedQuota(user.address, 50, 51)
     })
 
     it('rebind transfered', async () => {
-        await limitContract.connect(admin).bindTransferedQuota(user.address, 50, 51)
-        await expect(limitContract.connect(admin).bindTransferedQuota(user.address, 50, 100))
-            .to.be.revertedWith('can not rebind transfer quota')
+        await limitContract.connect(admin).bindTransferedQuota(user.address, 30, 51)
+        await limitContract.connect(admin).bindTransferedQuota(user.address, 30, 50)
+        await expect(limitContract.connect(admin).bindTransferedQuota(user.address, 30, 60))
+            .to.be.revertedWith('range of transfer quota must be smaller')
     })
 
     it('checkTransferedQuota, asset is not bound', async () => {
@@ -87,8 +88,9 @@ describe("Limit", function () {
 
     it('rebind frozen', async () => {
         await limitContract.connect(admin).bindFrozen(user.address, 50)
+        await limitContract.connect(admin).bindFrozen(user.address, 51)
         await expect(limitContract.connect(admin).bindFrozen(user.address, 50))
-            .to.be.revertedWith('can not rebind frozen')
+            .to.be.revertedWith('frozen time must bigger')
     })
 
     it('black tx list only for owner', async () => {

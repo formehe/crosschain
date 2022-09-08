@@ -109,6 +109,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
     function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external onlyRole(ADMIN_ROLE) {
         require(_withdrawQuota != 0, "withdraw quota can not be 0");
+        uint256 quota = withdrawQuotas[_asset];
+        require((quota == 0) || (_withdrawQuota < quota), "withdraw quota must be smaller");
         withdrawQuotas[_asset] = _withdrawQuota;
     }
 
