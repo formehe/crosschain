@@ -307,7 +307,9 @@ describe('IssueCoder', () => {
       buffer = borsh.serialize(schema, value);
       tx = await coreProxy.mint(buffer)
       rc = await tx.wait()
-
+    
+    //   tx = await generalContractor.expand(1, 4, AddressZero)
+    //   rc = await tx.wait()
     })
   })
 })

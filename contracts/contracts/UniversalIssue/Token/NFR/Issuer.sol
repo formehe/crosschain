@@ -47,4 +47,11 @@ abstract contract Issuer is IIssuerMetadata, Initializable {
     function issuerURI() external view override returns (string memory) {
         return uri;
     }
+
+    function issuer() external view returns (string memory name_, string memory certification_, string memory agreement_, string memory uri_) {
+        name_ = name;
+        certification_ = certification;
+        agreement_ = agreement;
+        uri_ = uri;
+    }
 }

@@ -34,10 +34,16 @@ contract GeneralContractor is Initializable{
         IProver prover;
     }
 
+    struct AssetInfo {
+        uint256 templateId;
+        uint256 saltId;
+        address asset;
+    }
+
     // chainId --- chainid
     mapping(uint256 => SubContractorInfo) public subContractors;
-    // groupid --- template address
-    mapping(uint256 => address[]) public contractGroupMember;
+    // groupid --- template id
+    mapping(uint256 => AssetInfo) public localContractGroupAsset;
     //templateId --- template address
     mapping(uint256 => address) public templateCodes;
 
@@ -90,7 +96,6 @@ contract GeneralContractor is Initializable{
 
     function bindContractGroup(bytes memory proof) external {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
-        contractGroupMember[receipt.data.contractGroupId].push(receipt.data.asset);
         bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId);
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
@@ -100,6 +105,7 @@ contract GeneralContractor is Initializable{
     }
 
     function issue(uint256 templateId, bytes memory issueInfo) external {
+        // templateId can not be 0
         address code = templateCodes[templateId];
         require(code != address(0), "template is not exist");
 
@@ -111,11 +117,19 @@ contract GeneralContractor is Initializable{
         bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", asset, chainId, contractGroupId_);
         (bool success, ) = proxy.call(payload);
         require(success, "fail to bind contract group");
+        localContractGroupAsset[contractGroupId] = AssetInfo(templateId, saltId, asset);
         emit GeneralContractorIssue(templateId, contractGroupId_, saltId_, generalIssueInfo);
     }
 
-    function expand(uint256 groupId, uint256 chainId, address issuer) external {
-        
+    function expand(uint256 groupId, uint256 peerChainId, address issuer) external {
+        AssetInfo memory assetInfo = localContractGroupAsset[groupId];
+        require(assetInfo.asset != address(0), "group id has not issued");
+        require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
+
+        // if group id is in issuing
+        bytes memory  generalIssueInfo = ITokenFactory(templateCodes[assetInfo.templateId]).expand(assetInfo.asset, peerChainId, issuer);
+        console.logBytes(generalIssueInfo);
+        emit GeneralContractorIssue(assetInfo.templateId, groupId, assetInfo.saltId, generalIssueInfo);
     }
 
     function applySaltId() internal returns(uint256) {

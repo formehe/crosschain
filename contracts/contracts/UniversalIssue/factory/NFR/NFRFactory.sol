@@ -56,6 +56,36 @@ contract NFRFactory is ITokenFactory{
         return (IssueCoder.encodeGeneralIssueInfo(issueWithRange), chainIds);
     }
 
+
+    function expand(address contractCode, uint256 peerChainId, address issuer) external view override returns(bytes memory) {
+        IssueCoder.GeneralIssueInfo memory issueWithRange;
+        bytes memory payload = abi.encodeWithSignature("rights()");
+        (bool success, bytes memory returnData) = contractCode.staticcall(payload);
+        require(success, "rights interface is not exist");
+        (issueWithRange.rights) = abi.decode(returnData, (IssueCoder.RightDescWithId[]));
+
+        payload = abi.encodeWithSignature("issuer()");
+        (success, returnData) = contractCode.staticcall(payload);
+        require(success, "issuer interface is not exist");
+        (issueWithRange.issuer.name, issueWithRange.issuer.certification, issueWithRange.issuer.agreement, issueWithRange.issuer.uri) = abi.decode(returnData, (string,string,string,string));
+
+        payload = abi.encodeWithSignature("name()");
+        (success, returnData) = contractCode.staticcall(payload);
+        require(success, "name interface is not exist");
+        (issueWithRange.name) = abi.decode(returnData, (string));
+
+        payload = abi.encodeWithSignature("symbol()");
+        (success, returnData) = contractCode.staticcall(payload);
+        require(success, "name interface is not exist");
+        (issueWithRange.symbol) = abi.decode(returnData, (string));
+        
+        issueWithRange.issueRangeOfChains = new IssueCoder.CirculationRangePerchain[](1);
+        issueWithRange.issueRangeOfChains[0].chainId = peerChainId;
+        issueWithRange.issueRangeOfChains[0].issuer = issuer;
+        
+        return IssueCoder.encodeGeneralIssueInfo(issueWithRange);
+    }
+
     function _applyRightsAndToken(
         IssueCoder.CirculationPerChain memory circulationPerChain, 
         uint256[] memory rightIndexes,

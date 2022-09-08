@@ -16,12 +16,9 @@ abstract contract ITokenFactory is Initializable {
         address predictAddr = Clones.predictDeterministicAddress(templateCode, bytes32(saltId));
         if (Address.isContract(predictAddr)) {
             return predictAddr;  
-        } 
-        console.logAddress(predictAddr);
-        address code = Clones.cloneDeterministic(templateCode, bytes32(saltId));
-        console.logAddress(code);
-        
+        }
 
+        address code = Clones.cloneDeterministic(templateCode, bytes32(saltId));        
         initialize(chainId, code, rangeOfIssue, minter);
         return code;
     }
@@ -30,4 +27,5 @@ abstract contract ITokenFactory is Initializable {
     }
 
     function issue(bytes memory issueInfo) external view virtual returns(bytes memory, uint256[] memory);
+    function expand(address contractCode, uint256 peerChainId, address issuer) external view virtual returns(bytes memory);
 }

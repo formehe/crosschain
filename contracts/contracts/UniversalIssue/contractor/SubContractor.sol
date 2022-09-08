@@ -31,7 +31,8 @@ contract SubContractor is Initializable{
         address  indexed asset
     );
 
-    mapping(uint256 => address) contractGroupMember;
+    // groupid --- templateid
+    mapping(uint256 => address) localContractGroupAsset;
     uint256 chainId;
     address proxy;
     address generalContractor;
@@ -61,13 +62,11 @@ contract SubContractor is Initializable{
         VerifiedReceipt memory result= _verify(proof);
         address code =  templateCodes[result.data.templateId];
         require(code != address(0), "template is not exist");
-
         address asset = ITokenFactory(code).clone(chainId, result.data.generalIssueInfo, result.data.saltId, proxy);
         bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256)", asset, result.data.contractGroupId);
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
-        
-        // initialize contract;
+        localContractGroupAsset[result.data.contractGroupId] = asset;
         emit SubContractorIssue(chainId, result.data.contractGroupId, asset);
     }
 

@@ -97,4 +97,19 @@ abstract contract Right is Initializable, IRightMetadata {
     function rightsURI(uint256 rightKind) external view override returns (string memory) {
         return _rightKinds[rightKind].uri;
     }
+
+    function rights() external view returns (IssueCoder.RightDescWithId[] memory rigthKinds_) {
+        uint256 len = _rightKindIndexes.length;
+        rigthKinds_ = new IssueCoder.RightDescWithId[](len);
+        for (uint256 i = 0; i < len; i++) {
+            uint256 id = _rightKindIndexes[i];
+            RightInfo memory rightInfo = _rightKinds[id];
+            IssueCoder.RightDescWithId memory rightDescWithId;
+            rightDescWithId.id = id;
+            rightDescWithId.right.name = rightInfo.name;
+            rightDescWithId.right.uri = rightInfo.uri;
+            rightDescWithId.right.agreement = rightInfo.agreement;
+            rigthKinds_[i] = rightDescWithId;
+        }
+    }
 }
