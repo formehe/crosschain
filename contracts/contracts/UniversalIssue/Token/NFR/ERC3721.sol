@@ -30,7 +30,6 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         IssueCoder.CirculationRangePerchain memory circulation_
     ) external initializer {
         minter = minter_;
-        console.log("===================");
         ERC721Chunk.initialize(name_, symbol_, issuer_.uri, circulation_.baseIndexOfToken, circulation_.baseIndexOfToken + circulation_.capOfToken, circulation_.issuer);
         Issuer.initialize(issuer_.name, issuer_.certification, issuer_.agreement, issuer_.uri);
         Right.initialize(circulation_.issuer, rights_, circulation_.rangeOfRights);

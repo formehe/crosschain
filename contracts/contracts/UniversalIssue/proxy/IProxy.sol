@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 import "../../common/codec/LogExtractor.sol";
 import "../../common/Deserialize.sol";
 import "../prover/IProver.sol";
+import "../../common/AdminControlledUpgradeable.sol";
 
-abstract contract IProxy {
+abstract contract IProxy is AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
     using LogExtractor for Borsh.Data;
 
@@ -13,6 +14,11 @@ abstract contract IProxy {
         uint256 chainId,
         address prover,
         address proxy
+    );
+
+    event UsedProof(
+        uint256 indexed chainId,
+        bytes32 indexed proofIndex
     );
 
     struct VerifiedEvent {
@@ -32,6 +38,10 @@ abstract contract IProxy {
         address prover;
         address proxy;
     }
+
+    uint constant UNPAUSED_ALL = 0;
+    uint constant PAUSED_BURN = 1 << 0;
+    uint constant PAUSED_MINT = 1 << 1;
 
     mapping(uint256 => PeerChainInfo) public peers;
 
@@ -63,9 +73,9 @@ abstract contract IProxy {
         
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
-        bytes32 topics0 = logInfo.topics[0];
-        
-        //require(topics0 == 0x60e046922dfd2b185e920419aac28e54bd4b5f0260376067224500f93e02459c, "invalid the function of topics");
+
+        //CrossTokenBurned        
+        require(logInfo.topics[0] == 0x0c3cc189fabadea7a58f5e283551fabc0b5ce635e10ab5b4f97d882dc81c231e, "invalid the function of topics");
         receipt_.fromChain = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
         receipt_.toChain = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[3]), (uint256));

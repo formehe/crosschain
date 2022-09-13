@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+// import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../prover/IProver.sol";
 import "../factory/ITokenFactory.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/Deserialize.sol";
+import "../../common/AdminControlledUpgradeable.sol";
 
-contract GeneralContractor is Initializable{
+contract GeneralContractor is AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
     using LogExtractor for Borsh.Data;
 
@@ -16,6 +17,11 @@ contract GeneralContractor is Initializable{
         uint256  indexed chainId,
         uint256  indexed contractGroupId,
         address  indexed asset
+    );
+
+    event UsedProof(
+        uint256 indexed chainId,
+        bytes32 proofIndex
     );
     
     struct VerifiedEvent {
@@ -40,6 +46,15 @@ contract GeneralContractor is Initializable{
         address asset;
     }
 
+    uint constant UNPAUSED_ALL = 0;
+    uint constant PAUSED_ISSUE = 1 << 0;
+    uint constant PAUSED_EXPAND = 1 << 1;
+    uint constant PAUSED_BOUND = 1 << 2;
+
+    bytes32 constant BLACK_ISSUE_ROLE = 0x98f43c3febbd0625021d7f077378e120db2ef156f39714519f9299a5e2ec80d6;//keccak256("BLACK.ISSUE.ROLE")
+    bytes32 constant BLACK_EXPAND_ROLE = 0x95cf58189926bed46d06a44661d498482dd2e90bb3956fe4676978b153148df0;//keccak256("BLACK.EXPAND.ROLE")
+    bytes32 constant BLACK_BOUND_ROLE = 0x36e5b819d1fba241578d86de8ed2b9d95e03a919a6b305312c96a153c43fcdbe;//keccak256("BLACK.BIND.CONTRACT.GROUP.ROLE")
+
     // chainId --- chainid
     mapping(uint256 => SubContractorInfo) public subContractors;
     // groupid --- template id
@@ -52,7 +67,6 @@ contract GeneralContractor is Initializable{
     uint256 public contractGroupId;
     address public proxy;
     mapping(uint256 => mapping(bytes32 => bool)) public usedProofs;
-    //templateId --- address
 
     event GeneralContractorIssue(
         uint256 indexed templateId,
@@ -72,29 +86,44 @@ contract GeneralContractor is Initializable{
         address indexed template
     );
 
-    constructor() {
-    }
+    // constructor() {
+    // }
 
-    function initialize(address localProxy_, uint256 chainId_) external initializer {
+    function initialize(address localProxy_, uint256 chainId_, address owner_) external initializer {
+        require(owner_ != address(0), "invalid owner");
+        require(Address.isContract(localProxy_), "invalid local proxy");
+
         proxy = localProxy_;
         chainId = chainId_;
+        
+        _AdminControlledUpgradeable_init(_msgSender(), 0);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
+        
+        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        
+        _setRoleAdmin(BLACK_ISSUE_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_EXPAND_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_BOUND_ROLE, ADMIN_ROLE);
+
+        _grantRole(OWNER_ROLE, owner_);
+        _grantRole(ADMIN_ROLE, _msgSender());
     }
 
-    function bindSubContractor(uint256 chainId_, address subContractor_, IProver prover_) external {
+    function bindSubContractor(uint256 chainId_, address subContractor_, IProver prover_) external onlyRole(ADMIN_ROLE){
         require(subContractors[chainId_].subContractor == address(0), "chain has been bound");
         require(subContractor_ != address(0), "zero subcontractor address");
         subContractors[chainId_] = SubContractorInfo(subContractor_, prover_);
         emit SubContractorBound(chainId_, subContractor_, address(prover_));
     }
 
-    function bindTemplate(uint256 templateId, address code) external {
+    function bindTemplate(uint256 templateId, address code) external onlyRole(ADMIN_ROLE){
         require(templateCodes[templateId] == address(0), "template has been bound");
         require(Address.isContract(code), "address is not contract");
         templateCodes[templateId] = code;
         emit CodeTemplateBound(templateId, code);
     }
 
-    function bindContractGroup(bytes memory proof) external {
+    function bindContractGroup(bytes memory proof) external accessable_and_unpauseable(BLACK_BOUND_ROLE, PAUSED_BOUND) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId);
         (bool success,) = proxy.call(payload);
@@ -104,8 +133,7 @@ contract GeneralContractor is Initializable{
         emit SubContractorIssue(receipt.data.chainId, receipt.data.contractGroupId, receipt.data.asset);
     }
 
-    function issue(uint256 templateId, bytes memory issueInfo) external {
-        // templateId can not be 0
+    function issue(uint256 templateId, bytes memory issueInfo) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_ISSUE){
         address code = templateCodes[templateId];
         require(code != address(0), "template is not exist");
 
@@ -121,7 +149,7 @@ contract GeneralContractor is Initializable{
         emit GeneralContractorIssue(templateId, contractGroupId_, saltId_, generalIssueInfo);
     }
 
-    function expand(uint256 groupId, uint256 peerChainId, address issuer) external {
+    function expand(uint256 groupId, uint256 peerChainId, address issuer) external accessable_and_unpauseable(BLACK_EXPAND_ROLE, PAUSED_EXPAND){
         AssetInfo memory assetInfo = localContractGroupAsset[groupId];
         require(assetInfo.asset != address(0), "group id has not issued");
         require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
@@ -153,8 +181,10 @@ contract GeneralContractor is Initializable{
     function _saveProof(
         uint256 chainId_,
         bytes32 proofIndex_
-    ) internal { 
+    ) internal {
+        require(!usedProofs[chainId_][proofIndex_], "event of proof cannot be reused");
         usedProofs[chainId_][proofIndex_] = true;
+        emit UsedProof(chainId_, proofIndex_);
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
@@ -174,7 +204,6 @@ contract GeneralContractor is Initializable{
 
         (bool success, bytes32 proofIndex) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
         require(success, "Proof should be valid");
-        require(!usedProofs[receipt_.data.chainId][proofIndex], "The burn event proof cannot be reused");
         receipt_.proofIndex = proofIndex;
     }
 
@@ -183,10 +212,9 @@ contract GeneralContractor is Initializable{
     ) internal virtual view returns (VerifiedEvent memory receipt_, address contractAddress_) {
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
-        bytes32 topics0 = logInfo.topics[0];
         
-        //subissue
-        require(topics0 == 0x60e046922dfd2b185e920419aac28e54bd4b5f0260376067224500f93e02459c, "invalid the function of topics");
+        //SubContractorIssue
+        require(logInfo.topics[0] == 0x60e046922dfd2b185e920419aac28e54bd4b5f0260376067224500f93e02459c, "invalid the function of topics");
         receipt_.chainId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
         receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         receipt_.asset = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));

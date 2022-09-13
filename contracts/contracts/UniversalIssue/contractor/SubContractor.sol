@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+// import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../../common/Deserialize.sol";
 import "../prover/IProver.sol";
 import "../factory/ITokenFactory.sol";
 import "../../common/codec/LogExtractor.sol";
+import "../../common/AdminControlledUpgradeable.sol";
 import "hardhat/console.sol";
 
-contract SubContractor is Initializable{
+contract SubContractor is AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
     using LogExtractor for Borsh.Data;
     
@@ -31,6 +32,15 @@ contract SubContractor is Initializable{
         address  indexed asset
     );
 
+    event UsedGeneralContractProof(
+        bytes32 proofIndex
+    );
+
+    uint constant UNPAUSED_ALL = 0;
+    uint constant PAUSED_SUBISSUE = 1 << 0;
+
+    bytes32 constant BLACK_SUBISSUE_ROLE = 0x087a187a71e9e5b54c3383aee32fc61034bba2d99b832059c9b4af6707503c43;//keccak256("BLACK.SUBISSUE.ROLE")
+
     // groupid --- templateid
     mapping(uint256 => address) localContractGroupAsset;
     uint256 chainId;
@@ -42,23 +52,34 @@ contract SubContractor is Initializable{
     mapping(uint256 => address) templateCodes;
     mapping(bytes32 => bool) public usedProofs;
 
-    constructor() {
-    }
+    function initialize(address generalContractor_, uint256 chainId_, address localProxy_, IProver prover_, address owner_) external initializer {
+        require(owner_ != address(0), "invalid owner");
+        require(Address.isContract(generalContractor_), "invalid general contractor");
+        require(Address.isContract(localProxy_), "invalid local proxy");
 
-    function initialize(address generalContractor_, uint256 chainId_, address localProxy_, IProver prover_) external initializer {
         generalContractor = generalContractor_;
         chainId = chainId_;
         proxy = localProxy_;
         prover = prover_;
+
+        _AdminControlledUpgradeable_init(_msgSender(), 0);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
+        
+        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        
+        _setRoleAdmin(BLACK_SUBISSUE_ROLE, ADMIN_ROLE);
+
+        _grantRole(OWNER_ROLE, owner_);
+        _grantRole(ADMIN_ROLE, _msgSender());
     }
 
-    function bindTemplate(uint256 templateId, address code) external {
+    function bindTemplate(uint256 templateId, address code) external onlyRole(ADMIN_ROLE){
         require(templateCodes[templateId] == address(0), "template has been bound");
         require(Address.isContract(code), "address is not contract");
         templateCodes[templateId] = code;
     }
 
-    function subIssue(bytes memory proof) external {
+    function subIssue(bytes memory proof) external accessable_and_unpauseable(BLACK_SUBISSUE_ROLE, PAUSED_SUBISSUE){
         VerifiedReceipt memory result= _verify(proof);
         address code =  templateCodes[result.data.templateId];
         require(code != address(0), "template is not exist");
@@ -73,7 +94,9 @@ contract SubContractor is Initializable{
     function _saveProof(
         bytes32 proofIndex
     ) internal {
+        require(!usedProofs[proofIndex], "proof is reused");
         usedProofs[proofIndex] = true;
+        emit UsedGeneralContractProof(proofIndex);
     }
 
     /// verify
@@ -100,7 +123,6 @@ contract SubContractor is Initializable{
         // require(limit.forbiddens(proofIndex) == false, "tx is forbidden");
         (bool success, bytes32 proofIndex) = prover.verify(proofData);
         require(success, "proof is invalid");
-        require(!usedProofs[proofIndex], "proof is reused");
         _receipt.proofIndex = proofIndex;
     }
 
@@ -108,10 +130,10 @@ contract SubContractor is Initializable{
         bytes memory log
     ) private pure returns (VerifiedEvent memory receipt_, address contractAddress_) {
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
-
         require(logInfo.topics.length == 4, "wrong number of topic");
-        bytes32 topics0 = logInfo.topics[0];        
-        //require(topics0 == 0x7944a782716b9f3423ef8c7f637efc142aed2c618e1e5234efb20d444dd7d94f, "invalid signature");
+
+        //GeneralContractorIssue    
+        require(logInfo.topics[0] == 0x8dfe5a421d6022c8b67da5c0acc654ce179fa7c7ba0ddda3fabd5f126d9198e9, "invalid signature");
         (receipt_.generalIssueInfo) = abi.decode(logInfo.data, (bytes));
         receipt_.templateId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
         receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));

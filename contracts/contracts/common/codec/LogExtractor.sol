@@ -9,7 +9,7 @@ library LogExtractor {
     using LogExtractor for Borsh.Data;
 
     function decode(Borsh.Data memory data) internal pure returns (bytes memory log) {
-        uint256 logIndex = data.decodeU64();
+        data.decodeU64();
         log = data.decodeBytes();
     }
 }

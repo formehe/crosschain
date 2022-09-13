@@ -6,10 +6,10 @@ import "../ITokenFactory.sol";
 import "hardhat/console.sol";
 
 contract NFRFactory is ITokenFactory{
-    constructor(address code) ITokenFactory(code) {  
+    constructor(address code_, address contractor_) ITokenFactory(code_, contractor_) {  
     }
 
-    function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal override initializer{
+    function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal override {
         IssueCoder.GeneralIssueInfo memory generalIssue = IssueCoder.decodeGeneralIssueInfo(rangeOfIssue);
         IssueCoder.CirculationRangePerchain memory circulationPerChain;
         for (uint256 i = 0; i < generalIssue.issueRangeOfChains.length; i++) {

@@ -24,7 +24,7 @@ contract EthLikeProver is IProver{
         // 调用系统合约验证块头
         bytes memory payload = abi.encodeWithSignature("is_confirmed(uint256,bytes32)", header.number, header.hash);
         (bool success, bytes memory returnData) = bridge.staticcall(payload);
-        require(success, "Height is not confirmed");
+        require(success, "height is not confirmed");
 
         (success) = abi.decode(returnData, (bool));
         require(success, "fail to decode");

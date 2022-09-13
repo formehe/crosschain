@@ -8,11 +8,15 @@ import "hardhat/console.sol";
 
 abstract contract ITokenFactory is Initializable {
     address templateCode;
-    constructor(address code) {
-        templateCode = code;
+    address contractor;
+    constructor(address code_, address contractor_) {
+        templateCode = code_;
+        contractor = contractor_;
     }
 
     function clone(uint256 chainId, bytes memory rangeOfIssue, uint256 saltId, address minter) external returns(address){
+        require(msg.sender == contractor, "caller is not permit");
+
         address predictAddr = Clones.predictDeterministicAddress(templateCode, bytes32(saltId));
         if (Address.isContract(predictAddr)) {
             return predictAddr;  
@@ -23,9 +27,7 @@ abstract contract ITokenFactory is Initializable {
         return code;
     }
 
-    function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal virtual initializer{
-    }
-
+    function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal virtual;
     function issue(bytes memory issueInfo) external view virtual returns(bytes memory, uint256[] memory);
     function expand(address contractCode, uint256 peerChainId, address issuer) external view virtual returns(bytes memory);
 }

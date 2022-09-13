@@ -24,11 +24,6 @@ contract AdminControlledUpgradeable is Initializable,AccessControl {
         paused = flags;
     }
 
-    modifier pausable(uint flag) {
-        require(isPause(flag) || hasRole(CONTROLLED_ROLE,msg.sender),"has been pause");
-        _;
-    }
-
     function isPause(uint flag) internal view returns(bool){
         return (paused & flag) == 0;
     }
@@ -39,5 +34,10 @@ contract AdminControlledUpgradeable is Initializable,AccessControl {
 
     function renounceRole(bytes32 role, address account) public pure override {
         require(false, "not support");
+    }
+
+    modifier accessable_and_unpauseable(bytes32 role_, uint pause_) {
+        require(!hasRole(role_,_msgSender()) && ((paused & pause_) == 0) ,"no permit");
+        _;
     }
 }

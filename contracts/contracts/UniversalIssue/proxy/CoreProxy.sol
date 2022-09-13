@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./IProxy.sol";
 
-contract CoreProxy is IProxy,Initializable{
+contract CoreProxy is IProxy{
     event ContractGroupProxyBound(
         address asset,
         uint256 contractGroupId,
@@ -31,15 +31,26 @@ contract CoreProxy is IProxy,Initializable{
     mapping(uint256 => mapping(bytes32 => bool)) public usedProofs;
     uint256 chainId;
 
-    constructor(){
-    }
+    function initialize(address generalContractor_, uint256 chainId_, address owner_) external initializer {
+        require(owner_ != address(0), "invalid owner");
+        require(Address.isContract(generalContractor_), "invalid general contractor");
 
-    function initialize(address generalContractor_, uint256 chainId_) external initializer {
         generalContractor = generalContractor_;
         chainId = chainId_;
+        
+        _AdminControlledUpgradeable_init(_msgSender(), 0);
+        _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
+        
+        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        
+        _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
+
+        _grantRole(OWNER_ROLE, owner_);
+        _grantRole(ADMIN_ROLE, _msgSender());
     }
 
-    function bindPeerChain(uint256 chainId_, address prover_, address peerProxy_) external {
+    function bindPeerChain(uint256 chainId_, address prover_, address peerProxy_) external onlyRole(ADMIN_ROLE) {
         _bindPeerChain(chainId_, prover_, peerProxy_);
     }
 
@@ -47,7 +58,7 @@ contract CoreProxy is IProxy,Initializable{
         address asset_, 
         uint256 chainId_,
         uint256 contractGroupId_
-    ) external {
+    ) external onlyRole(ADMIN_ROLE){
         require(msg.sender == generalContractor, "only for general contractor");
         require(asset_ != address(0), "from proxy address are not to be contract address");
         require(contractGroupId_ != 0, "contract group id can not be 0");
@@ -60,7 +71,7 @@ contract CoreProxy is IProxy,Initializable{
         emit ContractGroupProxyBound(asset_, contractGroupId_, chainId_);
     }
 
-    function mint(bytes memory proof) external {
+    function mint(bytes memory proof) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT){
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         address asset = contractGroupMember[receipt.data.contractGroupId][receipt.data.fromChain];
         require(asset != address(0) && asset == receipt.data.asset, "chain is not permit");
@@ -82,13 +93,14 @@ contract CoreProxy is IProxy,Initializable{
         _saveProof(receipt.data.fromChain, receipt.proofIndex);
     }
 
-    function burnTo(uint256 toChainId, address asset, address receiver, uint256 tokenId) external{
+    function burnTo(uint256 toChainId, address asset, address receiver, uint256 tokenId) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN){
         require(receiver != address(0), "invalid parameter");
         require(toChainId != chainId, "only support cross chain tx");
         uint256 groupId = assets[asset].groupId;
         require(groupId != 0, "asset is not bound");
         address toAsset = contractGroupMember[groupId][toChainId];
         require(toAsset != address(0), "to asset can not be 0");
+
         // call contract
         bytes memory codes = abi.encodeWithSignature("burn(uint256)", tokenId);
         (bool success, bytes memory result) = asset.call(codes);
@@ -107,5 +119,6 @@ contract CoreProxy is IProxy,Initializable{
     ) internal {
         require(!usedProofs[chainId_][proofIndex_], "The burn event proof cannot be reused");
         usedProofs[chainId_][proofIndex_] = true;
+        emit UsedProof(chainId_, proofIndex_);
     }
 }

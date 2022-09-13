@@ -95,11 +95,11 @@ library IssueCoder {
             idx++;
         }
 
-        console.log("============decode issuer==============");
-        console.log(issuer.name);
-        console.log(issuer.certification);
-        console.log(issuer.agreement);
-        console.log(issuer.uri);
+        // console.log("============decode issuer==============");
+        // console.log(issuer.name);
+        // console.log(issuer.certification);
+        // console.log(issuer.agreement);
+        // console.log(issuer.uri);
     }
 
     function encodeRightDesc(RightDesc memory right) internal view returns (bytes memory) {
@@ -121,10 +121,10 @@ library IssueCoder {
             idx++;
         }
 
-        console.log("============decode right desc==============");
-        console.log(right.name);
-        console.log(right.uri);
-        console.log(right.agreement);
+        // console.log("============decode right desc==============");
+        // console.log(right.name);
+        // console.log(right.uri);
+        // console.log(right.agreement);
     }
 
     function encodeRights(RightDescWithId[] memory rightWithIds) internal view returns (bytes memory) {
@@ -155,8 +155,8 @@ library IssueCoder {
                     idx++;
                 }
 
-                console.log("=============decode right=============");
-                console.logUint(rightWithIds[i].id);
+                // console.log("=============decode right=============");
+                // console.logUint(rightWithIds[i].id);
             }
         }
     }
@@ -186,9 +186,9 @@ library IssueCoder {
                     else it.next();
                     idx++;
                 }
-                console.log("=============decode circulation of right=============");
-                console.logUint(circulationOfRights[i].id);
-                console.logUint(circulationOfRights[i].amount);
+                // console.log("=============decode circulation of right=============");
+                // console.logUint(circulationOfRights[i].id);
+                // console.logUint(circulationOfRights[i].amount);
             }
         }
     }
@@ -223,10 +223,10 @@ library IssueCoder {
                     idx++;
                 }
 
-                console.log("=============decode circulation of chain=============");
-                console.logAddress(circulations[i].issuer);
-                console.logUint(circulations[i].chainId);
-                console.logUint(circulations[i].amountOfToken);
+                // console.log("=============decode circulation of chain=============");
+                // console.logAddress(circulations[i].issuer);
+                // console.logUint(circulations[i].chainId);
+                // console.logUint(circulations[i].amountOfToken);
             }
         }
     }
@@ -260,10 +260,10 @@ library IssueCoder {
                     idx++;
                 }
 
-                console.log("=============decode circulation range of right=============");
-                console.logUint(rangeOfRights[i].id);
-                console.logUint(rangeOfRights[i].baseIndex);
-                console.logUint(rangeOfRights[i].cap);
+                // console.log("=============decode circulation range of right=============");
+                // console.logUint(rangeOfRights[i].id);
+                // console.logUint(rangeOfRights[i].baseIndex);
+                // console.logUint(rangeOfRights[i].cap);
             }
         }
     }
@@ -299,11 +299,11 @@ library IssueCoder {
                     else it.next();
                     idx++;
                 }
-                console.log("=============decode circulation range of chain=============");
-                console.logAddress(circulations[i].issuer);
-                console.logUint(circulations[i].baseIndexOfToken);
-                console.logUint(circulations[i].capOfToken);
-                console.logUint(circulations[i].chainId);
+                // console.log("=============decode circulation range of chain=============");
+                // console.logAddress(circulations[i].issuer);
+                // console.logUint(circulations[i].baseIndexOfToken);
+                // console.logUint(circulations[i].capOfToken);
+                // console.logUint(circulations[i].chainId);
             }
         }
     }
@@ -331,9 +331,9 @@ library IssueCoder {
             idx++;
         }
 
-        console.log("=============decode issue info=============");
-        console.log(issueInfo.name);
-        console.log(issueInfo.symbol);
+        // console.log("=============decode issue info=============");
+        // console.log(issueInfo.name);
+        // console.log(issueInfo.symbol);
     }
 
     function encodeGeneralIssueInfo(GeneralIssueInfo memory generalIssue) internal view returns(bytes memory) {
@@ -359,9 +359,9 @@ library IssueCoder {
             idx++;
         }
 
-        console.log("=============decode general issue info=============");
-        console.log(generalIssueInfo.name );
-        console.log(generalIssueInfo.symbol);
+        // console.log("=============decode general issue info=============");
+        // console.log(generalIssueInfo.name );
+        // console.log(generalIssueInfo.symbol);
     }
 
     function encodeSubIssueInfo(SubIssueInfo memory subIssue) internal view returns (bytes memory) {
@@ -384,9 +384,9 @@ library IssueCoder {
             idx++;
         }
 
-        console.log("=============decode sub issue info=============");
-        console.logUint(subIssueInfo.chainId);
-        console.logUint(subIssueInfo.contractGroupId);
-        console.logAddress(subIssueInfo.asset);
+        // console.log("=============decode sub issue info=============");
+        // console.logUint(subIssueInfo.chainId);
+        // console.logUint(subIssueInfo.contractGroupId);
+        // console.logAddress(subIssueInfo.asset);
     }
 }
