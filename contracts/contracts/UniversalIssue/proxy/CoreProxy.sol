@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./IProxy.sol";
+import "../common/IMultiLimit.sol";
 
 contract CoreProxy is IProxy{
     event ContractGroupProxyBound(
@@ -30,13 +31,15 @@ contract CoreProxy is IProxy{
     address public generalContractor;
     mapping(uint256 => mapping(bytes32 => bool)) public usedProofs;
     uint256 chainId;
+    IMultiLimit public limiter;
 
-    function initialize(address generalContractor_, uint256 chainId_, address owner_) external initializer {
+    function initialize(address generalContractor_, uint256 chainId_, address owner_, IMultiLimit limit_) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(generalContractor_), "invalid general contractor");
 
         generalContractor = generalContractor_;
         chainId = chainId_;
+        limiter = limit_;
         
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
@@ -58,7 +61,7 @@ contract CoreProxy is IProxy{
         address asset_, 
         uint256 chainId_,
         uint256 contractGroupId_
-    ) external onlyRole(ADMIN_ROLE){
+    ) external {
         require(msg.sender == generalContractor, "only for general contractor");
         require(asset_ != address(0), "from proxy address are not to be contract address");
         require(contractGroupId_ != 0, "contract group id can not be 0");
@@ -82,9 +85,10 @@ contract CoreProxy is IProxy{
             emit CrossTokenBurned(chainId, receipt.data.toChain, receipt.data.contractGroupId, asset, receipt.data.burnInfo);
         } else {
             asset = contractGroupMember[receipt.data.contractGroupId][chainId];
+            require(limiter.forbiddens(receipt.data.fromChain, receipt.proofIndex) == false, "receipt id has already been forbidden");
             // call contract
             (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 
-                abi.decode(receipt.data.burnInfo, (address, uint256,uint256[],uint256[], bytes));
+                abi.decode(receipt.data.burnInfo, (address, uint256, uint256[], uint256[], bytes));
             bytes memory codes = abi.encodeWithSignature("mint(uint256,uint256[],uint256[],bytes,address)", tokenId, rightKinds, rightIds, additional, receiver);
             (bool success,) = (receipt.data.asset).call(codes);
             require(success, "fail to mint");
@@ -105,7 +109,7 @@ contract CoreProxy is IProxy{
         bytes memory codes = abi.encodeWithSignature("burn(uint256)", tokenId);
         (bool success, bytes memory result) = asset.call(codes);
         require(success, "fail to burn");
-        (uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = abi.decode(result, (uint256[],uint256[],bytes));
+        (uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = abi.decode(result, (uint256[], uint256[], bytes));
         bytes memory value = abi.encode(receiver, tokenId, rightKinds, rightIds, additional);
 
         emit CrossTokenBurned(chainId, toChainId, groupId, toAsset, value);

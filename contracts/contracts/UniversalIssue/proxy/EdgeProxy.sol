@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "../../common/ILimit.sol";
 import "./IProxy.sol";
 
 contract EdgeProxy is IProxy{
@@ -27,9 +28,10 @@ contract EdgeProxy is IProxy{
     mapping(address => ProxiedAsset) public assets;
     address public subContractor;
     uint256 public chainId;
+    ILimit public limit;
     mapping(bytes32 => bool) public usedProofs;
 
-    function initialize(address prover_, address subContractor_, address peerProxy_, uint256 peerChainId_, uint256 chainId_, address owner_) external initializer {
+    function initialize(address prover_, address subContractor_, address peerProxy_, uint256 peerChainId_, uint256 chainId_, address owner_, ILimit limit_) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(subContractor_), "invalid sub contractor");
         require(Address.isContract(prover_), "invalid prover");
@@ -38,6 +40,7 @@ contract EdgeProxy is IProxy{
         _bindPeerChain(peerChainId_, prover_, peerProxy_);
         subContractor = subContractor_;
         chainId = chainId_;
+        limit = limit_;
         
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
@@ -54,7 +57,7 @@ contract EdgeProxy is IProxy{
     function bindAssetGroup(
         address asset,
         uint256 contractGroupId
-    ) external onlyRole(ADMIN_ROLE) {
+    ) external {
         require(msg.sender == subContractor, "just subcontractor can bind");
         require(Address.isContract(asset), "from proxy address are not to be contract address");
         require(assets[asset].groupId == 0, "can not modify the bind asset");
@@ -68,6 +71,9 @@ contract EdgeProxy is IProxy{
         uint256 groupId = assets[receipt.data.asset].groupId;
         require((groupId != 0) && (groupId == receipt.data.contractGroupId), "chain is not permit");
         require(receipt.data.toChain == chainId, "not to mine");
+        require(limit.forbiddens(receipt.proofIndex) == false, "receipt id has already been forbidden");
+        PeerChainInfo memory peer = peers[receipt.data.fromChain];
+        require(limit.checkFrozen(receipt.data.asset, receipt.time),'tx is frozen');
         
         // call contract
         (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 

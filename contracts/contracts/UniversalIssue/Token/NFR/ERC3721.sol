@@ -93,7 +93,7 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
     }
 
     /**
-    * @dev Attaches Rights type `rightsId` to `tokenId`.
+    * @dev Attaches Rights type `rightKind` to `tokenId`.
     * Only Publisher allow attach Rights to specific NFT Token
     * Emits an {AttachRights} event.
     */
@@ -147,24 +147,4 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
 
         emit RightTokenDisbound(tokenId, rightKind, rightId);
     }
-
-    //  function _beforeTokenTransfer(
-    //     address from,
-    //     address to,
-    //     uint256 tokenId
-    // ) internal override virtual{
-    //     if (to != address(0)) {
-    //         return;
-    //     }
-
-    //     uint256 len = _tokenKindIndexes[tokenId].length;
-    //     for (uint i = 0; i < len; i++) {
-    //         uint256 rightKind = _tokenKindIndexes[tokenId][i];
-    //         uint256 rightId = _tokenRights[tokenId][rightKind];
-    //         _tokenRights[tokenId][rightKind] = 0;
-    //         _burnRight(rightKind, rightId);
-    //     }
-
-    //     delete _tokenKindIndexes[tokenId];
-    // }
 }

@@ -10,6 +10,7 @@ contract NFRFactory is ITokenFactory{
     }
 
     function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal override {
+        // Token若未在該鏈發行,是否需要創建template合約？
         IssueCoder.GeneralIssueInfo memory generalIssue = IssueCoder.decodeGeneralIssueInfo(rangeOfIssue);
         IssueCoder.CirculationRangePerchain memory circulationPerChain;
         for (uint256 i = 0; i < generalIssue.issueRangeOfChains.length; i++) {

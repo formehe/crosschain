@@ -13,7 +13,7 @@ contract TopLikeProver is IProver{
 
     constructor(address bridge_) IProver(bridge_) {}
 
-    function verify(bytes memory proofData) external override returns(bool valid, bytes32 proofIndex) {
+    function verify(bytes memory proofData) external override returns(bool valid, bytes32 proofIndex, uint256 time) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         TopProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();
@@ -24,9 +24,10 @@ contract TopLikeProver is IProver{
         require((keccak256(proof.logEntryData) == keccak256(receipt.log)), "Log is not found");
         _verify(proof.reciptIndex, proof.reciptData, proof.reciptProof, header.inner_lite.receipts_root_hash);
         _verify(proof.blockIndex, abi.encodePacked(header.block_hash), proof.blockProof,  _getBlockMerkleRoot(proof.polyBlockHeight));
-        bytes memory reciptIndex = abi.encode(header.inner_lite.height, proof.reciptIndex);
+        bytes memory reciptIndex = abi.encode(header.block_hash, proof.reciptIndex);
         proofIndex = keccak256(reciptIndex);
-        return (true, proofIndex);
+        time = getAddLightClientTime(proof.polyBlockHeight);
+        return (true, proofIndex, time);
     }
 
     function _getBlockMerkleRoot(uint64 height) internal view returns(bytes32 blockMerkleRoot){
@@ -36,5 +37,14 @@ contract TopLikeProver is IProver{
         (blockMerkleRoot) = abi.decode(returnData, (bytes32));
         require(uint(blockMerkleRoot) > 0, "Height is not confirmed4");
         return blockMerkleRoot;
+    }
+
+    function getAddLightClientTime(uint64 height) internal view returns(uint256 time){
+        bytes memory payload = abi.encodeWithSignature("blockHeights(uint64)", height);
+        (bool success, bytes memory returnData) = bridge.staticcall(payload);
+        require(success, "Height is not confirmed");
+        (time) = abi.decode(returnData, (uint256));
+        require(time > 0, "Height is not confirmed1");
+        return time;
     }
 }

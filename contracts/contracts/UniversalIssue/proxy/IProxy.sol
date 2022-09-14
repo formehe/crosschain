@@ -31,6 +31,7 @@ abstract contract IProxy is AdminControlledUpgradeable{
 
     struct VerifiedReceipt {
         bytes32 proofIndex;
+        uint256 time;
         VerifiedEvent data;
     }
 
@@ -62,9 +63,10 @@ abstract contract IProxy is AdminControlledUpgradeable{
         PeerChainInfo memory peer = peers[receipt_.data.fromChain];
         require(peer.proxy != address(0), "peer is not bound");
         require((contractAddress != address(0) && peer.proxy == contractAddress), "Invalid Token lock address");
-        (bool success, bytes32 proofIndex) = IProver(peer.prover).verify(proofData);
+        (bool success, bytes32 proofIndex, uint256 time) = IProver(peer.prover).verify(proofData);
         require(success, "Proof should be valid");
         receipt_.proofIndex = proofIndex;
+        receipt_.time = time;
     }
 
     function _parseBurnProofLog(bytes memory proof) private view returns (VerifiedEvent memory receipt_, address contractAddress_) {

@@ -52,7 +52,12 @@ contract SubContractor is AdminControlledUpgradeable{
     mapping(uint256 => address) templateCodes;
     mapping(bytes32 => bool) public usedProofs;
 
-    function initialize(address generalContractor_, uint256 chainId_, address localProxy_, IProver prover_, address owner_) external initializer {
+    function initialize(
+        address generalContractor_, 
+        uint256 chainId_, 
+        address localProxy_, 
+        IProver prover_, 
+        address owner_) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(generalContractor_), "invalid general contractor");
         require(Address.isContract(localProxy_), "invalid local proxy");
@@ -121,7 +126,7 @@ contract SubContractor is AdminControlledUpgradeable{
         require(contractAddress == generalContractor, "general contractor address is error");
 
         // require(limit.forbiddens(proofIndex) == false, "tx is forbidden");
-        (bool success, bytes32 proofIndex) = prover.verify(proofData);
+        (bool success, bytes32 proofIndex, uint256 time) = prover.verify(proofData);
         require(success, "proof is invalid");
         _receipt.proofIndex = proofIndex;
     }

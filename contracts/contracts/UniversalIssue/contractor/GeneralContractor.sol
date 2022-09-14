@@ -13,7 +13,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
     using LogExtractor for Borsh.Data;
 
-    event SubContractorIssue(
+    event ContractorGroupBound(
         uint256  indexed chainId,
         uint256  indexed contractGroupId,
         address  indexed asset
@@ -86,9 +86,6 @@ contract GeneralContractor is AdminControlledUpgradeable{
         address indexed template
     );
 
-    // constructor() {
-    // }
-
     function initialize(address localProxy_, uint256 chainId_, address owner_) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(localProxy_), "invalid local proxy");
@@ -111,7 +108,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
 
     function bindSubContractor(uint256 chainId_, address subContractor_, IProver prover_) external onlyRole(ADMIN_ROLE){
         require(subContractors[chainId_].subContractor == address(0), "chain has been bound");
-        require(subContractor_ != address(0), "zero subcontractor address");
+        require(subContractor_ != address(0), "invalid subcontractor address");
         subContractors[chainId_] = SubContractorInfo(subContractor_, prover_);
         emit SubContractorBound(chainId_, subContractor_, address(prover_));
     }
@@ -130,7 +127,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         require(success, "fail to bind contract group");
         _saveProof(receipt.data.chainId, receipt.proofIndex);
 
-        emit SubContractorIssue(receipt.data.chainId, receipt.data.contractGroupId, receipt.data.asset);
+        emit ContractorGroupBound(receipt.data.chainId, receipt.data.contractGroupId, receipt.data.asset);
     }
 
     function issue(uint256 templateId, bytes memory issueInfo) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_ISSUE){
@@ -202,7 +199,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         require(subContractors[receipt_.data.chainId].subContractor == contractAddress, "proxy is not bound");
         // require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
 
-        (bool success, bytes32 proofIndex) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
+        (bool success, bytes32 proofIndex, uint256 time) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
         require(success, "Proof should be valid");
         receipt_.proofIndex = proofIndex;
     }

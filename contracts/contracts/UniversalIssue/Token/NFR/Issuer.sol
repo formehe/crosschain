@@ -8,7 +8,8 @@ import "./IIssuerMetadata.sol";
 * @dev Required interface of an ERC3721 compliant contract.
 */
 abstract contract Issuer is IIssuerMetadata, Initializable {
-    event TransferRight(uint256 indexed from, uint256 indexed to, uint256 rightKind, uint256 indexed rightId); 
+    
+    event TransferRight(uint256 indexed from, uint256 indexed to, uint256 rightKind, uint256 indexed rightId);
     address addressOfIssuer;
     string  name;
     string  certification;
