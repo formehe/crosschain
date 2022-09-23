@@ -16,6 +16,7 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         address sender;
         uint256 amount;
         address receiver;
+        uint8   decimals;
     }
 
     struct VerifiedReceipt {
@@ -87,8 +88,8 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
         //Lock
-        require(topics0 == 0x56b161a6e4643e17140e8adce689a2b4dd38a651272b26645c7320a9284d7ab3, "invalid the function of topics");
-        (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
+        require(topics0 == 0xb75dda4df2729ec4d84d98e6f6263bb92944b5e0c16c8072544355e5d07449e3, "invalid the function of topics");
+        (_receipt.amount, _receipt.receiver, _receipt.decimals) = abi.decode(logInfo.data, (uint256, address, uint8));
         _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));

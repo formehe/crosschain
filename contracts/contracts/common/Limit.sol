@@ -27,10 +27,6 @@ contract Limit is AccessControl{
         bytes32 _forbiddenId
     );
 
-    event TxRecovered (
-        bytes32 forbiddenId
-    );
-
     event FrozenBound (
         address indexed asset, 
         uint  frozenDuration
@@ -87,14 +83,6 @@ contract Limit is AccessControl{
         require(forbiddens[_forbiddenId] == false, "id has been already forbidden");
         forbiddens[_forbiddenId] = true;
         emit TxForbidden(_forbiddenId);
-    }
-
-    function recover(
-        bytes32 _forbiddenId
-    ) external onlyRole(FORBIDEN_ROLE) {
-        require(forbiddens[_forbiddenId], "id has not been forbidden");
-        forbiddens[_forbiddenId] = false;
-        emit TxRecovered(_forbiddenId);
     }
 
     function bindFrozen(

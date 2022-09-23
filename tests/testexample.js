@@ -378,6 +378,48 @@ describe("ERC20MintProxy", function () {
         expect(await erc20Sample1.balanceOf(address))
             .to.equal(10)
     })
+
+    it('burn and mint success1', async () => {
+        const ERC20MintCon =  await hre.ethers.getContractFactory("ERC20Mintable", admin, { gasLimit: 9500000 })
+        ERC20Mint = await ERC20MintCon.deploy('ERC20Mintable', 'et')
+        await ERC20Mint.deployed()
+        // ERC20MintCon = await ethers.getContractFactory("ERC20TokenSample18", admin)
+        // ERC20Mint = await ERC20MintCon.deploy()
+        // console.log("+++++++++++++ERC20Mint Contract+++++++++++++++ ", ERC20Mint.address)
+        // await ERC20Mint.deployed()
+
+        //burn
+        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, ERC20Mint.address)
+        // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
+        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
+        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        const rc = await tx.wait()
+        const event = rc.events.find(event=>event.event === "Burned")
+
+        // construct receipt proof
+        getProof = new GetProof("http://127.0.0.1:8545")
+        proof = await getProof.receiptProof(tx.hash)
+        rpcInstance = new rpc("http://127.0.0.1:8545")
+        const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        const re = Receipt.fromRpc(targetReceipt)
+        const rlpLog = new LOGRLP(rc.logs[event.logIndex])
+        const rlplog = Log.fromRpc(rlpLog)
+
+        const value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+
+        const schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+        const buffer = borsh.serialize(schema, value);
+
+        //mint
+        await mintContract1.connect(admin).bindAssetHash(ERC20Mint.address, erc20Sample.address)
+        await mintContract1.connect(admin).bindWithdrawQuota(ERC20Mint.address, 100000000000000)
+        // await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
+        await mintContract1.connect(user).mint(buffer, 1)
+
+        expect(await ERC20Mint.balanceOf(address))
+            .to.equal(10000000000000)
+    })
 })
 
 describe("TRC20", function () {

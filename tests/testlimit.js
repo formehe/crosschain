@@ -109,14 +109,4 @@ describe("Limit", function () {
         await limitContract.connect(admin).forbiden("0x1111111111111111111111111111111111111111111111111111111111111111")
         await limitContract.connect(admin).forbiden("0x1111111111111111111111111111111111111111111111111111111111111112")
     })
-
-    it('black tx list, recover tx is not exist', async () => {
-        await expect(limitContract.connect(admin).recover("0x1111111111111111111111111111111111111111111111111111111111111112"))
-            .to.be.revertedWith('id has not been forbidden')
-    })
-
-    it('black tx list, recover tx success', async () => {
-        await limitContract.connect(admin).forbiden("0x1111111111111111111111111111111111111111111111111111111111111111")
-        await limitContract.connect(admin).recover("0x1111111111111111111111111111111111111111111111111111111111111111")
-    })
 })

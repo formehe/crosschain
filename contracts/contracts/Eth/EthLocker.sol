@@ -36,7 +36,7 @@ contract EthLocker is ITokenLocker,Locker{
         require(amount != 0, "amount cannot be zero");
         require(receiver != address(0), "receive address can not be zero");
         require(_transferToContract(amount));
-        emit Locked(fromAssetHash, toAssetHash ,msg.sender, amount, receiver);
+        emit Locked(fromAssetHash, toAssetHash ,msg.sender, amount, receiver, 18);
     }
 
     function unlockToken(bytes memory proofData, uint64 proofBlockHeight)
