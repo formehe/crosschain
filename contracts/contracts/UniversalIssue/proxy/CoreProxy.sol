@@ -8,17 +8,9 @@ import "../common/IMultiLimit.sol";
 
 contract CoreProxy is IProxy{
     event ContractGroupProxyBound(
-        address asset,
-        uint256 contractGroupId,
-        uint256 chainId
-    );
-
-    event CrossTokenBurned(
-        uint256 indexed fromChain,
-        uint256 indexed toChain,
         uint256 indexed contractGroupId,
-        address asset,
-        bytes   burnInfo
+        uint256 indexed chainId,
+        address indexed asset
     );
 
     struct ProxiedAsset{
@@ -36,6 +28,7 @@ contract CoreProxy is IProxy{
     function initialize(address generalContractor_, uint256 chainId_, address owner_, IMultiLimit limit_) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(generalContractor_), "invalid general contractor");
+        require(Address.isContract(address(limit_)), "invalid limit contractor");
 
         generalContractor = generalContractor_;
         chainId = chainId_;
@@ -65,36 +58,37 @@ contract CoreProxy is IProxy{
         require(msg.sender == generalContractor, "only for general contractor");
         require(asset_ != address(0), "from proxy address are not to be contract address");
         require(contractGroupId_ != 0, "contract group id can not be 0");
-
         require(contractGroupMember[contractGroupId_][chainId_] == address(0), "asset has been bound");
         contractGroupMember[contractGroupId_][chainId_] = asset_;
         if (chainId_ == chainId) {
             assets[asset_] = ProxiedAsset(contractGroupId_);
         }
-        emit ContractGroupProxyBound(asset_, contractGroupId_, chainId_);
+        emit ContractGroupProxyBound(contractGroupId_, chainId_, asset_);
     }
 
     function mint(bytes memory proof) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT){
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         address asset = contractGroupMember[receipt.data.contractGroupId][receipt.data.fromChain];
-        require(asset != address(0) && asset == receipt.data.asset, "chain is not permit");
+        require(asset != address(0) && asset == receipt.data.asset, "from chain is not permit");
         
-        require(asset != address(0));
+        asset = contractGroupMember[receipt.data.contractGroupId][receipt.data.toChain];
+        require(asset != address(0), "to chain is not permit");
+
         if (receipt.data.toChain != chainId){
-            asset = contractGroupMember[receipt.data.contractGroupId][receipt.data.toChain];
-            emit CrossTokenBurned(chainId, receipt.data.toChain, receipt.data.contractGroupId, asset, receipt.data.burnInfo);
+            emit CrossTokenBurned(chainId, receipt.data.toChain, receipt.data.contractGroupId, asset, true, receipt.data.burnInfo);
         } else {
-            asset = contractGroupMember[receipt.data.contractGroupId][chainId];
             require(limiter.forbiddens(receipt.data.fromChain, receipt.proofIndex) == false, "receipt id has already been forbidden");
             // call contract
             (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 
                 abi.decode(receipt.data.burnInfo, (address, uint256, uint256[], uint256[], bytes));
+
             bytes memory codes = abi.encodeWithSignature("mint(uint256,uint256[],uint256[],bytes,address)", tokenId, rightKinds, rightIds, additional, receiver);
-            (bool success,) = (receipt.data.asset).call(codes);
+            (bool success,) = (asset).call(codes);
             require(success, "fail to mint");
+            emit CrossTokenMinted(receipt.data.contractGroupId, receipt.data.fromChain, receipt.data.toChain, asset, receipt.data.burnInfo);
         }
 
-        _saveProof(receipt.data.fromChain, receipt.proofIndex);
+        _saveProof(receipt.data.fromChain, receipt.blockHash, receipt.receiptIndex, receipt.proofIndex);
     }
 
     function burnTo(uint256 toChainId, address asset, address receiver, uint256 tokenId) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN){
@@ -112,17 +106,19 @@ contract CoreProxy is IProxy{
         (uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = abi.decode(result, (uint256[], uint256[], bytes));
         bytes memory value = abi.encode(receiver, tokenId, rightKinds, rightIds, additional);
 
-        emit CrossTokenBurned(chainId, toChainId, groupId, toAsset, value);
+        emit CrossTokenBurned(groupId, chainId, toChainId, toAsset, false, value);
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
     /// The consumed event cannot be reused for future calls.
     function _saveProof(
         uint256 chainId_,
+        bytes32 blockHash_,
+        uint256 receiptIndex_,
         bytes32 proofIndex_
     ) internal {
         require(!usedProofs[chainId_][proofIndex_], "The burn event proof cannot be reused");
         usedProofs[chainId_][proofIndex_] = true;
-        emit UsedProof(chainId_, proofIndex_);
+        emit UsedProof(chainId_, blockHash_, receiptIndex_, proofIndex_);
     }
 }

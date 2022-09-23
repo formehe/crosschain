@@ -17,11 +17,6 @@ contract MultiLimit is AccessControl{
         bytes32 forbiddenId
     );
 
-    event MultiChainTxRecovered (
-        uint256 chainId,
-        bytes32 forbiddenId
-    );
-
     mapping(uint256 => mapping(bytes32 => bool)) public forbiddens;
 
     constructor(address owner){
@@ -40,14 +35,5 @@ contract MultiLimit is AccessControl{
         require(forbiddens[_chainId][_forbiddenId] == false, "id has been already forbidden");
         forbiddens[_chainId][_forbiddenId] = true;
         emit MultiChainTxForbidden(_chainId, _forbiddenId);
-    }
-
-    function recover(
-        uint256 _chainId,
-        bytes32 _forbiddenId
-    ) external onlyRole(FORBIDEN_ROLE) {
-        require(forbiddens[_chainId][_forbiddenId], "id has not been forbidden");
-        forbiddens[_chainId][_forbiddenId] = false;
-        emit MultiChainTxRecovered(_chainId, _forbiddenId);
     }
 }

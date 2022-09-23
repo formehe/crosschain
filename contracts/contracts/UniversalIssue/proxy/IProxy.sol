@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/Address.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/Deserialize.sol";
 import "../prover/IProver.sol";
@@ -18,7 +19,26 @@ abstract contract IProxy is AdminControlledUpgradeable{
 
     event UsedProof(
         uint256 indexed chainId,
-        bytes32 indexed proofIndex
+        bytes32 indexed blockHash,
+        uint256 indexed receiptIndex,
+        bytes32 proofIndex
+    );
+
+    event CrossTokenBurned(
+        uint256 indexed contractGroupId,
+        uint256 indexed fromChain,
+        uint256 indexed toChain,
+        address asset,
+        bool    proxied,
+        bytes   burnInfo
+    );
+
+    event CrossTokenMinted(
+        uint256 indexed contractGroupId,
+        uint256 indexed fromChain,
+        uint256 indexed toChain,
+        address asset,
+        bytes   burnInfo
     );
 
     struct VerifiedEvent {
@@ -30,6 +50,8 @@ abstract contract IProxy is AdminControlledUpgradeable{
     }
 
     struct VerifiedReceipt {
+        bytes32 blockHash;
+        uint256 receiptIndex;
         bytes32 proofIndex;
         uint256 time;
         VerifiedEvent data;
@@ -48,7 +70,7 @@ abstract contract IProxy is AdminControlledUpgradeable{
 
     function _bindPeerChain(uint256 chainId_, address prover_, address peerProxy_) internal {
         require (peers[chainId_].prover == address(0), "chain had bind prove");
-        require (prover_ != address(0), "address of prover can not be 0");
+        require (Address.isContract(prover_), "address of prover can not be 0");
         require (peerProxy_ != address(0), "address of proxy can not be 0");
         peers[chainId_] = PeerChainInfo(prover_, peerProxy_);
         emit PeerChainBound(chainId_, prover_, peerProxy_);
@@ -63,9 +85,11 @@ abstract contract IProxy is AdminControlledUpgradeable{
         PeerChainInfo memory peer = peers[receipt_.data.fromChain];
         require(peer.proxy != address(0), "peer is not bound");
         require((contractAddress != address(0) && peer.proxy == contractAddress), "Invalid Token lock address");
-        (bool success, bytes32 proofIndex, uint256 time) = IProver(peer.prover).verify(proofData);
+        (bool success, bytes32 blockHash, uint256 receiptIndex, uint256 time) = IProver(peer.prover).verify(proofData);
         require(success, "Proof should be valid");
-        receipt_.proofIndex = proofIndex;
+        receipt_.blockHash = blockHash;
+        receipt_.receiptIndex = receiptIndex;
+        receipt_.proofIndex = keccak256(abi.encode(blockHash, receiptIndex));
         receipt_.time = time;
     }
 
@@ -77,11 +101,13 @@ abstract contract IProxy is AdminControlledUpgradeable{
         require(logInfo.topics.length == 4, "invalid the number of topics");
 
         //CrossTokenBurned        
-        require(logInfo.topics[0] == 0x0c3cc189fabadea7a58f5e283551fabc0b5ce635e10ab5b4f97d882dc81c231e, "invalid the function of topics");
-        receipt_.fromChain = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
-        receipt_.toChain = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
-        receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[3]), (uint256));
-        (receipt_.asset, receipt_.burnInfo) = abi.decode(logInfo.data, (address, bytes));
+        require(logInfo.topics[0] == 0xa70303e63e54b781b5d1449833162f7194addb3b8728aa0ea87b60711b63e8e0, "invalid the function of topics");
+        receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
+        receipt_.fromChain = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
+        receipt_.toChain = abi.decode(abi.encodePacked(logInfo.topics[3]), (uint256));
+
+        bool proxied;
+        (receipt_.asset, proxied, receipt_.burnInfo) = abi.decode(logInfo.data, (address, bool, bytes));
         contractAddress_ = logInfo.contractAddress;
     }
 }

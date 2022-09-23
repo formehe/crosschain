@@ -21,7 +21,7 @@ abstract contract Issuer is IIssuerMetadata, Initializable {
         string  memory certification_,
         string  memory agreement_,
         string  memory uri_
-    ) public onlyInitializing {
+    ) internal onlyInitializing {
         name = name_;
         certification = certification_;
         agreement = agreement_;

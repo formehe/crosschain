@@ -15,6 +15,18 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable {
     using RLPDecode for RLPDecode.RLPItem;
     using RLPDecode for RLPDecode.Iterator;
 
+    event BlockBridgeInitial(
+        uint256 indexed height,
+        bytes32 indexed blockHash,
+        address  indexed submitter
+    );
+
+    event BlockAdded(
+        uint256  indexed height,
+        bytes32  indexed blockHash,
+        address  indexed submitter
+    );
+
     // Assumed to be even and to not exceed 256.
     uint constant private MAX_BLOCK_PRODUCERS = 100;
     uint constant private UNPAUSE_ALL = 0;
@@ -70,6 +82,7 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable {
         blockHeights[topBlock.inner_lite.height] = block.timestamp;
         heights.push(topBlock.inner_lite.height);
         maxMainHeight = topBlock.inner_lite.height;
+        emit BlockBridgeInitial(topBlock.inner_lite.height, topBlock.block_hash, msg.sender);
     }
 
     function fork(bytes memory epoch0, bytes memory epoch1, bytes memory forkpoint) public onlyRole(ADMIN_ROLE) {
@@ -178,6 +191,7 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable {
 
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;
+        emit BlockAdded(topBlock.inner_lite.height, topBlock.block_hash, msg.sender);
     }
 
     function setBlockProducers(Deserialize.BlockProducer[] memory src, uint64 epochId, uint64 blockHeight) internal {

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../common/ILimit.sol";
@@ -13,16 +12,8 @@ contract EdgeProxy is IProxy{
     }
 
     event ContractGroupBound(
-        address asset,
-        uint256 contractGroupId
-    );
-
-    event CrossTokenBurned(
-        uint256 indexed fromChain,
-        uint256 indexed toChain,
         uint256 indexed contractGroupId,
-        address asset,
-        bytes   burnInfo
+        address indexed asset
     );
 
     mapping(address => ProxiedAsset) public assets;
@@ -36,6 +27,7 @@ contract EdgeProxy is IProxy{
         require(Address.isContract(subContractor_), "invalid sub contractor");
         require(Address.isContract(prover_), "invalid prover");
         require(peerProxy_ != address(0), "invalid peer proxy");
+        require(Address.isContract(address(limit_)), "invalid limit contract");
 
         _bindPeerChain(peerChainId_, prover_, peerProxy_);
         subContractor = subContractor_;
@@ -63,7 +55,7 @@ contract EdgeProxy is IProxy{
         require(assets[asset].groupId == 0, "can not modify the bind asset");
         require(contractGroupId != 0, "contract group id can not be 0");
         assets[asset] = ProxiedAsset(contractGroupId);
-        emit ContractGroupBound(asset, contractGroupId);
+        emit ContractGroupBound(contractGroupId, asset);
     }
 
     function mint(bytes memory proof) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT) {
@@ -81,14 +73,15 @@ contract EdgeProxy is IProxy{
         bytes memory codes = abi.encodeWithSignature("mint(uint256,uint256[],uint256[],bytes,address)", tokenId, rightKinds, rightIds, additional, receiver);
         (bool success,) = (receipt.data.asset).call(codes);
         require(success, "fail to mint");
-        _saveProof(receipt.data.fromChain, receipt.proofIndex);
+        _saveProof(receipt.data.fromChain, receipt.blockHash, receipt.receiptIndex, receipt.proofIndex);
+        emit CrossTokenMinted(groupId, receipt.data.fromChain, receipt.data.toChain, receipt.data.asset, receipt.data.burnInfo);
     }
 
     function burnTo(uint256 toChainId, address asset, address receiver, uint256 tokenId) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN) {
         address localAsset = asset;
         require(receiver != address(0), "invalid parameter");
         uint256 groupId = assets[localAsset].groupId;
-        require(groupId != 0, "asset is not bind");
+        require(groupId != 0, "asset is not bound");
         require(toChainId != chainId, "only support cross chain tx");
 
         bytes memory codes = abi.encodeWithSignature("burn(uint256)", tokenId);
@@ -96,17 +89,19 @@ contract EdgeProxy is IProxy{
         require(success, "fail to burn");
         (uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = abi.decode(result, (uint256[],uint256[],bytes));
         bytes memory value = abi.encode(receiver, tokenId, rightKinds, rightIds, additional);
-        emit CrossTokenBurned(chainId, toChainId, groupId, localAsset, value);
+        emit CrossTokenBurned(groupId, chainId, toChainId, localAsset, false, value);
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
     /// The consumed event cannot be reused for future calls.
     function _saveProof(
         uint256 chainId_,
+        bytes32 blockHash_,
+        uint256 receiptIndex_,
         bytes32 proofIndex_
     ) internal {
         require(!usedProofs[proofIndex_], "The burn event proof cannot be reused");
         usedProofs[proofIndex_] = true;
-        emit UsedProof(chainId_, proofIndex_);
+        emit UsedProof(chainId_, blockHash_, receiptIndex_, proofIndex_);
     }
 }

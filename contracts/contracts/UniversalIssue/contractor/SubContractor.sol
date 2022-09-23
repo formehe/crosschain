@@ -22,7 +22,8 @@ contract SubContractor is AdminControlledUpgradeable{
     }
 
     struct VerifiedReceipt {
-        bytes32 proofIndex;
+        bytes32 blockHash;
+        uint256 receiptIndex;
         VerifiedEvent data;
     }
 
@@ -33,6 +34,8 @@ contract SubContractor is AdminControlledUpgradeable{
     );
 
     event UsedGeneralContractProof(
+        bytes32 indexed blockHash,
+        uint256 indexed receiptIndex,
         bytes32 proofIndex
     );
 
@@ -61,6 +64,7 @@ contract SubContractor is AdminControlledUpgradeable{
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(generalContractor_), "invalid general contractor");
         require(Address.isContract(localProxy_), "invalid local proxy");
+        require(Address.isContract(address(prover_)), "invalid prover");
 
         generalContractor = generalContractor_;
         chainId = chainId_;
@@ -97,17 +101,19 @@ contract SubContractor is AdminControlledUpgradeable{
     }
 
     function _saveProof(
-        bytes32 proofIndex
+        bytes32 blockHash,
+        uint256 receiptIndex
     ) internal {
+        bytes32 proofIndex = keccak256(abi.encode(blockHash, receiptIndex));
         require(!usedProofs[proofIndex], "proof is reused");
         usedProofs[proofIndex] = true;
-        emit UsedGeneralContractProof(proofIndex);
+        emit UsedGeneralContractProof(blockHash, receiptIndex, proofIndex);
     }
 
     /// verify
     function _verify( bytes memory proofData) internal returns (VerifiedReceipt memory receipt_){
         receipt_ = _parseAndConsumeProof(proofData);
-        _saveProof(receipt_.proofIndex);
+        _saveProof(receipt_.blockHash, receipt_.receiptIndex);
         return receipt_;
     }
 
@@ -126,9 +132,10 @@ contract SubContractor is AdminControlledUpgradeable{
         require(contractAddress == generalContractor, "general contractor address is error");
 
         // require(limit.forbiddens(proofIndex) == false, "tx is forbidden");
-        (bool success, bytes32 proofIndex, uint256 time) = prover.verify(proofData);
+        (bool success, bytes32 blockHash, uint256 receiptIndex, uint256 time) = prover.verify(proofData);
         require(success, "proof is invalid");
-        _receipt.proofIndex = proofIndex;
+        _receipt.blockHash = blockHash;
+        _receipt.receiptIndex = receiptIndex;
     }
 
     function _parseLog(

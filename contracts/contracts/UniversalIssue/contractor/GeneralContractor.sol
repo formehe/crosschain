@@ -21,6 +21,8 @@ contract GeneralContractor is AdminControlledUpgradeable{
 
     event UsedProof(
         uint256 indexed chainId,
+        bytes32 indexed blockHash,
+        uint256 indexed receiptIndex,
         bytes32 proofIndex
     );
     
@@ -31,7 +33,8 @@ contract GeneralContractor is AdminControlledUpgradeable{
     }
 
     struct VerifiedReceipt {
-        bytes32 proofIndex;
+        bytes32 blockHash;
+        uint256 receiptIndex;
         VerifiedEvent data;
     }
 
@@ -109,6 +112,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
     function bindSubContractor(uint256 chainId_, address subContractor_, IProver prover_) external onlyRole(ADMIN_ROLE){
         require(subContractors[chainId_].subContractor == address(0), "chain has been bound");
         require(subContractor_ != address(0), "invalid subcontractor address");
+        require(Address.isContract(address(prover_)), "invalid prover address");
         subContractors[chainId_] = SubContractorInfo(subContractor_, prover_);
         emit SubContractorBound(chainId_, subContractor_, address(prover_));
     }
@@ -125,7 +129,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId);
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
-        _saveProof(receipt.data.chainId, receipt.proofIndex);
+        _saveProof(receipt.data.chainId, receipt.blockHash, receipt.receiptIndex);
 
         emit ContractorGroupBound(receipt.data.chainId, receipt.data.contractGroupId, receipt.data.asset);
     }
@@ -143,6 +147,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         (bool success, ) = proxy.call(payload);
         require(success, "fail to bind contract group");
         localContractGroupAsset[contractGroupId] = AssetInfo(templateId, saltId, asset);
+
         emit GeneralContractorIssue(templateId, contractGroupId_, saltId_, generalIssueInfo);
     }
 
@@ -150,10 +155,8 @@ contract GeneralContractor is AdminControlledUpgradeable{
         AssetInfo memory assetInfo = localContractGroupAsset[groupId];
         require(assetInfo.asset != address(0), "group id has not issued");
         require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
-
-        // if group id is in issuing
+        require(peerChainId != chainId, "expand chain id can not be main chain");
         bytes memory  generalIssueInfo = ITokenFactory(templateCodes[assetInfo.templateId]).expand(assetInfo.asset, peerChainId, issuer);
-        console.logBytes(generalIssueInfo);
         emit GeneralContractorIssue(assetInfo.templateId, groupId, assetInfo.saltId, generalIssueInfo);
     }
 
@@ -166,22 +169,29 @@ contract GeneralContractor is AdminControlledUpgradeable{
     }
 
     function _checkChains(uint256[] memory chainIds_) internal view {
+        bool exist;
         for (uint256 i = 0; i < chainIds_.length; i++) {
             if (chainIds_[i] != chainId) {
                 require(subContractors[chainIds_[i]].subContractor != address(0), "chain is not bound");
-            }
+            } else {
+                exist = true;
+            }            
         }
+
+        require(exist, "must issue on main chain");
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
     /// The consumed event cannot be reused for future calls.
     function _saveProof(
         uint256 chainId_,
-        bytes32 proofIndex_
+        bytes32 blockHash_,
+        uint256 receiptIndex_
     ) internal {
+        bytes32 proofIndex_ = keccak256(abi.encode(blockHash_, receiptIndex_));
         require(!usedProofs[chainId_][proofIndex_], "event of proof cannot be reused");
         usedProofs[chainId_][proofIndex_] = true;
-        emit UsedProof(chainId_, proofIndex_);
+        emit UsedProof(chainId_, blockHash_, receiptIndex_, proofIndex_);
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
@@ -199,9 +209,10 @@ contract GeneralContractor is AdminControlledUpgradeable{
         require(subContractors[receipt_.data.chainId].subContractor == contractAddress, "proxy is not bound");
         // require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
 
-        (bool success, bytes32 proofIndex, uint256 time) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
+        (bool success, bytes32 blockHash, uint256 receiptIndex, uint256 time) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
         require(success, "Proof should be valid");
-        receipt_.proofIndex = proofIndex;
+        receipt_.blockHash = blockHash;
+        receipt_.receiptIndex = receiptIndex;
     }
 
     function _parseLog(

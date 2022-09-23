@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./IRightMetadata.sol";
 import "../../common/IssueCoder.sol";
+import "hardhat/console.sol";
 
 /**
 * @dev Required interface of an ERC3721 compliant contract.
@@ -17,6 +18,7 @@ abstract contract Right is Initializable, IRightMetadata {
         string name;
         string uri;
         string agreement;
+        uint256 totalAmount;
     }
 
     struct RightScope {
@@ -37,21 +39,22 @@ abstract contract Right is Initializable, IRightMetadata {
     
     function initialize(
         address owner_,
-        IssueCoder.RightDescWithId[] memory rigthKinds_,
+        IssueCoder.IssueRight[] memory rigthKinds_,
         IssueCoder.RightRange[] memory rightRanges_
-    ) public onlyInitializing {
+    ) internal onlyInitializing {
         require(owner_ != address(0), "opertion can not be 0");
         _owner = owner_;
 
         for (uint256 i = 0; i < rigthKinds_.length; i++) {
             uint256 rightKind = rigthKinds_[i].id;
             _rightKindIndexes.push(rightKind);
-            _rightKinds[rightKind] = RightInfo(rigthKinds_[i].right.name, rigthKinds_[i].right.uri, rigthKinds_[i].right.agreement);
+            _rightKinds[rightKind] = RightInfo(rigthKinds_[i].right.name, rigthKinds_[i].right.uri, rigthKinds_[i].right.agreement, rigthKinds_[i].totalAmount);
         }
 
         for (uint256 i = 0; i < rightRanges_.length; i++) {
             uint256 rightKind = rightRanges_[i].id;
             require(bytes(_rightKinds[rightKind].name).length != 0, "invalid right");
+            require(rightRanges_[i].baseIndex != 0, "right id cannot be 0");
             _rightRanges[rightKind] = RightScope(rightRanges_[i].baseIndex, rightRanges_[i].baseIndex + rightRanges_[i].cap);
         }
     }
@@ -60,6 +63,7 @@ abstract contract Right is Initializable, IRightMetadata {
         require(rightId != 0, "rightId can not be 0");
         require(_owner == owner, "just owner can attach");
         require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
+        require(rightId <= _rightKinds[rightKind].totalAmount, "right id is overflow");
         require(_stateOfRights[rightKind][rightId] == State.UNATTACHED, "token right has been bound");
         RightScope memory range = _rightRanges[rightKind];
         require((rightId >= range.minId) && (rightId < range.maxId), "token right id is out of range");
@@ -68,16 +72,17 @@ abstract contract Right is Initializable, IRightMetadata {
     }
 
     function _mintRight(uint256 rightKind, uint256 rightId) internal {
-        require(rightId != 0, "invalid token right id");
-        require(bytes(_rightKinds[rightKind].name).length != 0, "token right kind is not exist");
-        require(_stateOfRights[rightKind][rightId] != State.ATTACHED, "right");
+        require(rightId != 0, "rightId can not be 0");
+        require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
+        require(rightId <= _rightKinds[rightKind].totalAmount, "right id is overflow");
+        require(_stateOfRights[rightKind][rightId] != State.ATTACHED, "right is not attached");
         _stateOfRights[rightKind][rightId] = State.ATTACHED;
         emit RightMinted(rightKind, rightId);
     }
 
     function _burnRight(uint256 rightKind, uint256 rightId) internal {
         require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
-        require(_stateOfRights[rightKind][rightId] == State.ATTACHED, "right is unattched");
+        require(_stateOfRights[rightKind][rightId] == State.ATTACHED, "right is not attached");
         _stateOfRights[rightKind][rightId] = State.BURNED;
         emit RightBurned(rightKind, rightId);
     }
@@ -98,18 +103,23 @@ abstract contract Right is Initializable, IRightMetadata {
         return _rightKinds[rightKind].uri;
     }
 
-    function rights() external view returns (IssueCoder.RightDescWithId[] memory rigthKinds_) {
+    function rights() external view returns (IssueCoder.IssueRight[] memory rigthKinds_) {
         uint256 len = _rightKindIndexes.length;
-        rigthKinds_ = new IssueCoder.RightDescWithId[](len);
+        rigthKinds_ = new IssueCoder.IssueRight[](len);
         for (uint256 i = 0; i < len; i++) {
             uint256 id = _rightKindIndexes[i];
             RightInfo memory rightInfo = _rightKinds[id];
-            IssueCoder.RightDescWithId memory rightDescWithId;
+            IssueCoder.IssueRight memory rightDescWithId;
             rightDescWithId.id = id;
+            rightDescWithId.totalAmount = rightInfo.totalAmount;
             rightDescWithId.right.name = rightInfo.name;
             rightDescWithId.right.uri = rightInfo.uri;
             rightDescWithId.right.agreement = rightInfo.agreement;
             rigthKinds_[i] = rightDescWithId;
         }
+    }
+    
+    function rightIssueRange(uint256 rightkind) external view returns (uint256 minId, uint256 maxId){
+        return (_rightRanges[rightkind].minId, _rightRanges[rightkind].maxId);
     }
 }

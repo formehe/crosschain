@@ -7,10 +7,11 @@ abstract contract IProver {
     using MPT for MPT.MerkleProof;
     address public bridge;
     constructor(address bridge_) {
+        require(bridge_ != address(0), "invalid address");
         bridge = bridge_;
     }
 
-    function verify(bytes calldata proofData) external virtual returns(bool valid, bytes32 proofIndex, uint256 time);
+    function verify(bytes calldata proofData) external virtual returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time);
     function _verify(uint64 reciptIndex, bytes memory reciptData, bytes[] memory proof, bytes32 receiptsRoot) internal view {
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = receiptsRoot;

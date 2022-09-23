@@ -31,6 +31,12 @@ library IssueCoder {
         RightDesc right;
     }
 
+    struct IssueRight {
+        uint256 id;
+        uint256 totalAmount;
+        RightDesc right;
+    }
+
     struct IssuerDesc {
         string  name;
         string  certification;
@@ -63,8 +69,9 @@ library IssueCoder {
     struct GeneralIssueInfo {
         string            name;
         string            symbol;
+        uint256           totalAmountOfToken;
         IssuerDesc        issuer;
-        RightDescWithId[] rights;
+        IssueRight[]      rights;
         CirculationRangePerchain[]  issueRangeOfChains;
     }
 
@@ -146,11 +153,41 @@ library IssueCoder {
                 RLPDecode.Iterator memory it = ls[i].iterator();
                 uint idx;
                 while(it.hasNext()) {
-                    if ( idx == 0 ) {
-                        rightWithIds[i].id    = it.next().toUint();
-                        console.logUint(rightWithIds[i].id);
-                    }
+                    if ( idx == 0 ) rightWithIds[i].id    = it.next().toUint();
                     else if ( idx == 1 ) rightWithIds[i].right = decodeRightDesc(it.next());
+                    else it.next();
+                    idx++;
+                }
+
+                // console.log("=============decode right=============");
+                // console.logUint(rightWithIds[i].id);
+            }
+        }
+    }
+
+    function encodeIssueRights(IssueRight[] memory rightWithIds) internal view returns (bytes memory) {
+        bytes[] memory rights = new bytes[](rightWithIds.length);
+        for (uint i = 0; i < rightWithIds.length; i++) {
+            bytes[] memory rightWithId = new bytes[](3);
+            rightWithId[0] = RLPEncode.encodeUint(rightWithIds[i].id);
+            rightWithId[1] = RLPEncode.encodeUint(rightWithIds[i].totalAmount);
+            rightWithId[2] = encodeRightDesc(rightWithIds[i].right);
+            rights[i] = RLPEncode.encodeList(rightWithId);
+        }
+        return RLPEncode.encodeList(rights);
+    }
+
+    function decodeIssueRights(RLPDecode.RLPItem memory itemBytes) internal view returns (IssueRight[] memory rightWithIds) {
+        RLPDecode.RLPItem[] memory ls = itemBytes.toList();
+        if (ls.length > 0) { 
+            rightWithIds = new IssueRight[](ls.length);
+            for (uint256 i = 0; i < ls.length; i++) {
+                RLPDecode.Iterator memory it = ls[i].iterator();
+                uint idx;
+                while(it.hasNext()) {
+                    if ( idx == 0 ) rightWithIds[i].id    = it.next().toUint();
+                    else if ( idx == 1 ) rightWithIds[i].totalAmount    = it.next().toUint();
+                    else if ( idx == 2 ) rightWithIds[i].right = decodeRightDesc(it.next());
                     else it.next();
                     idx++;
                 }
@@ -337,12 +374,13 @@ library IssueCoder {
     }
 
     function encodeGeneralIssueInfo(GeneralIssueInfo memory generalIssue) internal view returns(bytes memory) {
-        bytes[] memory generalIssueInfo = new bytes[](5);
+        bytes[] memory generalIssueInfo = new bytes[](6);
         generalIssueInfo[0] = RLPEncode.encodeBytes(abi.encodePacked(generalIssue.name));
         generalIssueInfo[1] = RLPEncode.encodeBytes(abi.encodePacked(generalIssue.symbol));
-        generalIssueInfo[2] = encodeIssuer(generalIssue.issuer);
-        generalIssueInfo[3] = encodeRights(generalIssue.rights);
-        generalIssueInfo[4] = encodeCirculationRangeOfChains(generalIssue.issueRangeOfChains);
+        generalIssueInfo[2] = RLPEncode.encodeUint(generalIssue.totalAmountOfToken);
+        generalIssueInfo[3] = encodeIssuer(generalIssue.issuer);
+        generalIssueInfo[4] = encodeIssueRights(generalIssue.rights);
+        generalIssueInfo[5] = encodeCirculationRangeOfChains(generalIssue.issueRangeOfChains);
         return RLPEncode.encodeList(generalIssueInfo);
     }
 
@@ -352,9 +390,10 @@ library IssueCoder {
         while(it.hasNext()) {
             if ( idx == 0 )      generalIssueInfo.name            = string(it.next().toBytes());
             else if ( idx == 1 ) generalIssueInfo.symbol          = string(it.next().toBytes());
-            else if ( idx == 2 ) generalIssueInfo.issuer          = decodeIssuer(it.next());
-            else if ( idx == 3 ) generalIssueInfo.rights          = decodeRights(it.next());
-            else if ( idx == 4 ) generalIssueInfo.issueRangeOfChains = decodeCirculationRangeOfChains(it.next());
+            else if ( idx == 2 ) generalIssueInfo.totalAmountOfToken    = it.next().toUint();
+            else if ( idx == 3 ) generalIssueInfo.issuer          = decodeIssuer(it.next());
+            else if ( idx == 4 ) generalIssueInfo.rights          = decodeIssueRights(it.next());
+            else if ( idx == 5 ) generalIssueInfo.issueRangeOfChains = decodeCirculationRangeOfChains(it.next());
             else it.next();
             idx++;
         }

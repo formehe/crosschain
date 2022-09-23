@@ -101,14 +101,23 @@ describe('IssueCoder', () => {
 
     console.log("testIssueCoder "  + issueCoder.address)
 
-    
+    limitCon = await ethers.getContractFactory("Limit");
+    limit = await limitCon.deploy(wallet.address);
+    await limit.deployed();
+    console.log("Limit "  + limit.address)
+
+    multiLimitCon = await ethers.getContractFactory("MultiLimit");
+    multiLimit = await multiLimitCon.deploy(wallet.address);
+    await multiLimit.deployed();
+
+    console.log("multiLimit "  + multiLimit.address)
+
     coreProxyCon = await ethers.getContractFactory("CoreProxy");
     coreProxy = await coreProxyCon.deploy();
     await coreProxy.deployed();
 
     console.log("coreProxy "  + coreProxy.address)
 
-    
     generalContractorCon = await ethers.getContractFactory("GeneralContractor");
     generalContractor = await generalContractorCon.deploy();
     await generalContractor.deployed();
@@ -122,13 +131,13 @@ describe('IssueCoder', () => {
     console.log("erc20TokenSample "  + erc20TokenSample.address)
 
     nfrFactoryCon = await ethers.getContractFactory("NFRFactory");
-    nfrFactory = await nfrFactoryCon.deploy(erc20TokenSample.address);
+    nfrFactory = await nfrFactoryCon.deploy(erc20TokenSample.address, generalContractor.address);
     await nfrFactory.deployed();
 
     console.log("nfrFactory "  + nfrFactory.address)
     
-    await coreProxy.initialize(generalContractor.address, 1)
-    await generalContractor.initialize(coreProxy.address, 1)
+    await coreProxy.initialize(generalContractor.address, 1, wallet.address, multiLimit.address)
+    await generalContractor.initialize(coreProxy.address, 1, wallet.address)
 
     // sub general
     headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -155,8 +164,14 @@ describe('IssueCoder', () => {
 
     console.log("edgeProxy "  + edgeProxy.address)
 
-    await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address)
-    await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2)
+    nfrFactoryCon1 = await ethers.getContractFactory("NFRFactory");
+    nfrFactory1 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractor.address);
+    await nfrFactory1.deployed();
+
+    console.log("nfrFactory "  + nfrFactory1.address)
+
+    await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, wallet.address)
+    await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, wallet.address, limit.address)
 
     issueInfo = {
         name: "nfr",
@@ -236,7 +251,7 @@ describe('IssueCoder', () => {
     it('general issue', async () => {
       await generalContractor.bindTemplate(0, nfrFactory.address)
       await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-      await subContractor.bindTemplate(0, nfrFactory.address)
+      await subContractor.bindTemplate(0, nfrFactory1.address)
     
       let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
       //========================================================================
@@ -286,10 +301,10 @@ describe('IssueCoder', () => {
       console.log("attach right")
       coreProxy.bindPeerChain(2,ethLikeProver.address, edgeProxy.address)
       erc20SampleInstance = await erc20TokenSampleCon.attach(templateAddr)
-      await erc20SampleInstance.connect(wallet2).attachRight(1,1,1)
-      await erc20SampleInstance.connect(wallet2).approve(edgeProxy.address, 1)
+      await erc20SampleInstance.connect(wallet2).attachRight(51,1,51)
+      await erc20SampleInstance.connect(wallet2).approve(edgeProxy.address, 51)
       
-      tx = await edgeProxy.connect(wallet2).burnTo(1, templateAddr, wallet3.address, 1)
+      tx = await edgeProxy.connect(wallet2).burnTo(1, templateAddr, wallet3.address, 51)
       rc = await tx.wait()
       event = rc.events.find(event=>event.event === "CrossTokenBurned")
       // construct receipt proof

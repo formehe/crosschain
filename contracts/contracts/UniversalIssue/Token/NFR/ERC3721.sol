@@ -12,25 +12,30 @@ import "hardhat/console.sol";
 * @dev Required interface of an ERC3721 compliant contract.
 */
 abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
-    event RightTokenBound(uint256 indexed from, uint256 indexed rightKind, uint256 indexed rightId);
-    event RightTokenDisbound(uint256 indexed from, uint256 indexed rightKind, uint256 indexed rightId);
+    event TokenRightBound(uint256 indexed tokenId, uint256 indexed rightKind, uint256 indexed rightId);
+    event TokenRightDisbound(uint256 indexed tokenId, uint256 indexed rightKind, uint256 indexed rightId);
+    event TokenRightTansfered(uint256 indexed fromTokenId, uint256 toTokenId, uint256 indexed rightKind, uint256 indexed rightId);
+    event TokenAttached(uint256 indexed tokenId, bytes additional);
+    event TokenRightBurned(uint256 indexed tokenId, uint256 indexed rightKind, uint256 indexed rightId);
     
     mapping(uint256 => bytes) private _tokenExtension;
     // tokenid --- rightKind --- rightId
     mapping(uint256 => mapping(uint256 => uint256)) private _tokenRights;
-    mapping(uint256 => uint256[]) private _tokenKindIndexes;
+    mapping(uint256 => uint256[]) private _tokenKinds;
     address minter;
 
     function initialize(
         address minter_,
         string memory name_, 
-        string memory symbol_, 
-        IssueCoder.RightDescWithId[] memory rights_, 
+        string memory symbol_,
+        uint256 totalAmount,
+        IssueCoder.IssueRight[] memory rights_, 
         IssueCoder.IssuerDesc memory issuer_, 
         IssueCoder.CirculationRangePerchain memory circulation_
     ) external initializer {
+        require(minter_ != address(0), "minter can not be 0");
         minter = minter_;
-        ERC721Chunk.initialize(name_, symbol_, issuer_.uri, circulation_.baseIndexOfToken, circulation_.baseIndexOfToken + circulation_.capOfToken, circulation_.issuer);
+        ERC721Chunk.initialize(name_, symbol_, issuer_.uri, circulation_.baseIndexOfToken, circulation_.baseIndexOfToken + circulation_.capOfToken, circulation_.issuer, totalAmount);
         Issuer.initialize(issuer_.name, issuer_.certification, issuer_.agreement, issuer_.uri);
         Right.initialize(circulation_.issuer, rights_, circulation_.rangeOfRights);
     }
@@ -39,11 +44,11 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         uint256 tokenId
     ) external virtual returns(uint256[] memory rightKinds_, uint256[] memory rightIds_, bytes memory additional_) {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
-        uint256 len = _tokenKindIndexes[tokenId].length;
+        uint256 len = _tokenKinds[tokenId].length;
         rightKinds_ = new uint256[](len);
         rightIds_ = new uint256[](len);
         for (uint i = 0; i < len; i++) {
-            uint256 rightKind = _tokenKindIndexes[tokenId][i];
+            uint256 rightKind = _tokenKinds[tokenId][i];
             uint256 rightId = _tokenRights[tokenId][rightKind];
             _tokenRights[tokenId][rightKind] = 0;
             rightKinds_[i] = rightKind;
@@ -51,7 +56,7 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
             _burnRight(rightKind, rightId);
         }
         additional_ = _tokenExtension[tokenId];
-        delete _tokenKindIndexes[tokenId];
+        delete _tokenKinds[tokenId];
         delete _tokenExtension[tokenId];
 
         _burn(tokenId);
@@ -59,12 +64,13 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
 
     function burnRight(
         uint256 tokenId,
-        uint256 rightkind,
+        uint256 rightKind,
         uint256 rightId
     ) external virtual {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
-        _burnRight(rightkind, rightId);
-        _delRightOfToken(tokenId, rightkind, rightId);
+        _delRightOfToken(tokenId, rightKind, rightId);
+        _burnRight(rightKind, rightId);
+        emit TokenRightBurned(tokenId, rightKind, rightId);
     }
     
     /**
@@ -75,13 +81,14 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
     function transferRight(
         uint256 fromTokenId,
         uint256 toTokenId,
-        uint256 rightkind,
+        uint256 rightKind,
         uint256 rightId,
         bytes calldata data
     ) external virtual{        
         require(_isApprovedOrOwner(_msgSender(), fromTokenId), "caller is not owner nor approved");
-        _delRightOfToken(fromTokenId, rightkind, rightId);
-        _addRightOfToken(toTokenId, rightkind, rightId);
+        _delRightOfToken(fromTokenId, rightKind, rightId);
+        _addRightOfToken(toTokenId, rightKind, rightId);
+        emit TokenRightTansfered(fromTokenId, toTokenId, rightKind, rightId);
     }
 
     function attachAddtional(uint256 tokenId, bytes memory additional) external virtual {
@@ -90,6 +97,11 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         require(owner == issuer(tokenId), "only issuer can add additional of token");
         require(_tokenExtension[tokenId].length == 0, "additional of token has been bound");
         _tokenExtension[tokenId] = additional;
+        emit TokenAttached(tokenId, additional);
+    }
+
+    function tokenAddtional(uint256 tokenId) external virtual returns(bytes memory){
+        return _tokenExtension[tokenId];
     }
 
     /**
@@ -106,6 +118,17 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "not owner or approver");
         _attachRight(owner, rightKind, rightId);
         _addRightOfToken(tokenId, rightKind, rightId);
+    }
+
+    function tokenRights(uint256 tokenId) external virtual returns(uint256[] memory rightKinds, uint256[] memory rightIds){
+        uint256 len = _tokenKinds[tokenId].length;
+        rightKinds = new uint256[](len);
+        rightIds = new uint256[](len);
+        for (uint i = 0; i < len; i++) {
+            uint256 rightKind = _tokenKinds[tokenId][i];
+            rightKinds[i] = rightKind;
+            rightIds[i] = _tokenRights[tokenId][rightKind];
+        }
     }
 
     function mint(uint256 tokenId_, uint256[] memory rightKinds_, uint256[] memory rightIds_, bytes memory additional, address owner_) external {
@@ -126,25 +149,25 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         //cancel approved right and modify owner;
         require(_tokenRights[tokenId][rightKind] == 0, "right has been bound");
         _tokenRights[tokenId][rightKind] = rightId;
-        _tokenKindIndexes[tokenId].push(rightKind);
-        emit RightTokenBound(tokenId, rightKind, rightId);
+        _tokenKinds[tokenId].push(rightKind);
+        emit TokenRightBound(tokenId, rightKind, rightId);
     }
 
     function _delRightOfToken(uint256 tokenId, uint256 rightKind, uint256 rightId) internal {
-        require(_tokenRights[tokenId][rightKind] != 0, "right has not been bound");
+        require(_tokenRights[tokenId][rightKind] == rightId, "right has not been bound");
         delete _tokenRights[tokenId][rightKind];
 
         //cancel approved right and modify owner;
-        uint256 len = _tokenKindIndexes[tokenId].length;
+        uint256 len = _tokenKinds[tokenId].length;
         for (uint i = 0; i < len; i++) {
-            if (rightKind != _tokenKindIndexes[tokenId][i]) {
+            if (rightKind != _tokenKinds[tokenId][i]) {
                 continue;
             }
 
-            _tokenKindIndexes[tokenId][i] = _tokenKindIndexes[tokenId][len - 1];
-            delete _tokenKindIndexes[tokenId][len - 1];
+            _tokenKinds[tokenId][i] = _tokenKinds[tokenId][len - 1];
+            delete _tokenKinds[tokenId][len - 1];
         }
 
-        emit RightTokenDisbound(tokenId, rightKind, rightId);
+        emit TokenRightDisbound(tokenId, rightKind, rightId);
     }
 }

@@ -13,7 +13,7 @@ contract TopLikeProver is IProver{
 
     constructor(address bridge_) IProver(bridge_) {}
 
-    function verify(bytes memory proofData) external override returns(bool valid, bytes32 proofIndex, uint256 time) {
+    function verify(bytes memory proofData) external override returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         TopProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();
@@ -24,10 +24,8 @@ contract TopLikeProver is IProver{
         require((keccak256(proof.logEntryData) == keccak256(receipt.log)), "Log is not found");
         _verify(proof.reciptIndex, proof.reciptData, proof.reciptProof, header.inner_lite.receipts_root_hash);
         _verify(proof.blockIndex, abi.encodePacked(header.block_hash), proof.blockProof,  _getBlockMerkleRoot(proof.polyBlockHeight));
-        bytes memory reciptIndex = abi.encode(header.block_hash, proof.reciptIndex);
-        proofIndex = keccak256(reciptIndex);
         time = getAddLightClientTime(proof.polyBlockHeight);
-        return (true, proofIndex, time);
+        return (true, header.block_hash, proof.reciptIndex, time);
     }
 
     function _getBlockMerkleRoot(uint64 height) internal view returns(bytes32 blockMerkleRoot){

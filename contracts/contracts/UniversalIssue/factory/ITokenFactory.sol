@@ -7,14 +7,23 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "hardhat/console.sol";
 
 abstract contract ITokenFactory is Initializable {
+    event ContractCreated(
+        uint256  indexed chainId,
+        uint256  indexed saltId,
+        address  indexed asset,
+        address  templateCode,
+        address  minter
+    );
     address templateCode;
     address contractor;
     constructor(address code_, address contractor_) {
+        require(Address.isContract(code_), "invalid address");
+        require(Address.isContract(contractor_), "invalid address");
         templateCode = code_;
         contractor = contractor_;
     }
 
-    function clone(uint256 chainId, bytes memory rangeOfIssue, uint256 saltId, address minter) external returns(address){
+    function clone(uint256 chainId, bytes memory rangeOfIssue, uint256 saltId, address minter) external returns(address asset){
         require(msg.sender == contractor, "caller is not permit");
 
         address predictAddr = Clones.predictDeterministicAddress(templateCode, bytes32(saltId));
@@ -22,9 +31,9 @@ abstract contract ITokenFactory is Initializable {
             return predictAddr;  
         }
 
-        address code = Clones.cloneDeterministic(templateCode, bytes32(saltId));        
-        initialize(chainId, code, rangeOfIssue, minter);
-        return code;
+        asset = Clones.cloneDeterministic(templateCode, bytes32(saltId));        
+        initialize(chainId, asset, rangeOfIssue, minter);
+        emit ContractCreated(chainId, saltId, asset, templateCode, minter);
     }
 
     function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal virtual;

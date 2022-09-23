@@ -10,19 +10,21 @@ contract NFRFactory is ITokenFactory{
     }
 
     function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal override {
-        // Token若未在該鏈發行,是否需要創建template合約？
         IssueCoder.GeneralIssueInfo memory generalIssue = IssueCoder.decodeGeneralIssueInfo(rangeOfIssue);
         IssueCoder.CirculationRangePerchain memory circulationPerChain;
+        bool exist;
         for (uint256 i = 0; i < generalIssue.issueRangeOfChains.length; i++) {
             if (generalIssue.issueRangeOfChains[i].chainId != chainId) {
                 continue;
             }
 
             circulationPerChain = generalIssue.issueRangeOfChains[i];
+            exist = true;
         }
 
-        bytes memory payload = abi.encodeWithSignature("initialize(address,string,string,(uint256,(string,string,string))[],(string,string,string,string),(address,(uint256,uint256,uint256)[],uint256,uint256,uint256))", 
-            minter, generalIssue.name, generalIssue.symbol, generalIssue.rights, generalIssue.issuer, circulationPerChain);
+        require(exist, "not issue on this chain");
+        bytes memory payload = abi.encodeWithSignature("initialize(address,string,string,uint256,(uint256,uint256,(string,string,string))[],(string,string,string,string),(address,(uint256,uint256,uint256)[],uint256,uint256,uint256))", 
+            minter, generalIssue.name, generalIssue.symbol, generalIssue.totalAmountOfToken, generalIssue.rights, generalIssue.issuer, circulationPerChain);
         (bool success, bytes memory returnData) = code.call(payload);
         require(success, "fail to initialize template code");
     }
@@ -34,7 +36,7 @@ contract NFRFactory is ITokenFactory{
         issueWithRange.name = issueInfo.name;
         issueWithRange.symbol = issueInfo.symbol;
         issueWithRange.issuer = issueInfo.issuer;
-        issueWithRange.rights = issueInfo.rights;
+        issueWithRange.rights = new IssueCoder.IssueRight[](issueInfo.rights.length);
         issueWithRange.issueRangeOfChains = new IssueCoder.CirculationRangePerchain[](issueInfo.issueOfChains.length);
 
         uint256   tokenIndex = 1;
@@ -53,7 +55,15 @@ contract NFRFactory is ITokenFactory{
             chainIds[i] = issueInfo.issueOfChains[i].chainId;
         }
 
-        console.logBytes(IssueCoder.encodeGeneralIssueInfo(issueWithRange));
+        require(tokenIndex > 1, "none token issue");
+        issueWithRange.totalAmountOfToken = tokenIndex - 1;
+        
+        for (uint256 i = 0; i < issueInfo.rights.length; ++i) {
+            require(rightIndexes[i] > 1, "no right issue");
+            issueWithRange.rights[i].totalAmount = rightIndexes[i] - 1;
+            issueWithRange.rights[i].id = issueInfo.rights[i].id;
+            issueWithRange.rights[i].right = issueInfo.rights[i].right;
+        }
         return (IssueCoder.encodeGeneralIssueInfo(issueWithRange), chainIds);
     }
 
@@ -63,7 +73,7 @@ contract NFRFactory is ITokenFactory{
         bytes memory payload = abi.encodeWithSignature("rights()");
         (bool success, bytes memory returnData) = contractCode.staticcall(payload);
         require(success, "rights interface is not exist");
-        (issueWithRange.rights) = abi.decode(returnData, (IssueCoder.RightDescWithId[]));
+        (issueWithRange.rights) = abi.decode(returnData, (IssueCoder.IssueRight[]));
 
         payload = abi.encodeWithSignature("issuer()");
         (success, returnData) = contractCode.staticcall(payload);
@@ -79,6 +89,11 @@ contract NFRFactory is ITokenFactory{
         (success, returnData) = contractCode.staticcall(payload);
         require(success, "name interface is not exist");
         (issueWithRange.symbol) = abi.decode(returnData, (string));
+
+        payload = abi.encodeWithSignature("supply()");
+        (success, returnData) = contractCode.staticcall(payload);
+        require(success, "name interface is not exist");
+        (issueWithRange.totalAmountOfToken) = abi.decode(returnData, (uint256));
         
         issueWithRange.issueRangeOfChains = new IssueCoder.CirculationRangePerchain[](1);
         issueWithRange.issueRangeOfChains[0].chainId = peerChainId;
@@ -94,6 +109,7 @@ contract NFRFactory is ITokenFactory{
         uint256 tokenIndex
     ) internal view returns(IssueCoder.CirculationRangePerchain memory circulationRangePerChain, uint256[] memory, uint256) {
         circulationRangePerChain.baseIndexOfToken = tokenIndex;
+        require(circulationPerChain.amountOfToken < (1 << 128), "token amount is overflow");
         circulationRangePerChain.capOfToken = circulationPerChain.amountOfToken;
         circulationRangePerChain.chainId = circulationPerChain.chainId;
         circulationRangePerChain.issuer = circulationPerChain.issuer;
@@ -104,6 +120,7 @@ contract NFRFactory is ITokenFactory{
             require(rightIds[i] == circulationPerChain.circulationOfRights[i].id, "right id is not exist");
             circulationRangePerChain.rangeOfRights[i].id    = circulationPerChain.circulationOfRights[i].id;
             circulationRangePerChain.rangeOfRights[i].baseIndex  = rightIndexes[i];
+            require(circulationPerChain.circulationOfRights[i].amount < (1 << 128), "right amount is overflow");
             circulationRangePerChain.rangeOfRights[i].cap        = circulationPerChain.circulationOfRights[i].amount;
             rightIndexes[i] += circulationRangePerChain.rangeOfRights[i].cap;
         }

@@ -35,6 +35,8 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     string private _symbol;
 
     string private _uri;
+    
+    uint256 private _totalSupply;
 
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
@@ -51,7 +53,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
-    function initialize(string memory name_, string memory symbol_, string memory uri_, uint256 minId_, uint256 maxId_, address owner_) public virtual onlyInitializing {
+    function initialize(string memory name_, string memory symbol_, string memory uri_, uint256 minId_, uint256 maxId_, address owner_, uint256 totalAmount_) internal virtual onlyInitializing {
         require(maxId_ >= minId_, "maxId is smaller than maxId");
         _name = name_;
         _symbol = symbol_;
@@ -59,6 +61,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         _owner = owner_;
         _balances[owner_] = maxId_ - minId_;
         _uri = uri_;
+        _totalSupply = totalAmount_;
     }
 
     /**
@@ -108,6 +111,10 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      */
     function symbol() external view virtual override returns (string memory) {
         return _symbol;
+    }
+
+    function supply() external view virtual returns (uint256) {
+        return _totalSupply;
     }
 
     /**
@@ -322,13 +329,12 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     function _mint(address to, uint256 tokenId) internal virtual {
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
+        require(tokenId <= _totalSupply, "ERC721: token id is overflow");
 
         _beforeTokenTransfer(address(0), to, tokenId);
 
         _balances[to] += 1;
         _owners[tokenId] = to;
-        console.log("============");
-        console.logAddress(to);
         
         emit Transfer(address(0), to, tokenId);
 
@@ -489,5 +495,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         if (!_liquidPool[tokenId]) {
             _liquidPool[tokenId] = true;
         }
+    }
+
+    function isssueTokenRange() view external returns(uint256 minId, uint256 maxId) {
+        return (_tokenRange.minId, _tokenRange.maxId);
     }
 }
