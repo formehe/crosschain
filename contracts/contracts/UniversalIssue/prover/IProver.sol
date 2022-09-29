@@ -11,7 +11,7 @@ abstract contract IProver {
         bridge = bridge_;
     }
 
-    function verify(bytes calldata proofData) external virtual returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time);
+    function verify(bytes calldata proofData) external virtual view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time);
     function _verify(uint64 reciptIndex, bytes memory reciptData, bytes[] memory proof, bytes32 receiptsRoot) internal view {
         MPT.MerkleProof memory merkleProof;
         merkleProof.expectedRoot = receiptsRoot;

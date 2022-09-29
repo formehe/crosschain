@@ -78,7 +78,7 @@ abstract contract IProxy is AdminControlledUpgradeable{
 
     function _parseAndConsumeProof(
         bytes memory proofData
-    ) internal returns (VerifiedReceipt memory receipt_) {
+    ) internal view returns (VerifiedReceipt memory receipt_) {
         address contractAddress;
         (receipt_.data, contractAddress) = _parseBurnProofLog(proofData);
 
@@ -93,7 +93,7 @@ abstract contract IProxy is AdminControlledUpgradeable{
         receipt_.time = time;
     }
 
-    function _parseBurnProofLog(bytes memory proof) private view returns (VerifiedEvent memory receipt_, address contractAddress_) {
+    function _parseBurnProofLog(bytes memory proof) private pure returns (VerifiedEvent memory receipt_, address contractAddress_) {
         Borsh.Data memory borshData = Borsh.from(proof);
         bytes memory log = borshData.decode();
         
@@ -106,8 +106,7 @@ abstract contract IProxy is AdminControlledUpgradeable{
         receipt_.fromChain = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         receipt_.toChain = abi.decode(abi.encodePacked(logInfo.topics[3]), (uint256));
 
-        bool proxied;
-        (receipt_.asset, proxied, receipt_.burnInfo) = abi.decode(logInfo.data, (address, bool, bytes));
+        (receipt_.asset, , receipt_.burnInfo) = abi.decode(logInfo.data, (address, bool, bytes));
         contractAddress_ = logInfo.contractAddress;
     }
 }

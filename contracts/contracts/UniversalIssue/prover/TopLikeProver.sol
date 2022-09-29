@@ -13,7 +13,7 @@ contract TopLikeProver is IProver{
 
     constructor(address bridge_) IProver(bridge_) {}
 
-    function verify(bytes memory proofData) external override returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
+    function verify(bytes memory proofData) external override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         TopProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();

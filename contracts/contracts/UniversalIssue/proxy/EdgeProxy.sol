@@ -64,7 +64,6 @@ contract EdgeProxy is IProxy{
         require((groupId != 0) && (groupId == receipt.data.contractGroupId), "chain is not permit");
         require(receipt.data.toChain == chainId, "not to mine");
         require(limit.forbiddens(receipt.proofIndex) == false, "receipt id has already been forbidden");
-        PeerChainInfo memory peer = peers[receipt.data.fromChain];
         require(limit.checkFrozen(receipt.data.asset, receipt.time),'tx is frozen');
         
         // call contract

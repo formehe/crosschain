@@ -25,11 +25,11 @@ contract NFRFactory is ITokenFactory{
         require(exist, "not issue on this chain");
         bytes memory payload = abi.encodeWithSignature("initialize(address,string,string,uint256,(uint256,uint256,(string,string,string))[],(string,string,string,string),(address,(uint256,uint256,uint256)[],uint256,uint256,uint256))", 
             minter, generalIssue.name, generalIssue.symbol, generalIssue.totalAmountOfToken, generalIssue.rights, generalIssue.issuer, circulationPerChain);
-        (bool success, bytes memory returnData) = code.call(payload);
+        (bool success, ) = code.call(payload);
         require(success, "fail to initialize template code");
     }
 
-    function issue(bytes memory issueInfo_) external view override returns(bytes memory, uint256[] memory) {
+    function issue(bytes memory issueInfo_) external pure override returns(bytes memory, uint256[] memory) {
         IssueCoder.IssueInfo memory issueInfo = IssueCoder.decodeIssueInfo(issueInfo_);
         IssueCoder.GeneralIssueInfo memory issueWithRange;
 
@@ -107,7 +107,7 @@ contract NFRFactory is ITokenFactory{
         uint256[] memory rightIndexes,
         uint256[] memory rightIds,
         uint256 tokenIndex
-    ) internal view returns(IssueCoder.CirculationRangePerchain memory circulationRangePerChain, uint256[] memory, uint256) {
+    ) internal pure returns(IssueCoder.CirculationRangePerchain memory circulationRangePerChain, uint256[] memory, uint256) {
         circulationRangePerChain.baseIndexOfToken = tokenIndex;
         require(circulationPerChain.amountOfToken < (1 << 128), "token amount is overflow");
         circulationRangePerChain.capOfToken = circulationPerChain.amountOfToken;

@@ -198,7 +198,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
     /// The consumed event cannot be reused for future calls.
     function _parseAndConsumeProof(
         bytes memory proofData
-    ) internal returns (VerifiedReceipt memory receipt_) {
+    ) internal view returns (VerifiedReceipt memory receipt_) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         bytes memory log = borshData.decode();
         // borshData.done();
@@ -209,7 +209,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         require(subContractors[receipt_.data.chainId].subContractor == contractAddress, "proxy is not bound");
         // require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
 
-        (bool success, bytes32 blockHash, uint256 receiptIndex, uint256 time) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
+        (bool success, bytes32 blockHash, uint256 receiptIndex, ) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
         require(success, "Proof should be valid");
         receipt_.blockHash = blockHash;
         receipt_.receiptIndex = receiptIndex;
