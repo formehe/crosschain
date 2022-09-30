@@ -6,6 +6,7 @@ contract UsdtErc20Wrapper {
 
     string public name = "Wrapped Tether USD";
     string public symbol = "tUSDT";
+    uint8  public decimals = 18;
     bytes1 public chain_uuid;
 
     constructor(bytes1 chain_uuid_) {
