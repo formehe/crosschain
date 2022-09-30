@@ -6,6 +6,7 @@ contract TopErc20Wrapper {
 
     string public name = "TOP Network";
     string public symbol = "TOP";
+    uint8  public decimals = 6;
     bytes1 public chain_uuid;
 
     constructor(bytes1 chain_uuid_) {
