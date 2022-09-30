@@ -89,7 +89,11 @@ contract GeneralContractor is AdminControlledUpgradeable{
         address indexed template
     );
 
-    function initialize(address localProxy_, uint256 chainId_, address owner_) external initializer {
+    function initialize(
+        address localProxy_,
+        uint256 chainId_,
+        address owner_
+    ) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(localProxy_), "invalid local proxy");
 
@@ -109,7 +113,11 @@ contract GeneralContractor is AdminControlledUpgradeable{
         _grantRole(ADMIN_ROLE, _msgSender());
     }
 
-    function bindSubContractor(uint256 chainId_, address subContractor_, IProver prover_) external onlyRole(ADMIN_ROLE){
+    function bindSubContractor(
+        uint256 chainId_,
+        address subContractor_,
+        IProver prover_
+    ) external onlyRole(ADMIN_ROLE){
         require(subContractors[chainId_].subContractor == address(0), "chain has been bound");
         require(subContractor_ != address(0), "invalid subcontractor address");
         require(Address.isContract(address(prover_)), "invalid prover address");
@@ -117,14 +125,19 @@ contract GeneralContractor is AdminControlledUpgradeable{
         emit SubContractorBound(chainId_, subContractor_, address(prover_));
     }
 
-    function bindTemplate(uint256 templateId, address code) external onlyRole(ADMIN_ROLE){
+    function bindTemplate(
+        uint256 templateId,
+        address code
+    ) external onlyRole(ADMIN_ROLE){
         require(templateCodes[templateId] == address(0), "template has been bound");
         require(Address.isContract(code), "address is not contract");
         templateCodes[templateId] = code;
         emit CodeTemplateBound(templateId, code);
     }
 
-    function bindContractGroup(bytes memory proof) external accessable_and_unpauseable(BLACK_BOUND_ROLE, PAUSED_BOUND) {
+    function bindContractGroup(
+        bytes memory proof
+    ) external accessable_and_unpauseable(BLACK_BOUND_ROLE, PAUSED_BOUND) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId);
         (bool success,) = proxy.call(payload);
@@ -134,7 +147,10 @@ contract GeneralContractor is AdminControlledUpgradeable{
         emit ContractorGroupBound(receipt.data.chainId, receipt.data.contractGroupId, receipt.data.asset);
     }
 
-    function issue(uint256 templateId, bytes memory issueInfo) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_ISSUE){
+    function issue(
+        uint256 templateId,
+        bytes memory issueInfo
+    ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_ISSUE){
         address code = templateCodes[templateId];
         require(code != address(0), "template is not exist");
 
@@ -151,7 +167,11 @@ contract GeneralContractor is AdminControlledUpgradeable{
         emit GeneralContractorIssue(templateId, contractGroupId_, saltId_, generalIssueInfo);
     }
 
-    function expand(uint256 groupId, uint256 peerChainId, address issuer) external accessable_and_unpauseable(BLACK_EXPAND_ROLE, PAUSED_EXPAND){
+    function expand(
+        uint256 groupId,
+        uint256 peerChainId,
+        address issuer
+    ) external accessable_and_unpauseable(BLACK_EXPAND_ROLE, PAUSED_EXPAND){
         AssetInfo memory assetInfo = localContractGroupAsset[groupId];
         require(assetInfo.asset != address(0), "group id has not issued");
         require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
@@ -168,7 +188,9 @@ contract GeneralContractor is AdminControlledUpgradeable{
         return ++contractGroupId;
     }
 
-    function _checkChains(uint256[] memory chainIds_) internal view {
+    function _checkChains(
+        uint256[] memory chainIds_
+    ) internal view {
         bool exist;
         for (uint256 i = 0; i < chainIds_.length; i++) {
             if (chainIds_[i] != chainId) {

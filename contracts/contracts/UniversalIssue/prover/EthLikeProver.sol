@@ -10,7 +10,9 @@ contract EthLikeProver is IProver{
 
     constructor(address bridge_) IProver(bridge_) {}
 
-    function verify( bytes calldata proofData) external override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
+    function verify(
+        bytes calldata proofData
+    ) external override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         EthProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();

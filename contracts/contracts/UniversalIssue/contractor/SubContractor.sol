@@ -60,7 +60,8 @@ contract SubContractor is AdminControlledUpgradeable{
         uint256 chainId_, 
         address localProxy_, 
         IProver prover_, 
-        address owner_) external initializer {
+        address owner_
+    ) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(generalContractor_), "invalid general contractor");
         require(Address.isContract(localProxy_), "invalid local proxy");
@@ -82,18 +83,23 @@ contract SubContractor is AdminControlledUpgradeable{
         _grantRole(ADMIN_ROLE, _msgSender());
     }
 
-    function bindTemplate(uint256 templateId, address code) external onlyRole(ADMIN_ROLE){
+    function bindTemplate(
+        uint256 templateId,
+        address code
+    ) external onlyRole(ADMIN_ROLE){
         require(templateCodes[templateId] == address(0), "template has been bound");
         require(Address.isContract(code), "address is not contract");
         templateCodes[templateId] = code;
     }
 
-    function subIssue(bytes memory proof) external accessable_and_unpauseable(BLACK_SUBISSUE_ROLE, PAUSED_SUBISSUE){
+    function subIssue(
+        bytes memory proof
+    ) external accessable_and_unpauseable(BLACK_SUBISSUE_ROLE, PAUSED_SUBISSUE){
         VerifiedReceipt memory result= _verify(proof);
         address code =  templateCodes[result.data.templateId];
         require(code != address(0), "template is not exist");
         address asset = ITokenFactory(code).clone(chainId, result.data.generalIssueInfo, result.data.saltId, proxy);
-        bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256)", asset, result.data.contractGroupId);
+        bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256,address)", asset, result.data.contractGroupId, code);
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
         localContractGroupAsset[result.data.contractGroupId] = asset;
@@ -111,7 +117,9 @@ contract SubContractor is AdminControlledUpgradeable{
     }
 
     /// verify
-    function _verify( bytes memory proofData) internal returns (VerifiedReceipt memory receipt_){
+    function _verify(
+        bytes memory proofData
+    ) internal returns (VerifiedReceipt memory receipt_){
         receipt_ = _parseAndConsumeProof(proofData);
         _saveProof(receipt_.blockHash, receipt_.receiptIndex);
         return receipt_;

@@ -53,7 +53,15 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
-    function initialize(string memory name_, string memory symbol_, string memory uri_, uint256 minId_, uint256 maxId_, address owner_, uint256 totalAmount_) internal virtual onlyInitializing {
+    function initialize(
+        string memory name_,
+        string memory symbol_,
+        string memory uri_,
+        uint256 minId_,
+        uint256 maxId_,
+        address owner_,
+        uint256 totalAmount_
+    ) internal virtual onlyInitializing {
         require(maxId_ >= minId_, "maxId is smaller than maxId");
         _name = name_;
         _symbol = symbol_;
@@ -67,7 +75,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC165, IERC165) returns (bool) {
         return
             interfaceId == type(IERC721).interfaceId ||
             interfaceId == type(IERC721Metadata).interfaceId ||
@@ -77,7 +87,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     /**
      * @dev See {IERC721-balanceOf}.
      */
-    function balanceOf(address owner) public view virtual override returns (uint256) {
+    function balanceOf(
+        address owner
+    ) public view virtual override returns (uint256) {
         require(owner != address(0), "ERC721: balance query for the zero address");
         return _balances[owner];
     }
@@ -85,7 +97,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     /**
      * @dev See {IERC721-ownerOf}.
      */
-    function ownerOf(uint256 tokenId) public view virtual override returns (address) {
+    function ownerOf(
+        uint256 tokenId
+    ) public view virtual override returns (address) {
         address owner;
         if (_liquidPool[tokenId]) {
              owner = _owners[tokenId];
@@ -94,7 +108,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
                 owner = _owner;
             }
         }
-        console.logAddress(owner);
+        // console.logAddress(owner);
         require(owner != address(0), "ERC721: owner query for nonexistent token");
         return owner;
     }
@@ -113,14 +127,16 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         return _symbol;
     }
 
-    function supply() external view virtual returns (uint256) {
+    function totalSupply() external view virtual returns (uint256) {
         return _totalSupply;
     }
 
     /**
      * @dev See {IERC721Metadata-tokenURI}.
      */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURI(
+        uint256 tokenId
+    ) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
         string memory baseURI = _baseURI();
@@ -130,7 +146,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         /**
      * @dev See {IERC721Metadata-tokenURI}.
      */
-    function issuer(uint256 tokenId) public view virtual returns (address) {
+    function issuer(
+        uint256 tokenId
+    ) public view virtual returns (address) {
         if ((tokenId < _tokenRange.maxId) && (tokenId >= _tokenRange.minId)) {
             return _owner;
         }
@@ -150,7 +168,10 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     /**
      * @dev See {IERC721-approve}.
      */
-    function approve(address to, uint256 tokenId) public virtual override {
+    function approve(
+        address to,
+        uint256 tokenId
+    ) public virtual override {
         address owner = ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
@@ -165,7 +186,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     /**
      * @dev See {IERC721-getApproved}.
      */
-    function getApproved(uint256 tokenId) public view virtual override returns (address) {
+    function getApproved(
+        uint256 tokenId
+    ) public view virtual override returns (address) {
         require(_exists(tokenId), "ERC721: approved query for nonexistent token");
 
         return _tokenApprovals[tokenId];
@@ -174,14 +197,20 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     /**
      * @dev See {IERC721-setApprovalForAll}.
      */
-    function setApprovalForAll(address operator, bool approved) public virtual override {
+    function setApprovalForAll(
+        address operator,
+        bool approved
+    ) public virtual override {
         _setApprovalForAll(_msgSender(), operator, approved);
     }
 
     /**
      * @dev See {IERC721-isApprovedForAll}.
      */
-    function isApprovedForAll(address owner, address operator) public view virtual override returns (bool) {
+    function isApprovedForAll(
+        address owner,
+        address operator
+    ) public view virtual override returns (bool) {
         return _operatorApprovals[owner][operator];
     }
 
@@ -259,7 +288,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      * Tokens start existing when they are minted (`_mint`),
      * and stop existing when they are burned (`_burn`).
      */
-    function _exists(uint256 tokenId) internal view virtual returns (bool) {
+    function _exists(
+        uint256 tokenId
+    ) internal view virtual returns (bool) {
         if (_liquidPool[tokenId]) {
             return _owners[tokenId] != address(0);
         } else {
@@ -278,7 +309,10 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      *
      * - `tokenId` must exist.
      */
-    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view virtual returns (bool) {
+    function _isApprovedOrOwner(
+        address spender,
+        uint256 tokenId
+    ) internal view virtual returns (bool) {
         require(_exists(tokenId), "ERC721: operator query for nonexistent token");
         address owner = ownerOf(tokenId);
         return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender));
@@ -294,7 +328,10 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      *
      * Emits a {Transfer} event.
      */
-    function _safeMint(address to, uint256 tokenId) internal virtual {
+    function _safeMint(
+        address to,
+        uint256 tokenId
+    ) internal virtual {
         _safeMint(to, tokenId, "");
     }
 
@@ -326,7 +363,10 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      *
      * Emits a {Transfer} event.
      */
-    function _mint(address to, uint256 tokenId) internal virtual {
+    function _mint(
+        address to,
+        uint256 tokenId
+    ) internal virtual {
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
         require(tokenId <= _totalSupply, "ERC721: token id is overflow");
@@ -351,7 +391,9 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      *
      * Emits a {Transfer} event.
      */
-    function _burn(uint256 tokenId) internal virtual {
+    function _burn(
+        uint256 tokenId
+    ) internal virtual {
         address owner = ownerOf(tokenId);
 
         _beforeTokenTransfer(owner, address(0), tokenId);
@@ -402,7 +444,10 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      *
      * Emits a {Approval} event.
      */
-    function _approve(address to, uint256 tokenId) internal virtual {
+    function _approve(
+        address to,
+        uint256 tokenId
+    ) internal virtual {
         _tokenApprovals[tokenId] = to;
         emit Approval(ownerOf(tokenId), to, tokenId);
     }

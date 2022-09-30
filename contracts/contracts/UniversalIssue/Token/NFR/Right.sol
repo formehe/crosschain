@@ -59,7 +59,11 @@ abstract contract Right is Initializable, IRightMetadata {
         }
     }
 
-    function _attachRight(address owner, uint256 rightKind, uint256 rightId) internal virtual{
+    function _attachRight(
+        address owner,
+        uint256 rightKind,
+        uint256 rightId
+    ) internal virtual{
         require(rightId != 0, "rightId can not be 0");
         require(_owner == owner, "just owner can attach");
         require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
@@ -71,7 +75,10 @@ abstract contract Right is Initializable, IRightMetadata {
         emit RightAttached(rightKind, rightId);
     }
 
-    function _mintRight(uint256 rightKind, uint256 rightId) internal {
+    function _mintRight(
+        uint256 rightKind,
+        uint256 rightId
+    ) internal {
         require(rightId != 0, "rightId can not be 0");
         require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
         require(rightId <= _rightKinds[rightKind].totalAmount, "right id is overflow");
@@ -80,7 +87,10 @@ abstract contract Right is Initializable, IRightMetadata {
         emit RightMinted(rightKind, rightId);
     }
 
-    function _burnRight(uint256 rightKind, uint256 rightId) internal {
+    function _burnRight(
+        uint256 rightKind,
+        uint256 rightId
+    ) internal {
         require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
         require(_stateOfRights[rightKind][rightId] == State.ATTACHED, "right is not attached");
         _stateOfRights[rightKind][rightId] = State.BURNED;
@@ -89,17 +99,23 @@ abstract contract Right is Initializable, IRightMetadata {
 
     //======================== IERC3721Metadata =================================
     /** @dev Returns the Name of the Rights. */
-    function rightsName(uint256 rightKind) external view override returns (string memory) {
+    function rightsName(
+        uint256 rightKind
+    ) external view override returns (string memory) {
         return _rightKinds[rightKind].name;
     }
     
     /** @dev Returns the Agreement of the Rights.*/
-    function rightsAgreement(uint256 rightKind) external view override returns (string memory) {
+    function rightsAgreement(
+        uint256 rightKind
+    ) external view override returns (string memory) {
         return _rightKinds[rightKind].agreement;
     }
     
     /** @dev Returns the Uniform Resource Identifier (URI) for `rightsId` Rights.*/
-    function rightsURI(uint256 rightKind) external view override returns (string memory) {
+    function rightsURI(
+        uint256 rightKind
+    ) external view override returns (string memory) {
         return _rightKinds[rightKind].uri;
     }
 
@@ -119,7 +135,9 @@ abstract contract Right is Initializable, IRightMetadata {
         }
     }
     
-    function rightIssueRange(uint256 rightkind) external view returns (uint256 minId, uint256 maxId){
+    function rightIssueRange(
+        uint256 rightkind
+    ) external view returns (uint256 minId, uint256 maxId){
         return (_rightRanges[rightkind].minId, _rightRanges[rightkind].maxId);
     }
 }

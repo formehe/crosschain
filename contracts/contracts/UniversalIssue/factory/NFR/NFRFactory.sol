@@ -9,7 +9,12 @@ contract NFRFactory is ITokenFactory{
     constructor(address code_, address contractor_) ITokenFactory(code_, contractor_) {  
     }
 
-    function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal override {
+    function initialize(
+        uint256 chainId,
+        address code,
+        bytes memory rangeOfIssue,
+        address minter
+    ) internal override {
         IssueCoder.GeneralIssueInfo memory generalIssue = IssueCoder.decodeGeneralIssueInfo(rangeOfIssue);
         IssueCoder.CirculationRangePerchain memory circulationPerChain;
         bool exist;
@@ -29,7 +34,9 @@ contract NFRFactory is ITokenFactory{
         require(success, "fail to initialize template code");
     }
 
-    function issue(bytes memory issueInfo_) external pure override returns(bytes memory, uint256[] memory) {
+    function issue(
+        bytes memory issueInfo_
+    ) external pure override returns(bytes memory, uint256[] memory) {
         IssueCoder.IssueInfo memory issueInfo = IssueCoder.decodeIssueInfo(issueInfo_);
         IssueCoder.GeneralIssueInfo memory issueWithRange;
 
@@ -68,7 +75,11 @@ contract NFRFactory is ITokenFactory{
     }
 
 
-    function expand(address contractCode, uint256 peerChainId, address issuer) external view override returns(bytes memory) {
+    function expand(
+        address contractCode,
+        uint256 peerChainId,
+        address issuer
+    ) external view override returns(bytes memory) {
         IssueCoder.GeneralIssueInfo memory issueWithRange;
         bytes memory payload = abi.encodeWithSignature("rights()");
         (bool success, bytes memory returnData) = contractCode.staticcall(payload);
@@ -90,7 +101,7 @@ contract NFRFactory is ITokenFactory{
         require(success, "name interface is not exist");
         (issueWithRange.symbol) = abi.decode(returnData, (string));
 
-        payload = abi.encodeWithSignature("supply()");
+        payload = abi.encodeWithSignature("totalSupply()");
         (success, returnData) = contractCode.staticcall(payload);
         require(success, "name interface is not exist");
         (issueWithRange.totalAmountOfToken) = abi.decode(returnData, (uint256));

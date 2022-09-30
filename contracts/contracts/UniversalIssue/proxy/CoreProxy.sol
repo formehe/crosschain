@@ -25,7 +25,12 @@ contract CoreProxy is IProxy{
     uint256 chainId;
     IMultiLimit public limiter;
 
-    function initialize(address generalContractor_, uint256 chainId_, address owner_, IMultiLimit limit_) external initializer {
+    function initialize(
+        address generalContractor_,
+        uint256 chainId_,
+        address owner_,
+        IMultiLimit limit_
+    ) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(generalContractor_), "invalid general contractor");
         require(Address.isContract(address(limit_)), "invalid limit contractor");
@@ -46,7 +51,11 @@ contract CoreProxy is IProxy{
         _grantRole(ADMIN_ROLE, _msgSender());
     }
 
-    function bindPeerChain(uint256 chainId_, address prover_, address peerProxy_) external onlyRole(ADMIN_ROLE) {
+    function bindPeerChain(
+        uint256 chainId_,
+        address prover_,
+        address peerProxy_
+    ) external onlyRole(ADMIN_ROLE) {
         _bindPeerChain(chainId_, prover_, peerProxy_);
     }
 
@@ -66,7 +75,9 @@ contract CoreProxy is IProxy{
         emit ContractGroupProxyBound(contractGroupId_, chainId_, asset_);
     }
 
-    function mint(bytes memory proof) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT){
+    function mint(
+        bytes memory proof
+    ) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT){
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         address asset = contractGroupMember[receipt.data.contractGroupId][receipt.data.fromChain];
         require(asset != address(0) && asset == receipt.data.asset, "from chain is not permit");
@@ -91,7 +102,12 @@ contract CoreProxy is IProxy{
         _saveProof(receipt.data.fromChain, receipt.blockHash, receipt.receiptIndex, receipt.proofIndex);
     }
 
-    function burnTo(uint256 toChainId, address asset, address receiver, uint256 tokenId) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN){
+    function burnTo(
+        uint256 toChainId,
+        address asset,
+        address receiver,
+        uint256 tokenId
+    ) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN){
         require(receiver != address(0), "invalid parameter");
         require(toChainId != chainId, "only support cross chain tx");
         uint256 groupId = assets[asset].groupId;

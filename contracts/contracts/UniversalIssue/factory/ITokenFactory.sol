@@ -23,7 +23,12 @@ abstract contract ITokenFactory is Initializable {
         contractor = contractor_;
     }
 
-    function clone(uint256 chainId, bytes memory rangeOfIssue, uint256 saltId, address minter) external returns(address asset){
+    function clone(
+        uint256 chainId,
+        bytes memory rangeOfIssue,
+        uint256 saltId,
+        address minter
+    ) external returns(address asset){
         require(msg.sender == contractor, "caller is not permit");
 
         address predictAddr = Clones.predictDeterministicAddress(templateCode, bytes32(saltId));

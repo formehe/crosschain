@@ -9,6 +9,7 @@ import "./IProxy.sol";
 contract EdgeProxy is IProxy{
     struct ProxiedAsset{
         uint256 groupId;
+        address templateCode;
     }
 
     event ContractGroupBound(
@@ -22,7 +23,15 @@ contract EdgeProxy is IProxy{
     ILimit public limit;
     mapping(bytes32 => bool) public usedProofs;
 
-    function initialize(address prover_, address subContractor_, address peerProxy_, uint256 peerChainId_, uint256 chainId_, address owner_, ILimit limit_) external initializer {
+    function initialize(
+        address prover_,
+        address subContractor_,
+        address peerProxy_,
+        uint256 peerChainId_,
+        uint256 chainId_,
+        address owner_,
+        ILimit limit_
+    ) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(subContractor_), "invalid sub contractor");
         require(Address.isContract(prover_), "invalid prover");
@@ -48,23 +57,26 @@ contract EdgeProxy is IProxy{
 
     function bindAssetGroup(
         address asset,
-        uint256 contractGroupId
+        uint256 contractGroupId,
+        address templateCode
     ) external {
         require(msg.sender == subContractor, "just subcontractor can bind");
         require(Address.isContract(asset), "from proxy address are not to be contract address");
         require(assets[asset].groupId == 0, "can not modify the bind asset");
         require(contractGroupId != 0, "contract group id can not be 0");
-        assets[asset] = ProxiedAsset(contractGroupId);
+        assets[asset] = ProxiedAsset(contractGroupId, templateCode);
         emit ContractGroupBound(contractGroupId, asset);
     }
 
-    function mint(bytes memory proof) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT) {
+    function mint(
+        bytes memory proof
+    ) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
-        uint256 groupId = assets[receipt.data.asset].groupId;
-        require((groupId != 0) && (groupId == receipt.data.contractGroupId), "chain is not permit");
+        ProxiedAsset memory proxyAsset = assets[receipt.data.asset];
+        require((proxyAsset.groupId != 0) && (proxyAsset.groupId == receipt.data.contractGroupId), "chain is not permit");
         require(receipt.data.toChain == chainId, "not to mine");
         require(limit.forbiddens(receipt.proofIndex) == false, "receipt id has already been forbidden");
-        require(limit.checkFrozen(receipt.data.asset, receipt.time),'tx is frozen');
+        require(limit.checkFrozen(proxyAsset.templateCode, receipt.time),'tx is frozen');
         
         // call contract
         (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 
@@ -73,10 +85,15 @@ contract EdgeProxy is IProxy{
         (bool success,) = (receipt.data.asset).call(codes);
         require(success, "fail to mint");
         _saveProof(receipt.data.fromChain, receipt.blockHash, receipt.receiptIndex, receipt.proofIndex);
-        emit CrossTokenMinted(groupId, receipt.data.fromChain, receipt.data.toChain, receipt.data.asset, receipt.data.burnInfo);
+        emit CrossTokenMinted(proxyAsset.groupId, receipt.data.fromChain, receipt.data.toChain, receipt.data.asset, receipt.data.burnInfo);
     }
 
-    function burnTo(uint256 toChainId, address asset, address receiver, uint256 tokenId) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN) {
+    function burnTo(
+        uint256 toChainId,
+        address asset,
+        address receiver,
+        uint256 tokenId
+    ) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN) {
         address localAsset = asset;
         require(receiver != address(0), "invalid parameter");
         uint256 groupId = assets[localAsset].groupId;

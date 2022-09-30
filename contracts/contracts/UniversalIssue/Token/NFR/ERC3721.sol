@@ -91,7 +91,10 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         emit TokenRightTansfered(fromTokenId, toTokenId, rightKind, rightId);
     }
 
-    function attachAddtional(uint256 tokenId, bytes memory additional) external virtual {
+    function attachAddtional(
+        uint256 tokenId,
+        bytes memory additional
+    ) external virtual {
         require(additional.length != 0, "invalid parameter");
         address owner = ownerOf(tokenId);
         require(owner == issuer(tokenId), "only issuer can add additional of token");
@@ -100,7 +103,9 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         emit TokenAttached(tokenId, additional);
     }
 
-    function tokenAddtional(uint256 tokenId) external virtual returns(bytes memory){
+    function tokenAddtional(
+        uint256 tokenId
+    ) external virtual returns(bytes memory){
         return _tokenExtension[tokenId];
     }
 
@@ -120,7 +125,9 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         _addRightOfToken(tokenId, rightKind, rightId);
     }
 
-    function tokenRights(uint256 tokenId) external virtual returns(uint256[] memory rightKinds, uint256[] memory rightIds){
+    function tokenRights(
+        uint256 tokenId
+    ) external virtual returns(uint256[] memory rightKinds, uint256[] memory rightIds){
         uint256 len = _tokenKinds[tokenId].length;
         rightKinds = new uint256[](len);
         rightIds = new uint256[](len);
@@ -131,7 +138,13 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         }
     }
 
-    function mint(uint256 tokenId_, uint256[] memory rightKinds_, uint256[] memory rightIds_, bytes memory additional, address owner_) external {
+    function mint(
+        uint256 tokenId_,
+        uint256[] memory rightKinds_,
+        uint256[] memory rightIds_,
+        bytes memory additional,
+        address owner_
+    ) external virtual {
         require(_msgSender() == minter, "only for minter");
         require(rightKinds_.length == rightIds_.length, "invalid right kinds or right ids");
         require(owner_ != address(0), "invalid owner");
@@ -145,7 +158,11 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         }
     }
 
-    function _addRightOfToken(uint256 tokenId, uint256 rightKind, uint256 rightId) internal virtual{
+    function _addRightOfToken(
+        uint256 tokenId,
+        uint256 rightKind,
+        uint256 rightId
+    ) internal virtual{
         //cancel approved right and modify owner;
         require(_tokenRights[tokenId][rightKind] == 0, "right has been bound");
         _tokenRights[tokenId][rightKind] = rightId;
@@ -153,7 +170,11 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         emit TokenRightBound(tokenId, rightKind, rightId);
     }
 
-    function _delRightOfToken(uint256 tokenId, uint256 rightKind, uint256 rightId) internal {
+    function _delRightOfToken(
+        uint256 tokenId,
+        uint256 rightKind,
+        uint256 rightId
+    ) internal virtual{
         require(_tokenRights[tokenId][rightKind] == rightId, "right has not been bound");
         delete _tokenRights[tokenId][rightKind];
 

@@ -68,7 +68,11 @@ abstract contract IProxy is AdminControlledUpgradeable{
 
     mapping(uint256 => PeerChainInfo) public peers;
 
-    function _bindPeerChain(uint256 chainId_, address prover_, address peerProxy_) internal {
+    function _bindPeerChain(
+        uint256 chainId_,
+        address prover_,
+        address peerProxy_
+    ) internal {
         require (peers[chainId_].prover == address(0), "chain had bind prove");
         require (Address.isContract(prover_), "address of prover can not be 0");
         require (peerProxy_ != address(0), "address of proxy can not be 0");
@@ -93,7 +97,9 @@ abstract contract IProxy is AdminControlledUpgradeable{
         receipt_.time = time;
     }
 
-    function _parseBurnProofLog(bytes memory proof) private pure returns (VerifiedEvent memory receipt_, address contractAddress_) {
+    function _parseBurnProofLog(
+        bytes memory proof
+    ) private pure returns (VerifiedEvent memory receipt_, address contractAddress_) {
         Borsh.Data memory borshData = Borsh.from(proof);
         bytes memory log = borshData.decode();
         

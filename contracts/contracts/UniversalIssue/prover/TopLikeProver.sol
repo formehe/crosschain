@@ -13,7 +13,9 @@ contract TopLikeProver is IProver{
 
     constructor(address bridge_) IProver(bridge_) {}
 
-    function verify(bytes memory proofData) external override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
+    function verify(
+        bytes memory proofData
+    ) external override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         TopProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();
@@ -28,7 +30,9 @@ contract TopLikeProver is IProver{
         return (true, header.block_hash, proof.reciptIndex, time);
     }
 
-    function _getBlockMerkleRoot(uint64 height) internal view returns(bytes32 blockMerkleRoot){
+    function _getBlockMerkleRoot(
+        uint64 height
+    ) internal view returns(bytes32 blockMerkleRoot){
         bytes memory payload = abi.encodeWithSignature("blockMerkleRoots(uint64)", height);
         (bool success, bytes memory returnData) = bridge.staticcall(payload);
         require(success, "Height is not confirmed3");
@@ -37,7 +41,9 @@ contract TopLikeProver is IProver{
         return blockMerkleRoot;
     }
 
-    function getAddLightClientTime(uint64 height) internal view returns(uint256 time){
+    function getAddLightClientTime(
+        uint64 height
+    ) internal view returns(uint256 time){
         bytes memory payload = abi.encodeWithSignature("blockHeights(uint64)", height);
         (bool success, bytes memory returnData) = bridge.staticcall(payload);
         require(success, "Height is not confirmed");
