@@ -6,7 +6,6 @@ contract EthWrapper {
 
     string public name = "ETH";
     string public symbol = "ETH";
-    uint8  public decimals = 18;
     bytes1 public chain_uuid;
 
     constructor(bytes1 chain_uuid_) {

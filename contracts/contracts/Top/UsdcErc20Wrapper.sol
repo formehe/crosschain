@@ -6,7 +6,6 @@ contract UsdcErc20Wrapper {
 
     string public name = "Wrapped USD Coin";
     string public symbol = "tUSDC";
-    uint8  public decimals = 18;
     bytes1 public chain_uuid;
 
     constructor(bytes1 chain_uuid_) {
