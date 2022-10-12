@@ -27,7 +27,6 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     TokenRange private _tokenRange;
     address    private _owner;
 
-    mapping(uint256 => bool) private _liquidPool;
     // Token name
     string private _name;
 
@@ -49,7 +48,8 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
 
     // Mapping from owner to operator approvals
     mapping(address => mapping(address => bool)) private _operatorApprovals;
-
+    
+    mapping(uint256 => bool) private _liquidPool;
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
@@ -143,7 +143,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
     }
 
-        /**
+    /**
      * @dev See {IERC721Metadata-tokenURI}.
      */
     function issuer(
@@ -397,7 +397,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         address owner = ownerOf(tokenId);
 
         _beforeTokenTransfer(owner, address(0), tokenId);
-        // Clear approvals
+        // // Clear approvals
         _approve(address(0), tokenId);
         _balances[owner] -= 1;
         delete _owners[tokenId];
@@ -537,9 +537,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         address /*to*/,
         uint256 tokenId
     ) internal virtual {
-        if (!_liquidPool[tokenId]) {
-            _liquidPool[tokenId] = true;
-        }
+        _liquidPool[tokenId] = true;
     }
 
     function isssueTokenRange() view external returns(uint256 minId, uint256 maxId) {

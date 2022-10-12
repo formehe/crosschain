@@ -29,9 +29,9 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         string memory name_, 
         string memory symbol_,
         uint256 totalAmount,
-        IssueCoder.IssueRight[] memory rights_, 
+        IssueCoder.IssueRight[] calldata rights_, 
         IssueCoder.IssuerDesc memory issuer_, 
-        IssueCoder.CirculationRangePerchain memory circulation_
+        IssueCoder.CirculationRangePerchain calldata circulation_
     ) external initializer {
         require(minter_ != address(0), "minter can not be 0");
         minter = minter_;
@@ -186,7 +186,7 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
             }
 
             _tokenKinds[tokenId][i] = _tokenKinds[tokenId][len - 1];
-            delete _tokenKinds[tokenId][len - 1];
+            _tokenKinds[tokenId].pop();
         }
 
         emit TokenRightDisbound(tokenId, rightKind, rightId);

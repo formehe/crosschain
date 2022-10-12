@@ -89,7 +89,7 @@ contract CoreProxy is IProxy{
             emit CrossTokenBurned(chainId, receipt.data.toChain, receipt.data.contractGroupId, asset, true, receipt.data.burnInfo);
         } else {
             require(limiter.forbiddens(receipt.data.fromChain, receipt.proofIndex) == false, "receipt id has already been forbidden");
-            // call contract
+
             (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 
                 abi.decode(receipt.data.burnInfo, (address, uint256, uint256[], uint256[], bytes));
 
@@ -98,7 +98,7 @@ contract CoreProxy is IProxy{
             require(success, "fail to mint");
             emit CrossTokenMinted(receipt.data.contractGroupId, receipt.data.fromChain, receipt.data.toChain, asset, receipt.data.burnInfo);
         }
-
+        
         _saveProof(receipt.data.fromChain, receipt.blockHash, receipt.receiptIndex, receipt.proofIndex);
     }
 

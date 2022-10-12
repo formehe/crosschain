@@ -39,8 +39,8 @@ abstract contract Right is Initializable, IRightMetadata {
     
     function initialize(
         address owner_,
-        IssueCoder.IssueRight[] memory rigthKinds_,
-        IssueCoder.RightRange[] memory rightRanges_
+        IssueCoder.IssueRight[] calldata rigthKinds_,
+        IssueCoder.RightRange[] calldata rightRanges_
     ) internal onlyInitializing {
         require(owner_ != address(0), "opertion can not be 0");
         _owner = owner_;

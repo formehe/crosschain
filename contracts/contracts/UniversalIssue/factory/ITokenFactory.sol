@@ -44,4 +44,6 @@ abstract contract ITokenFactory is Initializable {
     function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal virtual;
     function issue(bytes memory issueInfo) external pure virtual returns(bytes memory, uint256[] memory);
     function expand(address contractCode, uint256 peerChainId, address issuer) external view virtual returns(bytes memory);
+    function constrcutMint(bytes memory info) external pure virtual returns(bytes memory);
+    function constrcutBurn(bytes memory info, address to, uint256 asset) external pure virtual returns(bytes memory);
 }

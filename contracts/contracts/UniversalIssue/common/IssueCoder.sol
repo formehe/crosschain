@@ -246,7 +246,7 @@ library IssueCoder {
 
     function decodeCirculationOfChains(RLPDecode.RLPItem memory itemBytes) internal pure returns(CirculationPerChain[] memory circulations){
         RLPDecode.RLPItem[] memory ls = itemBytes.toList();
-        if (ls.length > 0) { 
+        if (ls.length > 0) {
             circulations = new CirculationPerChain[](ls.length);
             for (uint256 i = 0; i < ls.length; i++) {
                 RLPDecode.Iterator memory it = ls[i].iterator();
