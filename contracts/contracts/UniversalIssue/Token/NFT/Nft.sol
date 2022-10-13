@@ -14,10 +14,10 @@ contract NFT is ERC721Chunk, Issuer {
 
     function initialize(
         address minter_,
-        string memory name_, 
+        string memory name_,
         string memory symbol_,
         uint256 totalAmount,
-        IssueCoder.IssuerDesc memory issuer_, 
+        IssueCoder.IssuerDesc calldata issuer_,
         IssueCoder.CirculationRangePerchain calldata circulation_
     ) external initializer {
         require(minter_ != address(0), "minter can not be 0");

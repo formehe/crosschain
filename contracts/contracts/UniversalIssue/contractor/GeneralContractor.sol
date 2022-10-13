@@ -136,10 +136,13 @@ contract GeneralContractor is AdminControlledUpgradeable{
     }
 
     function bindContractGroup(
-        bytes memory proof
+        bytes calldata proof
     ) external accessable_and_unpauseable(BLACK_BOUND_ROLE, PAUSED_BOUND) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
-        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId);
+        AssetInfo memory asset = localContractGroupAsset[receipt.data.contractGroupId];
+        address code = templateCodes[asset.templateId];
+        require(code != address(0), "template is not exist");
+        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId, code);
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
         _saveProof(receipt.data.chainId, receipt.blockHash, receipt.receiptIndex);
@@ -149,7 +152,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
 
     function issue(
         uint256 templateId,
-        bytes memory issueInfo
+        bytes calldata issueInfo
     ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_ISSUE){
         address code = templateCodes[templateId];
         require(code != address(0), "template is not exist");
@@ -159,7 +162,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         uint256 contractGroupId_ = applyGroupId();
         _checkChains(chainIds);
         address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, saltId_, proxy);
-        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256)", asset, chainId, contractGroupId_);
+        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", asset, chainId, contractGroupId_, code);
         (bool success, ) = proxy.call(payload);
         require(success, "fail to bind contract group");
         localContractGroupAsset[contractGroupId] = AssetInfo(templateId, saltId, asset);

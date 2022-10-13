@@ -12,7 +12,7 @@ contract NFTFactory is ITokenFactory{
     function initialize(
         uint256 chainId,
         address code,
-        bytes memory rangeOfIssue,
+        bytes calldata rangeOfIssue,
         address minter
     ) internal override {
         IssueCoder.GeneralIssueInfo memory generalIssue = IssueCoder.decodeGeneralIssueInfo(rangeOfIssue);
@@ -35,7 +35,7 @@ contract NFTFactory is ITokenFactory{
     }
 
     function issue(
-        bytes memory issueInfo_
+        bytes calldata issueInfo_
     ) external pure override returns(bytes memory, uint256[] memory) {
         IssueCoder.IssueInfo memory issueInfo = IssueCoder.decodeIssueInfo(issueInfo_);
         IssueCoder.GeneralIssueInfo memory issueWithRange;
@@ -108,7 +108,7 @@ contract NFTFactory is ITokenFactory{
     }
 
     function constrcutMint(
-        bytes memory info
+        bytes calldata info
     ) external pure override returns(bytes memory) {
         (address receiver, uint256 tokenId) = abi.decode(info, (address, uint256));
         bytes memory codes = abi.encodeWithSignature("mint(uint256,address)", tokenId, receiver);
@@ -116,7 +116,7 @@ contract NFTFactory is ITokenFactory{
     }
 
     function constrcutBurn(
-        bytes memory, 
+        bytes calldata, 
         address to, 
         uint256 asset
     ) external pure override returns(bytes memory) {

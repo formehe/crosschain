@@ -24,7 +24,7 @@ contract testIssueCoder {
         return returnValue;
     }
 
-    function decodeIssueInfo(bytes memory issue) public pure returns(IssueCoder.IssueInfo memory issueInfo) {
+    function decodeIssueInfo(bytes calldata issue) public pure returns(IssueCoder.IssueInfo memory issueInfo) {
         return IssueCoder.decodeIssueInfo(issue);
     }
 }

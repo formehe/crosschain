@@ -25,7 +25,7 @@ abstract contract ITokenFactory is Initializable {
 
     function clone(
         uint256 chainId,
-        bytes memory rangeOfIssue,
+        bytes calldata rangeOfIssue,
         uint256 saltId,
         address minter
     ) external returns(address asset){
@@ -36,14 +36,14 @@ abstract contract ITokenFactory is Initializable {
             return predictAddr;  
         }
 
-        asset = Clones.cloneDeterministic(templateCode, bytes32(saltId));        
+        asset = Clones.cloneDeterministic(templateCode, bytes32(saltId));
         initialize(chainId, asset, rangeOfIssue, minter);
         emit ContractCreated(chainId, saltId, asset, templateCode, minter);
     }
 
-    function initialize(uint256 chainId, address code, bytes memory rangeOfIssue, address minter) internal virtual;
-    function issue(bytes memory issueInfo) external pure virtual returns(bytes memory, uint256[] memory);
+    function initialize(uint256 chainId, address code, bytes calldata rangeOfIssue, address minter) internal virtual;
+    function issue(bytes calldata issueInfo) external pure virtual returns(bytes memory, uint256[] memory);
     function expand(address contractCode, uint256 peerChainId, address issuer) external view virtual returns(bytes memory);
-    function constrcutMint(bytes memory info) external pure virtual returns(bytes memory);
-    function constrcutBurn(bytes memory info, address to, uint256 asset) external pure virtual returns(bytes memory);
+    function constrcutMint(bytes calldata info) external pure virtual returns(bytes memory);
+    function constrcutBurn(bytes calldata info, address to, uint256 asset) external pure virtual returns(bytes memory);
 }

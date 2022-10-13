@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../common/ILimit.sol";
 import "./IProxy.sol";
+import "../factory/ITokenFactory.sol";
 
 contract EdgeProxy is IProxy{
     struct ProxiedAsset{
@@ -79,9 +80,7 @@ contract EdgeProxy is IProxy{
         require(limit.checkFrozen(proxyAsset.templateCode, receipt.time),'tx is frozen');
         
         // call contract
-        (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 
-            abi.decode(receipt.data.burnInfo, (address, uint256,uint256[],uint256[], bytes));
-        bytes memory codes = abi.encodeWithSignature("mint(uint256,uint256[],uint256[],bytes,address)", tokenId, rightKinds, rightIds, additional, receiver);
+        bytes memory codes = ITokenFactory(proxyAsset.templateCode).constrcutMint(receipt.data.burnInfo);
         (bool success,) = (receipt.data.asset).call(codes);
         require(success, "fail to mint");
         _saveProof(receipt.data.fromChain, receipt.blockHash, receipt.receiptIndex, receipt.proofIndex);
@@ -94,18 +93,17 @@ contract EdgeProxy is IProxy{
         address receiver,
         uint256 tokenId
     ) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN) {
-        address localAsset = asset;
         require(receiver != address(0), "invalid parameter");
-        uint256 groupId = assets[localAsset].groupId;
-        require(groupId != 0, "asset is not bound");
+        ProxiedAsset memory proxyAsset = assets[asset];
+        require(proxyAsset.groupId != 0, "asset is not bound");
         require(toChainId != chainId, "only support cross chain tx");
 
         bytes memory codes = abi.encodeWithSignature("burn(uint256)", tokenId);
-        (bool success, bytes memory result) = localAsset.call(codes);
+        (bool success, bytes memory result) = asset.call(codes);
         require(success, "fail to burn");
-        (uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = abi.decode(result, (uint256[],uint256[],bytes));
-        bytes memory value = abi.encode(receiver, tokenId, rightKinds, rightIds, additional);
-        emit CrossTokenBurned(groupId, chainId, toChainId, localAsset, false, value);
+
+        bytes memory value = ITokenFactory(proxyAsset.templateCode).constrcutBurn(result, receiver, tokenId);
+        emit CrossTokenBurned(proxyAsset.groupId, chainId, toChainId, asset, false, value);
     }
 
     /// Parses the provided proof and consumes it if it's not already used.

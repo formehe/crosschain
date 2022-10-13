@@ -159,14 +159,15 @@ library MPT {
         uint256 start,
         uint256 length
     )
-        pure internal returns(bytes memory)
+        pure internal returns(bytes memory newdata)
     {
         uint256 slots = length / 32;
         uint256 rest = (length % 32) * 8;
         uint256 pos = 32;
         uint256 si = 0;
         uint256 source;
-        bytes memory newdata = new bytes(length);
+        
+        newdata = new bytes(length);
         assembly {
             source := add(start, data)
 

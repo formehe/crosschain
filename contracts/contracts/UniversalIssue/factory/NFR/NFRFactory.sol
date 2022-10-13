@@ -12,7 +12,7 @@ contract NFRFactory is ITokenFactory{
     function initialize(
         uint256 chainId,
         address code,
-        bytes memory rangeOfIssue,
+        bytes calldata rangeOfIssue,
         address minter
     ) internal override {
         IssueCoder.GeneralIssueInfo memory generalIssue = IssueCoder.decodeGeneralIssueInfo(rangeOfIssue);
@@ -35,7 +35,7 @@ contract NFRFactory is ITokenFactory{
     }
 
     function issue(
-        bytes memory issueInfo_
+        bytes calldata issueInfo_
     ) external pure override returns(bytes memory, uint256[] memory) {
         IssueCoder.IssueInfo memory issueInfo = IssueCoder.decodeIssueInfo(issueInfo_);
         IssueCoder.GeneralIssueInfo memory issueWithRange;
@@ -73,7 +73,6 @@ contract NFRFactory is ITokenFactory{
         }
         return (IssueCoder.encodeGeneralIssueInfo(issueWithRange), chainIds);
     }
-
 
     function expand(
         address contractCode,
@@ -140,7 +139,7 @@ contract NFRFactory is ITokenFactory{
     }
 
     function constrcutMint(
-        bytes memory info
+        bytes calldata info
     ) external pure override returns(bytes memory) {
         (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 
                 abi.decode(info, (address, uint256, uint256[], uint256[], bytes));
@@ -149,7 +148,7 @@ contract NFRFactory is ITokenFactory{
     }
 
     function constrcutBurn(
-        bytes memory info, 
+        bytes calldata info, 
         address to, 
         uint256 asset
     ) external pure override returns(bytes memory) {

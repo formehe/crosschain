@@ -355,7 +355,7 @@ library IssueCoder {
         return RLPEncode.encodeList(issueInfo);
     }
 
-    function decodeIssueInfo(bytes memory issue) internal pure  returns(IssueInfo memory issueInfo) {
+    function decodeIssueInfo(bytes calldata issue) internal pure  returns(IssueInfo memory issueInfo) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(issue).iterator();
         uint idx;
         while(it.hasNext()) {
@@ -384,7 +384,7 @@ library IssueCoder {
         return RLPEncode.encodeList(generalIssueInfo);
     }
 
-    function decodeGeneralIssueInfo(bytes memory generalIssue) internal pure returns (GeneralIssueInfo memory generalIssueInfo) {
+    function decodeGeneralIssueInfo(bytes calldata generalIssue) internal pure returns (GeneralIssueInfo memory generalIssueInfo) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(generalIssue).iterator();
         uint idx;
         while(it.hasNext()) {
@@ -412,7 +412,7 @@ library IssueCoder {
         return RLPEncode.encodeList(serializer);
     }
 
-    function decodeSubIssueInfo(bytes memory subIssue) internal pure returns (SubIssueInfo memory subIssueInfo) {
+    function decodeSubIssueInfo(bytes calldata subIssue) internal pure returns (SubIssueInfo memory subIssueInfo) {
         RLPDecode.Iterator memory it = RLPDecode.toRlpItem(subIssue).iterator();
         uint idx;
         while(it.hasNext()) {
