@@ -187,16 +187,16 @@ describe('IssueCoder', () => {
                 id:0, 
                 right: {
                     name: "right1",
-                    uri: "right uri",
-                    agreement: "right agreement"
+                    uri: "right1 uri",
+                    agreement: "right1 agreement"
                 }
             },
             {
                 id:1, 
                 right: {
                     name: "right2",
-                    uri: "right uri",
-                    agreement: "right agreement"
+                    uri: "right2 uri",
+                    agreement: "right2 agreement"
                 },
             }
         ],

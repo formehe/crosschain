@@ -24,7 +24,7 @@ contract CoreProxy is IProxy{
     mapping(address => ProxiedAsset) public assets;
     address public generalContractor;
     mapping(uint256 => mapping(bytes32 => bool)) public usedProofs;
-    uint256 chainId;
+    uint256 public chainId;
     IMultiLimit public limiter;
 
     function initialize(

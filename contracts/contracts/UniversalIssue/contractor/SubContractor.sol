@@ -42,13 +42,13 @@ contract SubContractor is AdminControlledUpgradeable{
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_SUBISSUE = 1 << 0;
 
-    bytes32 constant BLACK_SUBISSUE_ROLE = 0x087a187a71e9e5b54c3383aee32fc61034bba2d99b832059c9b4af6707503c43;//keccak256("BLACK.SUBISSUE.ROLE")
+    bytes32 constant BLACK_ISSUE_ROLE = 0x98f43c3febbd0625021d7f077378e120db2ef156f39714519f9299a5e2ec80d6;//keccak256("BLACK.ISSUE.ROLE")
 
     // groupid --- templateid
-    mapping(uint256 => address) localContractGroupAsset;
-    uint256 chainId;
-    address proxy;
-    address generalContractor;
+    mapping(uint256 => address) public localContractGroupAsset;
+    uint256 public chainId;
+    address public proxy;
+    address public generalContractor;
     IProver public prover;
     
     //templateId --- address
@@ -63,7 +63,7 @@ contract SubContractor is AdminControlledUpgradeable{
         address owner_
     ) external initializer {
         require(owner_ != address(0), "invalid owner");
-        require(Address.isContract(generalContractor_), "invalid general contractor");
+        require(generalContractor_ != address(0), "invalid general contractor");
         require(Address.isContract(localProxy_), "invalid local proxy");
         require(Address.isContract(address(prover_)), "invalid prover");
 
@@ -77,7 +77,7 @@ contract SubContractor is AdminControlledUpgradeable{
         
         _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
         
-        _setRoleAdmin(BLACK_SUBISSUE_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BLACK_ISSUE_ROLE, ADMIN_ROLE);
 
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
@@ -94,7 +94,7 @@ contract SubContractor is AdminControlledUpgradeable{
 
     function subIssue(
         bytes memory proof
-    ) external accessable_and_unpauseable(BLACK_SUBISSUE_ROLE, PAUSED_SUBISSUE){
+    ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_SUBISSUE){
         VerifiedReceipt memory result= _verify(proof);
         address code =  templateCodes[result.data.templateId];
         require(code != address(0), "template is not exist");

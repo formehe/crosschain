@@ -55,10 +55,8 @@ contract GeneralContractor is AdminControlledUpgradeable{
     uint constant PAUSED_BOUND = 1 << 2;
 
     bytes32 constant BLACK_ISSUE_ROLE = 0x98f43c3febbd0625021d7f077378e120db2ef156f39714519f9299a5e2ec80d6;//keccak256("BLACK.ISSUE.ROLE")
-    bytes32 constant BLACK_EXPAND_ROLE = 0x95cf58189926bed46d06a44661d498482dd2e90bb3956fe4676978b153148df0;//keccak256("BLACK.EXPAND.ROLE")
-    bytes32 constant BLACK_BOUND_ROLE = 0x36e5b819d1fba241578d86de8ed2b9d95e03a919a6b305312c96a153c43fcdbe;//keccak256("BLACK.BIND.CONTRACT.GROUP.ROLE")
 
-    // chainId --- chainid
+    // chainId --- chainInfo
     mapping(uint256 => SubContractorInfo) public subContractors;
     // groupid --- template id
     mapping(uint256 => AssetInfo) public localContractGroupAsset;
@@ -104,10 +102,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         
         _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
-        
         _setRoleAdmin(BLACK_ISSUE_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(BLACK_EXPAND_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(BLACK_BOUND_ROLE, ADMIN_ROLE);
 
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
@@ -137,7 +132,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
 
     function bindContractGroup(
         bytes calldata proof
-    ) external accessable_and_unpauseable(BLACK_BOUND_ROLE, PAUSED_BOUND) {
+    ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_BOUND) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         AssetInfo memory asset = localContractGroupAsset[receipt.data.contractGroupId];
         address code = templateCodes[asset.templateId];
@@ -174,7 +169,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         uint256 groupId,
         uint256 peerChainId,
         address issuer
-    ) external accessable_and_unpauseable(BLACK_EXPAND_ROLE, PAUSED_EXPAND){
+    ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_EXPAND){
         AssetInfo memory assetInfo = localContractGroupAsset[groupId];
         require(assetInfo.asset != address(0), "group id has not issued");
         require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
@@ -200,7 +195,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
                 require(subContractors[chainIds_[i]].subContractor != address(0), "chain is not bound");
             } else {
                 exist = true;
-            }            
+            }
         }
 
         require(exist, "must issue on main chain");
