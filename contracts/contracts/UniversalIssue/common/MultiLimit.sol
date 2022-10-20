@@ -2,9 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "../governance/IGovernanceCapability.sol";
+import "../../common/Utils.sol";
 //import "hardhat/console.sol";
 
-contract MultiLimit is AccessControl{
+contract MultiLimit is AccessControl, IGovernanceCapability{
     //keccak256("OWNER.ROLE");
     bytes32 constant private OWNER_ROLE = 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6;
     //keccak256("FORBIDEN.ROLE");
@@ -22,7 +24,8 @@ contract MultiLimit is AccessControl{
     constructor(address owner){
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         
-        _setRoleAdmin(FORBIDEN_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(FORBIDEN_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(FORBIDEN_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE, owner);
         _grantRole(ADMIN_ROLE,_msgSender());
@@ -35,5 +38,23 @@ contract MultiLimit is AccessControl{
         require(forbiddens[_chainId][_forbiddenId] == false, "id has been already forbidden");
         forbiddens[_chainId][_forbiddenId] = true;
         emit MultiChainTxForbidden(_chainId, _forbiddenId);
+    }
+
+    function isSupportCapability(
+        bytes32 /*classId*/,
+        bytes32 subClass,
+        bytes memory action
+    ) external pure override returns (bool) {
+        bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
+        
+        if (!((subClass == ADMIN_ROLE) || (subClass == FORBIDEN_ROLE))) {
+            return false;
+        }
+
+        if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
+            return false;
+        }
+
+        return true;
     }
 }

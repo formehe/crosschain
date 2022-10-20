@@ -6,8 +6,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./IProxy.sol";
 import "../common/IMultiLimit.sol";
 import "../factory/ITokenFactory.sol";
+import "../governance/IGovernanceCapability.sol";
 
-contract CoreProxy is IProxy{
+contract CoreProxy is IProxy, IGovernanceCapability{
     event ContractGroupProxyBound(
         uint256 indexed contractGroupId,
         uint256 indexed chainId,
@@ -43,11 +44,11 @@ contract CoreProxy is IProxy{
         
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
-        
-        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
-        
-        _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);        
+        // _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
@@ -62,7 +63,7 @@ contract CoreProxy is IProxy{
     }
 
     function bindAssetProxyGroup(
-        address asset_, 
+        address asset_,
         uint256 chainId_,
         uint256 contractGroupId_,
         address templateCode
@@ -80,7 +81,7 @@ contract CoreProxy is IProxy{
 
     function mint(
         bytes memory proof
-    ) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT){
+    ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_MINT){
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         address asset = contractGroupMember[receipt.data.contractGroupId][receipt.data.fromChain];
         require(asset != address(0) && asset == receipt.data.asset, "from chain is not permit");
@@ -107,7 +108,7 @@ contract CoreProxy is IProxy{
         address asset,
         address receiver,
         uint256 tokenId
-    ) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN){
+    ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_BURN){
         require(receiver != address(0), "invalid parameter");
         require(toChainId != chainId, "only support cross chain tx");
         ProxiedAsset memory proxyAsset = assets[asset];
@@ -135,5 +136,28 @@ contract CoreProxy is IProxy{
         require(!usedProofs[chainId_][proofIndex_], "The burn event proof cannot be reused");
         usedProofs[chainId_][proofIndex_] = true;
         emit UsedProof(chainId_, blockHash_, receiptIndex_, proofIndex_);
+    }
+
+    function isSupportCapability(
+        bytes32 /*classId*/,
+        bytes32 subClass,
+        bytes memory action
+    ) external pure override returns (bool) {
+        bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
+        
+        // if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || 
+        //      (subClass == BLACK_MINT_ROLE) || (subClass == BLACK_BURN_ROLE))) {
+        //     return false;
+        // }
+
+        if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ROLE))) {
+            return false;
+        }
+
+        if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
+            return false;
+        }
+
+        return true;
     }
 }

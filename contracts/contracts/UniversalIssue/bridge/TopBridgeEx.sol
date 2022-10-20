@@ -8,8 +8,9 @@ import "../../../lib/external_lib/RLPDecode.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../../common/Deserialize.sol";
+import "../governance/IGovernanceCapability.sol";
 
-contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable {
+contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCapability {
     using RLPDecode for bytes;
     using RLPDecode for uint;
     using RLPDecode for RLPDecode.RLPItem;
@@ -63,8 +64,10 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable {
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSE_ALL ^ 0xff);
 
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
-        _setRoleAdmin(ADDBLOCK_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(ADDBLOCK_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(ADDBLOCK_ROLE, OWNER_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
         _grantRole(OWNER_ROLE,_owner);
         _grantRole(ADMIN_ROLE, msg.sender);
     }
@@ -85,37 +88,37 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable {
         emit BlockBridgeInitial(topBlock.inner_lite.height, topBlock.block_hash, msg.sender);
     }
 
-    function fork(bytes memory epoch0, bytes memory epoch1, bytes memory forkpoint) public onlyRole(ADMIN_ROLE) {
-        Deserialize.LightClientBlock memory topForkpoint = Deserialize.decodeLightClientBlock(forkpoint);
-        for (uint256 i = 0; i < heights.length; i++) {
-            uint64 height = heights[i];
-            if (height >= topForkpoint.inner_lite.height) {
-                delete blockHashes[height];
-                delete blockMerkleRoots[height];
-                delete blockHeights[height];
-            }
-        }
+    // function fork(bytes memory epoch0, bytes memory epoch1, bytes memory forkpoint) public onlyRole(ADMIN_ROLE) {
+    //     Deserialize.LightClientBlock memory topForkpoint = Deserialize.decodeLightClientBlock(forkpoint);
+    //     for (uint256 i = 0; i < heights.length; i++) {
+    //         uint64 height = heights[i];
+    //         if (height >= topForkpoint.inner_lite.height) {
+    //             delete blockHashes[height];
+    //             delete blockMerkleRoots[height];
+    //             delete blockHeights[height];
+    //         }
+    //     }
 
-        currentEpochIdex = 0;
-        delete heights;
+    //     currentEpochIdex = 0;
+    //     delete heights;
 
-        Deserialize.LightClientBlock memory topEpoch0 = Deserialize.decodeLightClientBlock(epoch0);
-        require(topEpoch0.inner_lite.next_bps.some, "Initialization block must contain next_bps");
-        setBlockProducers(topEpoch0.inner_lite.next_bps.blockProducers,topEpoch0.inner_lite.next_bps.epochId, topEpoch0.inner_lite.height);
-        blockHashes[topEpoch0.inner_lite.height] = topEpoch0.block_hash;
-        blockMerkleRoots[topEpoch0.inner_lite.height] = topEpoch0.inner_lite.block_merkle_root;
-        blockHeights[topEpoch0.inner_lite.height] = block.timestamp;
-        maxMainHeight = topEpoch0.inner_lite.height;
+    //     Deserialize.LightClientBlock memory topEpoch0 = Deserialize.decodeLightClientBlock(epoch0);
+    //     require(topEpoch0.inner_lite.next_bps.some, "Initialization block must contain next_bps");
+    //     setBlockProducers(topEpoch0.inner_lite.next_bps.blockProducers,topEpoch0.inner_lite.next_bps.epochId, topEpoch0.inner_lite.height);
+    //     blockHashes[topEpoch0.inner_lite.height] = topEpoch0.block_hash;
+    //     blockMerkleRoots[topEpoch0.inner_lite.height] = topEpoch0.inner_lite.block_merkle_root;
+    //     blockHeights[topEpoch0.inner_lite.height] = block.timestamp;
+    //     maxMainHeight = topEpoch0.inner_lite.height;
 
-        bytes32 epoch1Hash = keccak256(epoch1);
-        if (epoch1Hash != keccak256(epoch0)) {
-            addLightClientBlock(epoch1);
-        }
+    //     bytes32 epoch1Hash = keccak256(epoch1);
+    //     if (epoch1Hash != keccak256(epoch0)) {
+    //         addLightClientBlock(epoch1);
+    //     }
         
-        if (epoch1Hash != keccak256(forkpoint)) {
-            addLightClientBlock(forkpoint);
-        }
-    }
+    //     if (epoch1Hash != keccak256(forkpoint)) {
+    //         addLightClientBlock(forkpoint);
+    //     }
+    // }
 
     struct BridgeState {
         uint currentHeight; // Height of the current confirmed block
@@ -246,7 +249,26 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable {
     }
 
     modifier addLightClientBlock_able(){
-        require(( isPause(PAUSED_ADD_BLOCK) && hasRole(ADDBLOCK_ROLE,_msgSender())),"without permission");
+        require((isPause(PAUSED_ADD_BLOCK) && hasRole(ADDBLOCK_ROLE,_msgSender())),"without permission");
         _;
+    }
+
+    function isSupportCapability(
+        bytes32 /*classId*/,
+        bytes32 subClass,
+        bytes memory action
+    ) external pure override returns (bool) {
+        bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
+        
+        if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || 
+             (subClass == ADDBLOCK_ROLE))) {
+            return false;
+        }
+
+        if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
+            return false;
+        }
+
+        return true;
     }
 }

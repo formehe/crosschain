@@ -6,7 +6,7 @@ import "../ITokenFactory.sol";
 import "hardhat/console.sol";
 
 contract NFTFactory is ITokenFactory{
-    constructor(address code_, address contractor_) ITokenFactory(code_, contractor_) {  
+    constructor(address code_, address contractor_) ITokenFactory(code_, contractor_) {
     }
 
     function initialize(
@@ -28,7 +28,7 @@ contract NFTFactory is ITokenFactory{
         }
 
         require(exist, "not issue on this chain");
-        bytes memory payload = abi.encodeWithSignature("initialize(address,string,string,uint256,(string,string,string,string),(address,(uint256,uint256,uint256)[],uint256,uint256,uint256))", 
+        bytes memory payload = abi.encodeWithSignature("initialize(address,string,string,uint256,(string,string,string,string),(address,(uint256,uint256,uint256)[],uint256,uint256,uint256))",
             minter, generalIssue.name, generalIssue.symbol, generalIssue.totalAmountOfToken, generalIssue.issuer, circulationPerChain);
         (bool success, ) = code.call(payload);
         require(success, "fail to initialize template code");

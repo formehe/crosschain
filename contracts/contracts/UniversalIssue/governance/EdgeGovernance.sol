@@ -7,6 +7,7 @@ import "../prover/IProver.sol";
 import "../../common/AdminControlledUpgradeable.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/Deserialize.sol";
+import "./IGovernanceCapability.sol";
 
 contract EdgeGovernance is AdminControlledUpgradeable{
     using Borsh for Borsh.Data;
@@ -18,18 +19,22 @@ contract EdgeGovernance is AdminControlledUpgradeable{
         bytes32 proofIndex
     );
 
+    event GovernedContractBound(
+        address indexed governedContract
+    );
+
     event Governance(
-        bytes32 indexed namespace,
-        uint256 indexed id,
+        bytes32 indexed classId,
+        bytes32 indexed subClass,
         uint256[] chains,
-        bytes   proposal
+        bytes   action
     );
 
     struct VerifiedEvent {
-        bytes32 namespace;
-        uint256 id;
+        bytes32 classId;
+        bytes32 subClass;
         uint256[] chains;
-        bytes   proposal;
+        bytes   action;
     }
 
     struct VerifiedReceipt {
@@ -51,9 +56,10 @@ contract EdgeGovernance is AdminControlledUpgradeable{
     uint constant PAUSE_GOVERNANCE_PROPOSAL = 1 << 0;
 
     mapping(bytes32 => bool) public usedProofs;
+    address[] public governedContracts;
 
     function initialize(
-        address coreGovernance_, 
+        address coreGovernance_,
         uint256 chainId_,
         IProver prover_, 
         address owner_
@@ -78,9 +84,26 @@ contract EdgeGovernance is AdminControlledUpgradeable{
         _grantRole(ADMIN_ROLE, _msgSender());
     }
 
+    function bindGovernedContract(
+        address governedContract
+    ) external onlyRole(GOVERNANCE_PROPOSER_ROLE) {
+        require(Address.isContract(governedContract), "invalid governed contract");
+        bool exist;
+        for (uint256 i = 0; i < governedContracts.length; i++) {
+            if (governedContracts[i] == governedContract) {
+                exist = true;
+                break;
+            }
+        }
+
+        require(!exist, "contract is existed");
+        governedContracts.push(governedContract);
+        emit GovernedContractBound(governedContract);
+    }
+
     function applyProposal(
         bytes memory proof
-    ) external onlyRole(GOVERNANCE_PROPOSER_ROLE){
+    ) external accessable_and_unpauseable(BLACK_GOVERNANCE_ROLE, PAUSE_GOVERNANCE_PROPOSAL) {
         VerifiedReceipt memory result= _verify(proof);
         bool exist;
         for (uint256 i = 0; i < result.data.chains.length; i++) {
@@ -91,7 +114,26 @@ contract EdgeGovernance is AdminControlledUpgradeable{
         }
 
         require(exist, "chain is not governed");
-        emit Governance(result.data.namespace, result.data.id, result.data.chains, result.data.proposal);
+        
+        applyGovernance(result.data.classId, result.data.subClass, result.data.action);
+        emit Governance(result.data.classId, result.data.subClass, result.data.chains, result.data.action);
+    }
+
+    function applyGovernance(
+        bytes32 classId,
+        bytes32 subClass,
+        bytes memory action
+    ) internal {
+        for (uint256 i = 0; i < governedContracts.length; i++) {
+            address governanceContract = governedContracts[i];
+            bool success = IGovernanceCapability(governanceContract).isSupportCapability(classId, subClass, action);
+            if (!success) {
+                continue;
+            }
+
+            (success, ) = governanceContract.call(action);
+            require(success, "fail to apply governance");
+        }
     }
 
     /// verify
@@ -129,10 +171,10 @@ contract EdgeGovernance is AdminControlledUpgradeable{
         require(logInfo.topics.length == 3, "wrong number of topic");
 
         //GeneralContractorIssue    
-        require(logInfo.topics[0] == 0x1a78f035c36345a8ac9abbd6de1cc8fb9c125d95e5b8590a593e7c0612ca301c, "invalid signature");
-        (receipt_.chains, receipt_.proposal) = abi.decode(logInfo.data, (uint256[],bytes));
-        receipt_.namespace = abi.decode(abi.encodePacked(logInfo.topics[1]), (bytes32));
-        receipt_.id = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
+        require(logInfo.topics[0] == 0x67e32e88b1860f2e173290d5672ff7629724fc659cc66c34aa5e2abe38c1fa78, "invalid signature");
+        (receipt_.chains, receipt_.action) = abi.decode(logInfo.data, (uint256[],bytes));
+        receipt_.classId = abi.decode(abi.encodePacked(logInfo.topics[1]), (bytes32));
+        receipt_.subClass = abi.decode(abi.encodePacked(logInfo.topics[2]), (bytes32));
         contractAddress_ = logInfo.contractAddress;
     }
 

@@ -8,6 +8,6 @@ interface IRightMetadata {
     //======================== IERC3721Metadata =================================
     /** @dev Returns the Name of the Rights. */
     function rightsName(uint256 rightkind) external view returns (string memory);
-    function rightsAgreement(uint256 rightkind) external view returns (string memory); 
+    function rightsAgreement(uint256 rightkind) external view returns (string memory);
     function rightsURI(uint256 rightkind) external view returns (string memory);
 }

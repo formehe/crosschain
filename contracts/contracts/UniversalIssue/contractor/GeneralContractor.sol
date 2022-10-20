@@ -8,8 +8,9 @@ import "../factory/ITokenFactory.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/Deserialize.sol";
 import "../../common/AdminControlledUpgradeable.sol";
+import "../governance/IGovernanceCapability.sol";
 
-contract GeneralContractor is AdminControlledUpgradeable{
+contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     using Borsh for Borsh.Data;
     using LogExtractor for Borsh.Data;
 
@@ -54,7 +55,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
     uint constant PAUSED_EXPAND = 1 << 1;
     uint constant PAUSED_BOUND = 1 << 2;
 
-    bytes32 constant BLACK_ISSUE_ROLE = 0x98f43c3febbd0625021d7f077378e120db2ef156f39714519f9299a5e2ec80d6;//keccak256("BLACK.ISSUE.ROLE")
+    // bytes32 constant BLACK_ISSUE_ROLE = 0x98f43c3febbd0625021d7f077378e120db2ef156f39714519f9299a5e2ec80d6;//keccak256("BLACK.ISSUE.ROLE")
 
     // chainId --- chainInfo
     mapping(uint256 => SubContractorInfo) public subContractors;
@@ -101,8 +102,10 @@ contract GeneralContractor is AdminControlledUpgradeable{
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         
-        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(BLACK_ISSUE_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(BLACK_ISSUE_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
@@ -132,7 +135,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
 
     function bindContractGroup(
         bytes calldata proof
-    ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_BOUND) {
+    ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_BOUND) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         AssetInfo memory asset = localContractGroupAsset[receipt.data.contractGroupId];
         address code = templateCodes[asset.templateId];
@@ -148,7 +151,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
     function issue(
         uint256 templateId,
         bytes calldata issueInfo
-    ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_ISSUE){
+    ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_ISSUE){
         address code = templateCodes[templateId];
         require(code != address(0), "template is not exist");
 
@@ -169,7 +172,7 @@ contract GeneralContractor is AdminControlledUpgradeable{
         uint256 groupId,
         uint256 peerChainId,
         address issuer
-    ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_EXPAND){
+    ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_EXPAND){
         AssetInfo memory assetInfo = localContractGroupAsset[groupId];
         require(assetInfo.asset != address(0), "group id has not issued");
         require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
@@ -247,5 +250,27 @@ contract GeneralContractor is AdminControlledUpgradeable{
         receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         receipt_.asset = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
         contractAddress_ = logInfo.contractAddress;
+    }
+
+    function isSupportCapability(
+        bytes32 /*classId*/,
+        bytes32 subClass,
+        bytes memory action
+    ) external pure override returns (bool) {
+        bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
+        
+        // if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ISSUE_ROLE))) {
+        //     return false;
+        // }
+
+        if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ROLE))) {
+            return false;
+        }
+
+        if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
+            return false;
+        }
+
+        return true;
     }
 }

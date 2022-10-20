@@ -6,8 +6,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../common/ILimit.sol";
 import "./IProxy.sol";
 import "../factory/ITokenFactory.sol";
+import "../governance/IGovernanceCapability.sol";
 
-contract EdgeProxy is IProxy{
+contract EdgeProxy is IProxy, IGovernanceCapability{
     struct ProxiedAsset{
         uint256 groupId;
         address templateCode;
@@ -47,10 +48,12 @@ contract EdgeProxy is IProxy{
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         
-        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
-        
-        _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
+
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
@@ -71,7 +74,7 @@ contract EdgeProxy is IProxy{
 
     function mint(
         bytes memory proof
-    ) external accessable_and_unpauseable(BLACK_MINT_ROLE, PAUSED_MINT) {
+    ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_MINT) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
         ProxiedAsset memory proxyAsset = assets[receipt.data.asset];
         require((proxyAsset.groupId != 0) && (proxyAsset.groupId == receipt.data.contractGroupId), "chain is not permit");
@@ -92,7 +95,7 @@ contract EdgeProxy is IProxy{
         address asset,
         address receiver,
         uint256 tokenId
-    ) external accessable_and_unpauseable(BLACK_BURN_ROLE, PAUSED_BURN) {
+    ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_BURN) {
         require(receiver != address(0), "invalid parameter");
         ProxiedAsset memory proxyAsset = assets[asset];
         require(proxyAsset.groupId != 0, "asset is not bound");
@@ -117,5 +120,28 @@ contract EdgeProxy is IProxy{
         require(!usedProofs[proofIndex_], "The burn event proof cannot be reused");
         usedProofs[proofIndex_] = true;
         emit UsedProof(chainId_, blockHash_, receiptIndex_, proofIndex_);
+    }
+
+    function isSupportCapability(
+        bytes32 /*classId*/,
+        bytes32 subClass,
+        bytes memory action
+    ) external pure override returns (bool) {
+        bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
+        
+        // if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || 
+        //      (subClass == BLACK_MINT_ROLE) || (subClass == BLACK_BURN_ROLE))) {
+        //     return false;
+        // }
+
+        if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ROLE))) {
+            return false;
+        }
+
+        if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
+            return false;
+        }
+
+        return true;
     }
 }

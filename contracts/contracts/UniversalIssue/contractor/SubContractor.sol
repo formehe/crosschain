@@ -8,9 +8,10 @@ import "../prover/IProver.sol";
 import "../factory/ITokenFactory.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/AdminControlledUpgradeable.sol";
+import "../governance/IGovernanceCapability.sol";
 import "hardhat/console.sol";
 
-contract SubContractor is AdminControlledUpgradeable{
+contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
     using Borsh for Borsh.Data;
     using LogExtractor for Borsh.Data;
     
@@ -42,7 +43,7 @@ contract SubContractor is AdminControlledUpgradeable{
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSED_SUBISSUE = 1 << 0;
 
-    bytes32 constant BLACK_ISSUE_ROLE = 0x98f43c3febbd0625021d7f077378e120db2ef156f39714519f9299a5e2ec80d6;//keccak256("BLACK.ISSUE.ROLE")
+    // bytes32 constant BLACK_ISSUE_ROLE = 0x98f43c3febbd0625021d7f077378e120db2ef156f39714519f9299a5e2ec80d6;//keccak256("BLACK.ISSUE.ROLE")
 
     // groupid --- templateid
     mapping(uint256 => address) public localContractGroupAsset;
@@ -75,9 +76,11 @@ contract SubContractor is AdminControlledUpgradeable{
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         
-        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
-        
-        _setRoleAdmin(BLACK_ISSUE_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
+        // _setRoleAdmin(BLACK_ISSUE_ROLE, ADMIN_ROLE);
+
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        _setRoleAdmin(BLACK_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
@@ -94,7 +97,7 @@ contract SubContractor is AdminControlledUpgradeable{
 
     function subIssue(
         bytes memory proof
-    ) external accessable_and_unpauseable(BLACK_ISSUE_ROLE, PAUSED_SUBISSUE){
+    ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_SUBISSUE){
         VerifiedReceipt memory result= _verify(proof);
         address code =  templateCodes[result.data.templateId];
         require(code != address(0), "template is not exist");
@@ -152,12 +155,34 @@ contract SubContractor is AdminControlledUpgradeable{
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "wrong number of topic");
 
-        //GeneralContractorIssue    
+        //GeneralContractorIssue
         require(logInfo.topics[0] == 0x8dfe5a421d6022c8b67da5c0acc654ce179fa7c7ba0ddda3fabd5f126d9198e9, "invalid signature");
         (receipt_.generalIssueInfo) = abi.decode(logInfo.data, (bytes));
         receipt_.templateId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
         receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         receipt_.saltId = abi.decode(abi.encodePacked(logInfo.topics[3]), (uint256));
         contractAddress_ = logInfo.contractAddress;
+    }
+
+    function isSupportCapability(
+        bytes32 /*classId*/,
+        bytes32 subClass,
+        bytes memory action
+    ) external pure override returns (bool) {
+        bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
+        
+        // if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ISSUE_ROLE))) {
+        //     return false;
+        // }
+        
+        if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ROLE))) {
+            return false;
+        }
+
+        if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
+            return false;
+        }
+
+        return true;
     }
 }
