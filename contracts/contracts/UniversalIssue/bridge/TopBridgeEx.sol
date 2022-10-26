@@ -37,6 +37,7 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
     bool public initialized;
     uint64 public maxMainHeight;
     address public lastSubmitter;
+    uint256 public minHeight;
 
     Epoch[2] internal epochs;
     uint private currentEpochIdex;
@@ -58,8 +59,10 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
     bytes32 constant private ADDBLOCK_ROLE = 0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86;
     
     function initialize(
-        address _owner
+        address _owner,
+        uint256 _minHeight
     ) external initializer {
+        minHeight = _minHeight;
         require(_owner != address(0));
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSE_ALL ^ 0xff);
 
@@ -78,6 +81,7 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
 
         Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
 
+        require(topBlock.inner_lite.height >= minHeight, "invalid block height");
         require(topBlock.inner_lite.next_bps.some, "Initialization block must contain next_bps");
         setBlockProducers(topBlock.inner_lite.next_bps.blockProducers,topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
         blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
@@ -161,6 +165,7 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
             return;
         }
 
+        require(topBlock.inner_lite.height >= minHeight, "invalid block height");
         require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
 
         require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");

@@ -6,6 +6,7 @@ import "./Issuer.sol";
 import "./Right.sol";
 import "./ERC721Chunk.sol";
 import "../../common/IssueCoder.sol";
+import "../ProxyRegistry.sol";
 import "hardhat/console.sol";
 
 /**
@@ -145,7 +146,7 @@ abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
         bytes memory additional,
         address owner_
     ) external virtual {
-        require(_msgSender() == minter, "only for minter");
+        require(_msgSender() == ProxyRegistry(minter).proxy(), "only for minter");
         require(rightKinds_.length == rightIds_.length, "invalid right kinds or right ids");
         require(owner_ != address(0), "invalid owner");
         _safeMint(owner_, tokenId_);

@@ -135,9 +135,16 @@ describe('IssueCoder', () => {
     await nfrFactory.deployed();
 
     console.log("nfrFactory "  + nfrFactory.address)
+
+    proxyRegistryCon = await ethers.getContractFactory("ProxyRegistry");
+    proxyRegistry = await proxyRegistryCon.deploy(coreProxy.address, wallet.address);
+    await proxyRegistry.deployed();
+
+    console.log("proxyRegistry "  + proxyRegistry.address)
+
     
     await coreProxy.initialize(generalContractor.address, 1, wallet.address, multiLimit.address)
-    await generalContractor.initialize(coreProxy.address, 1, wallet.address)
+    await generalContractor.initialize(coreProxy.address, 1, wallet.address, 0, 0, proxyRegistry.address)
 
     // sub general
     headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -170,7 +177,13 @@ describe('IssueCoder', () => {
 
     console.log("nfrFactory "  + nfrFactory1.address)
 
-    await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, wallet.address)
+    proxyRegistryCon1 = await ethers.getContractFactory("ProxyRegistry");
+    proxyRegistry1 = await proxyRegistryCon1.deploy(edgeProxy.address, wallet.address);
+    await proxyRegistry1.deployed();
+
+    console.log("proxyRegistry "  + proxyRegistry1.address)
+
+    await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, wallet.address, 0, proxyRegistry1.address)
     await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, wallet.address, limit.address)
 
     issueInfo = {

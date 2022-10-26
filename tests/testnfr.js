@@ -81,7 +81,13 @@ describe('ERC3721', () => {
             chainId: 1
         }
 
-        await nfrContract.initialize(miner.address, "nfr token", "nfr symbol", 50, rightWithIds, issuerInfo, perChain)
+        proxyRegistryCon = await ethers.getContractFactory("ProxyRegistry");
+        proxyRegistry = await proxyRegistryCon.deploy(deployer.address, deployer.address);
+        await proxyRegistry.deployed();
+    
+        console.log("proxyRegistry "  + proxyRegistry.address)	
+
+        await nfrContract.initialize(proxyRegistry.address, "nfr token", "nfr symbol", 50, rightWithIds, issuerInfo, perChain)
     })
 
     describe('initialize', () => {
@@ -92,14 +98,14 @@ describe('ERC3721', () => {
 
     describe('mint', () => {
         it('mint only for minter', async () => {
-            await expect(nfrContract.mint(51, [0,1], [1,1], '0x1111', user.address))
+            await expect(nfrContract.connect(miner).mint(51, [0,1], [1,1], '0x1111', user.address))
             .to.be.revertedWith('only for minter')
         })
 
         it('burn and mint', async () => {
-            await expect(nfrContract.connect(miner).mint(51, [0,1], [1,1], '0x1111', user.address)).to.be.revertedWith('ERC721: token id is overflow')
+            await expect(nfrContract.mint(51, [0,1], [1,1], '0x1111', user.address)).to.be.revertedWith('ERC721: token id is overflow')
             await nfrContract.connect(admin).burn(1)
-            await nfrContract.connect(miner).mint(1, [0,1], [1,1], '0x1111', user.address)
+            await nfrContract.mint(1, [0,1], [1,1], '0x1111', user.address)
         })
     })
 
@@ -307,7 +313,13 @@ describe('Right', () => {
         nfrContract1 = await nfrCon1.deploy();
         await nfrContract1.deployed();
 
-        await nfrContract.initialize(miner.address, "nfr token", "nfr symbol", 50, rightWithIds, issuerInfo, perChain)
+        proxyRegistryCon = await ethers.getContractFactory("ProxyRegistry");
+        proxyRegistry = await proxyRegistryCon.deploy(deployer.address, deployer.address);
+        await proxyRegistry.deployed();
+    
+        console.log("proxyRegistry "  + proxyRegistry.address)	
+
+        await nfrContract.initialize(proxyRegistry.address, "nfr token", "nfr symbol", 50, rightWithIds, issuerInfo, perChain)
     })
 
     describe('initialize', () => {
@@ -359,7 +371,7 @@ describe('Right', () => {
                 chainId: 1
             }
 
-            await expect(nfrContract1.initialize(miner.address, "nfr token", "nfr symbol", 50, rightWithIds1, issuerInfo1, perChain1))
+            await expect(nfrContract1.initialize(proxyRegistry.address, "nfr token", "nfr symbol", 50, rightWithIds1, issuerInfo1, perChain1))
             .to.be.revertedWith('right id cannot be 0')
         })
 
@@ -413,7 +425,7 @@ describe('Right', () => {
 
             // await nfrContract.connect(miner).initialize(51, [0,1], [1,1], '0x1111', user.address)
 
-            await expect(nfrContract1.initialize(miner.address, "nfr token", "nfr symbol", 50, rightWithIds1, issuerInfo1, perChain1))
+            await expect(nfrContract1.initialize(proxyRegistry.address, "nfr token", "nfr symbol", 50, rightWithIds1, issuerInfo1, perChain1))
             .to.be.revertedWith('invalid right')
         })
     })
@@ -421,15 +433,15 @@ describe('Right', () => {
     describe('mint', () => {
         it('mint right cannot be 0', async () => {
             await nfrContract.connect(admin).burn(50)
-            await expect(nfrContract.connect(miner).mint(50, [0,1], [0,1], '0x1111', user.address))
+            await expect(nfrContract.mint(50, [0,1], [0,1], '0x1111', user.address))
             .to.be.revertedWith('rightId can not be 0')
-            await expect(nfrContract.connect(miner).mint(50, [0,1], [51,1], '0x1111', user.address))
+            await expect(nfrContract.mint(50, [0,1], [51,1], '0x1111', user.address))
             .to.be.revertedWith('right id is overflow')
         })
 
         it('mint right is not exist', async () => {
             await nfrContract.connect(admin).burn(50)
-            await expect(nfrContract.connect(miner).mint(50, [0,2], [1,1], '0x1111', user.address))
+            await expect(nfrContract.mint(50, [0,2], [1,1], '0x1111', user.address))
             .to.be.revertedWith('right kind is not exist')
         })
     })

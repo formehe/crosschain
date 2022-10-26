@@ -26,6 +26,14 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         uint256 indexed receiptIndex,
         bytes32 proofIndex
     );
+
+    event HistoryContractorGroupBound(
+        uint256  indexed templateId,
+        uint256  indexed contractGroupId,
+        uint256  indexed saltId,
+        uint256[] chains,
+        address[] assets
+    );
     
     struct VerifiedEvent {
         uint256 chainId;
@@ -66,8 +74,11 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
 
     uint256 public chainId;
     uint256 public saltId;
+    uint256 public minSaltId;
+    uint256 public minContractGroupId;
     uint256 public contractGroupId;
     address public proxy;
+    address public minterProxy;
     mapping(uint256 => mapping(bytes32 => bool)) public usedProofs;
 
     event GeneralContractorIssue(
@@ -91,13 +102,24 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     function initialize(
         address localProxy_,
         uint256 chainId_,
-        address owner_
+        address owner_,
+        uint256 maxHistorySaltId_,
+        uint256 maxHistoryContractGroupId_,
+        address minterProxy_
     ) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(localProxy_), "invalid local proxy");
+        require(Address.isContract(minterProxy_), "invalid minter proxy");
 
         proxy = localProxy_;
         chainId = chainId_;
+
+        saltId = maxHistorySaltId_;
+        contractGroupId = maxHistoryContractGroupId_;
+
+        minSaltId = maxHistorySaltId_;
+        minContractGroupId = maxHistoryContractGroupId_;
+        minterProxy = minterProxy_;
         
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
@@ -137,6 +159,7 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         bytes calldata proof
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_BOUND) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
+        require(receipt.data.contractGroupId > minContractGroupId, "contract group id is small");
         AssetInfo memory asset = localContractGroupAsset[receipt.data.contractGroupId];
         address code = templateCodes[asset.templateId];
         require(code != address(0), "template is not exist");
@@ -146,6 +169,40 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         _saveProof(receipt.data.chainId, receipt.blockHash, receipt.receiptIndex);
 
         emit ContractorGroupBound(receipt.data.chainId, receipt.data.contractGroupId, receipt.data.asset);
+    }
+
+    // support for load in data
+    function bindHistoryContractGroup(
+        uint256 contractGroupId_,
+        uint256 templateId_,
+        uint256 saltId_,
+        uint256[] calldata chains_,
+        address[] calldata assets_
+    ) external onlyRole(ADMIN_ROLE) {
+        require(contractGroupId_ <= minContractGroupId, "contract group id is overflow");
+        require(saltId_ <= minSaltId, "salt id is overflow");
+        require(chains_.length == assets_.length, "invalid chains info");
+
+        address code = templateCodes[templateId_];
+        require(code != address(0), "template is not exist");
+
+        require(localContractGroupAsset[contractGroupId_].templateId == 0, "asset generate info has been bound");
+        _checkChains(chains_);
+        
+        address localAsset;
+        for (uint256 i = 0; i < chains_.length; i++) {
+            bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", assets_[i], chains_[i], contractGroupId_, code);
+            (bool success, ) = proxy.call(payload);
+            require(success, "fail to bind contract group");
+            if (chains_[i] == chainId) {
+                localAsset = assets_[i];
+            }
+        }
+
+        require(localAsset != address(0), "local asset is not exist");
+
+        localContractGroupAsset[contractGroupId_] = AssetInfo(templateId_, saltId_, localAsset);
+        emit HistoryContractorGroupBound(templateId_, contractGroupId_, saltId_, chains_, assets_);
     }
 
     function issue(
@@ -159,7 +216,7 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         uint256 saltId_ = applySaltId();
         uint256 contractGroupId_ = applyGroupId();
         _checkChains(chainIds);
-        address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, saltId_, proxy);
+        address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, saltId_, minterProxy);
         bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", asset, chainId, contractGroupId_, code);
         (bool success, ) = proxy.call(payload);
         require(success, "fail to bind contract group");

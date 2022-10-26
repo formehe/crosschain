@@ -127,8 +127,14 @@ describe('Governance', () => {
     
         console.log("nfrFactory "  + nfrFactory.address)
         
+        proxyRegistryCon = await ethers.getContractFactory("ProxyRegistry");
+        proxyRegistry = await proxyRegistryCon.deploy(coreProxy.address, admin.address);
+        await proxyRegistry.deployed();
+    
+        console.log("proxyRegistry "  + proxyRegistry.address)
+
         await coreProxy.initialize(generalContractor.address, 1, coreGovernance.address, multiLimit.address)
-        await generalContractor.initialize(coreProxy.address, 1, coreGovernance.address)
+        await generalContractor.initialize(coreProxy.address, 1, coreGovernance.address, 0, 0, proxyRegistry.address)
     
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -161,7 +167,13 @@ describe('Governance', () => {
     
         console.log("nfrFactory "  + nfrFactory1.address)
     
-        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, edgeGovernance.address)
+        proxyRegistryCon1 = await ethers.getContractFactory("ProxyRegistry");
+        proxyRegistry1 = await proxyRegistryCon1.deploy(edgeProxy.address, admin.address);
+        await proxyRegistry1.deployed();
+    
+        console.log("proxyRegistry "  + proxyRegistry1.address)	
+
+        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, edgeGovernance.address, 0, proxyRegistry1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, edgeGovernance.address, limit.address)
 
         await coreGovernance.initialize(1, admin.address)

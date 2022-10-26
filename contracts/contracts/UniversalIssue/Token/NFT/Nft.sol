@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "../NFR/Issuer.sol";
 import "../NFR/ERC721Chunk.sol";
 import "../../common/IssueCoder.sol";
+import "../ProxyRegistry.sol";
 import "hardhat/console.sol";
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
@@ -30,7 +31,7 @@ contract NFT is ERC721Chunk, Issuer {
         uint256 tokenId_,
         address owner_
     ) external virtual {
-        require(_msgSender() == minter, "only for minter");
+        require(_msgSender() == ProxyRegistry(minter).proxy(), "only for minter");
         require(owner_ != address(0), "invalid owner");
         _safeMint(owner_, tokenId_);
     }
