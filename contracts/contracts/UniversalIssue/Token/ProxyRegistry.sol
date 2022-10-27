@@ -19,7 +19,7 @@ contract ProxyRegistry is AccessControl {
         _grantRole(ADMIN_ROLE, _msgSender());
     }
 
-    function update(address proxy_) external onlyRole(ADMIN_ROLE) {
+    function set(address proxy_) external onlyRole(ADMIN_ROLE) {
         require(proxy_ != address(0), "invalid address");
         proxy = proxy_;
     }

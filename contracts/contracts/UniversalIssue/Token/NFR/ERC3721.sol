@@ -12,7 +12,7 @@ import "hardhat/console.sol";
 /**
 * @dev Required interface of an ERC3721 compliant contract.
 */
-abstract contract ERC3721 is ERC721Chunk, Right, Issuer {
+contract ERC3721 is ERC721Chunk, Right, Issuer {
     event TokenRightBound(uint256 indexed tokenId, uint256 indexed rightKind, uint256 indexed rightId);
     event TokenRightDisbound(uint256 indexed tokenId, uint256 indexed rightKind, uint256 indexed rightId);
     event TokenRightTansfered(uint256 indexed fromTokenId, uint256 toTokenId, uint256 indexed rightKind, uint256 indexed rightId);

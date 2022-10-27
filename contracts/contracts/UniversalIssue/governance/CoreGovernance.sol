@@ -34,7 +34,7 @@ contract CoreGovernance is AdminControlledUpgradeable{
     }
 
     //keccak256("BLACK.GOVERNANCE.ROLE")
-    // bytes32 constant BLACK_GOVERNANCE_ROLE = 0x5815e0e9225333c89575398fc48947fa6c0b7306b87716d0fcefc6b814f0e647;
+    //bytes32 constant BLACK_GOVERNANCE_ROLE = 0x5815e0e9225333c89575398fc48947fa6c0b7306b87716d0fcefc6b814f0e647;
     //keccak256("GOVERNANCE.PROPOSER.ROLE")
     bytes32 constant GOVERNANCE_PROPOSER_ROLE = 0xd5a906cf3ac93205af230c14cfaf12c82bbb6d36751ef6c37d190b7d9d4f3b4a;
 
@@ -78,7 +78,7 @@ contract CoreGovernance is AdminControlledUpgradeable{
 
     function bindGovernedContract(
         address governedContract
-    ) external onlyRole(GOVERNANCE_PROPOSER_ROLE) {
+    ) external onlyRole(ADMIN_ROLE) {
         require(Address.isContract(governedContract), "invalid governed contract");
         bool exist;
         for (uint256 i = 0; i < governedContracts.length; i++) {

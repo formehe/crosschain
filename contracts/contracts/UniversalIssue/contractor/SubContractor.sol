@@ -123,6 +123,7 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         VerifiedReceipt memory result= _verify(0xac2fca6a4028ff9e74a127c2c4421ca02b2a57a31c008002f5736cd984a9cf74, proof);
         address code =  templateCodes[result.data.templateId];
         require(code != address(0), "template is not exist");
+        require(result.data.contractGroupId != 0, "contract group id can not be 0");
         require(result.data.contractGroupId <= minContractGroupId, "contract group id is bigger");
         require(localContractGroupAsset[result.data.contractGroupId] == address(0), "asset has been bound");
 
@@ -131,7 +132,7 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         
         for (uint256 i = 0; i < chains.length; i++) {
             if (chains[i] == chainId) {
-                require(assets[i] != address(0), "invalid asset address");
+                require(Address.isContract(assets[i]), "invalid asset address");
                 bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256,address)", assets[i], result.data.contractGroupId, code);
                 (bool success, ) = proxy.call(payload);
                 require(success, "fail to bind contract group");
@@ -148,7 +149,6 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         VerifiedReceipt memory result= _verify(0x8dfe5a421d6022c8b67da5c0acc654ce179fa7c7ba0ddda3fabd5f126d9198e9, proof);
         address code =  templateCodes[result.data.templateId];
         require(code != address(0), "template is not exist");
-        require(result.data.contractGroupId > minContractGroupId, "contract group id is small");
         (bytes memory generalIssueInfo) = abi.decode(result.data.data, (bytes));
         address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, result.data.saltId, minterProxy);
         bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256,address)", asset, result.data.contractGroupId, code);
