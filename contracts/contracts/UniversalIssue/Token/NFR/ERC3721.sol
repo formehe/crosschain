@@ -7,22 +7,19 @@ import "./Right.sol";
 import "./ERC721Chunk.sol";
 import "../../common/IssueCoder.sol";
 import "../ProxyRegistry.sol";
-import "hardhat/console.sol";
 
 /**
 * @dev Required interface of an ERC3721 compliant contract.
 */
 contract ERC3721 is ERC721Chunk, Right, Issuer {
-    event TokenRightBound(uint256 indexed tokenId, uint256 indexed rightKind, uint256 indexed rightId);
-    event TokenRightDisbound(uint256 indexed tokenId, uint256 indexed rightKind, uint256 indexed rightId);
-    event TokenRightTansfered(uint256 indexed fromTokenId, uint256 toTokenId, uint256 indexed rightKind, uint256 indexed rightId);
+    event TokenRightBound(uint256 indexed tokenId, uint256 indexed rightKind, uint256 amount);
+    event TokenRightDisbound(uint256 indexed tokenId, uint256 indexed rightKind, uint256 amount);
+    event TokenRightTansfered(uint256 indexed fromTokenId, uint256 toTokenId, uint256 indexed rightKind, uint256 amount);
     event TokenAttached(uint256 indexed tokenId, bytes additional);
-    event TokenRightBurned(uint256 indexed tokenId, uint256 indexed rightKind, uint256 indexed rightId);
+    event TokenRightBurned(uint256 indexed tokenId, uint256 indexed rightKind, uint256 amount);
     
     mapping(uint256 => bytes) private _tokenExtension;
-    // tokenid --- rightKind --- rightId
     mapping(uint256 => mapping(uint256 => uint256)) private _tokenRights;
-    mapping(uint256 => uint256[]) private _tokenKinds;
     address minter;
 
     function initialize(
@@ -43,21 +40,19 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
 
     function burn(
         uint256 tokenId
-    ) external virtual returns(uint256[] memory rightKinds_, uint256[] memory rightIds_, bytes memory additional_) {
+    ) external virtual returns(uint256[] memory rightKinds_, uint256[] memory rightQuantities_, bytes memory additional_) {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
-        uint256 len = _tokenKinds[tokenId].length;
-        rightKinds_ = new uint256[](len);
-        rightIds_ = new uint256[](len);
+        address owner = ownerOf(tokenId);
+        rightKinds_ = rightKinds();
+        uint256 len = rightKinds_.length;
+        rightQuantities_ = new uint256[](len);
         for (uint i = 0; i < len; i++) {
-            uint256 rightKind = _tokenKinds[tokenId][i];
-            uint256 rightId = _tokenRights[tokenId][rightKind];
-            _tokenRights[tokenId][rightKind] = 0;
-            rightKinds_[i] = rightKind;
-            rightIds_[i] = rightId;
-            _burnRight(rightKind, rightId);
+            uint256 rightKind = rightKinds_[i];
+            uint256 amount = _tokenRights[tokenId][rightKind];
+            rightQuantities_[i] = amount;
+            delete _tokenRights[tokenId][rightKind];
         }
         additional_ = _tokenExtension[tokenId];
-        delete _tokenKinds[tokenId];
         delete _tokenExtension[tokenId];
 
         _burn(tokenId);
@@ -65,13 +60,12 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
 
     function burnRight(
         uint256 tokenId,
-        uint256 rightKind,
-        uint256 rightId
+        uint256 rightKind
     ) external virtual {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
-        _delRightOfToken(tokenId, rightKind, rightId);
-        _burnRight(rightKind, rightId);
-        emit TokenRightBurned(tokenId, rightKind, rightId);
+        address owner = ownerOf(tokenId);
+        _delRightOfToken(tokenId, rightKind, 1);
+        emit TokenRightBurned(tokenId, rightKind, 1);
     }
     
     /**
@@ -83,13 +77,12 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
         uint256 fromTokenId,
         uint256 toTokenId,
         uint256 rightKind,
-        uint256 rightId,
         bytes calldata data
     ) external virtual{        
         require(_isApprovedOrOwner(_msgSender(), fromTokenId), "caller is not owner nor approved");
-        _delRightOfToken(fromTokenId, rightKind, rightId);
-        _addRightOfToken(toTokenId, rightKind, rightId);
-        emit TokenRightTansfered(fromTokenId, toTokenId, rightKind, rightId);
+        _delRightOfToken(fromTokenId, rightKind, 1);
+        _addRightOfToken(toTokenId, rightKind, 1);
+        emit TokenRightTansfered(fromTokenId, toTokenId, rightKind, 1);
     }
 
     function attachAddtional(
@@ -117,44 +110,44 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     */
     function attachRight(
         uint256 tokenId,
-        uint256 rightKind,
-        uint256 rightId
+        uint256 rightKind
     ) external virtual{
         address owner = ownerOf(tokenId); 
         require(_isApprovedOrOwner(_msgSender(), tokenId), "not owner or approver");
-        _attachRight(owner, rightKind, rightId);
-        _addRightOfToken(tokenId, rightKind, rightId);
+        _attachRight(rightKind);
+        _addRightOfToken(tokenId, rightKind, 1);
     }
 
     function tokenRights(
         uint256 tokenId
-    ) external virtual returns(uint256[] memory rightKinds, uint256[] memory rightIds){
-        uint256 len = _tokenKinds[tokenId].length;
-        rightKinds = new uint256[](len);
-        rightIds = new uint256[](len);
+    ) external virtual returns(uint256[] memory rightKinds_, uint256[] memory rightQuantities_){
+        rightKinds_ = rightKinds();
+        uint256 len = rightKinds_.length;
+        rightQuantities_ = new uint256[](len);
         for (uint i = 0; i < len; i++) {
-            uint256 rightKind = _tokenKinds[tokenId][i];
-            rightKinds[i] = rightKind;
-            rightIds[i] = _tokenRights[tokenId][rightKind];
+            uint256 rightKind = rightKinds_[i];
+            rightQuantities_[i] = _tokenRights[tokenId][rightKind];
         }
     }
 
     function mint(
         uint256 tokenId_,
         uint256[] memory rightKinds_,
-        uint256[] memory rightIds_,
+        uint256[] memory rightQuantities_,
         bytes memory additional,
         address owner_
     ) external virtual {
         require(_msgSender() == ProxyRegistry(minter).proxy(), "only for minter");
-        require(rightKinds_.length == rightIds_.length, "invalid right kinds or right ids");
+        require(rightKinds_.length == rightQuantities_.length, "invalid right kind numbers");
         require(owner_ != address(0), "invalid owner");
         _safeMint(owner_, tokenId_);
         for (uint256 i = 0; i < rightKinds_.length; i++) {
             uint256 rightKind = rightKinds_[i];
-            uint256 rightId = rightIds_[i];
-            _mintRight(rightKind, rightId);
-            _addRightOfToken(tokenId_, rightKind, rightId);
+            uint256 amount = rightQuantities_[i];
+            if (amount != 0) {
+                _checkRight(rightKind);
+                _addRightOfToken(tokenId_, rightKind, amount);
+            }
             _tokenExtension[tokenId_] = additional;
         }
     }
@@ -162,34 +155,19 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     function _addRightOfToken(
         uint256 tokenId,
         uint256 rightKind,
-        uint256 rightId
+        uint256 amount
     ) internal virtual{
-        //cancel approved right and modify owner;
-        require(_tokenRights[tokenId][rightKind] == 0, "right has been bound");
-        _tokenRights[tokenId][rightKind] = rightId;
-        _tokenKinds[tokenId].push(rightKind);
-        emit TokenRightBound(tokenId, rightKind, rightId);
+        _tokenRights[tokenId][rightKind] += amount;
+        emit TokenRightBound(tokenId, rightKind, amount);
     }
 
     function _delRightOfToken(
         uint256 tokenId,
         uint256 rightKind,
-        uint256 rightId
+        uint256 amount
     ) internal virtual{
-        require(_tokenRights[tokenId][rightKind] == rightId, "right has not been bound");
-        delete _tokenRights[tokenId][rightKind];
-
-        //cancel approved right and modify owner;
-        uint256 len = _tokenKinds[tokenId].length;
-        for (uint i = 0; i < len; i++) {
-            if (rightKind != _tokenKinds[tokenId][i]) {
-                continue;
-            }
-
-            _tokenKinds[tokenId][i] = _tokenKinds[tokenId][len - 1];
-            _tokenKinds[tokenId].pop();
-        }
-
-        emit TokenRightDisbound(tokenId, rightKind, rightId);
+        require(_tokenRights[tokenId][rightKind] >= amount, "has no right");
+        _tokenRights[tokenId][rightKind] -= amount;
+        emit TokenRightDisbound(tokenId, rightKind, amount);
     }
 }

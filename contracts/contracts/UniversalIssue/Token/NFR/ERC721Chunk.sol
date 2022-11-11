@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "hardhat/console.sol";
 
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
@@ -19,13 +18,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     using Address for address;
     using Strings for uint256;
 
-    struct TokenRange {
-        uint256 minId;
-        uint256 maxId;
-    }
-
-    TokenRange private _tokenRange;
-    address    private _owner;
+    address    private _issuer;
 
     // Token name
     string private _name;
@@ -45,11 +38,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
 
     // Mapping from token ID to approved address
     mapping(uint256 => address) private _tokenApprovals;
-
-    // Mapping from owner to operator approvals
-    mapping(address => mapping(address => bool)) private _operatorApprovals;
     
-    mapping(uint256 => bool) private _liquidPool;
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
@@ -59,17 +48,21 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         string memory uri_,
         uint256 minId_,
         uint256 maxId_,
-        address owner_,
+        address issuer_,
         uint256 totalAmount_
     ) internal virtual onlyInitializing {
         require(maxId_ >= minId_, "maxId is smaller than maxId");
+        require(issuer_ != address(0), "invalid owner");
         _name = name_;
         _symbol = symbol_;
-        _tokenRange = TokenRange(minId_, maxId_);
-        _owner = owner_;
-        _balances[owner_] = maxId_ - minId_;
+        
+        _issuer = issuer_;
+        _balances[issuer_] = maxId_ - minId_;
         _uri = uri_;
         _totalSupply = totalAmount_;
+        for (uint i = minId_; i < maxId_; i++) {
+            _mint(issuer_, i);
+        }
     }
 
     /**
@@ -100,16 +93,8 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     function ownerOf(
         uint256 tokenId
     ) public view virtual override returns (address) {
-        address owner;
-        if (_liquidPool[tokenId]) {
-             owner = _owners[tokenId];
-        } else {
-            if ((tokenId < _tokenRange.maxId) && (tokenId >= _tokenRange.minId)) {
-                owner = _owner;
-            }
-        }
-        // console.logAddress(owner);
-        require(owner != address(0), "ERC721: owner query for nonexistent token");
+        address owner = _owners[tokenId];
+        require(owner != address(0), "ERC721: owner query for nonexistent token on this chain");
         return owner;
     }
 
@@ -149,11 +134,8 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     function issuer(
         uint256 tokenId
     ) public view virtual returns (address) {
-        if ((tokenId < _tokenRange.maxId) && (tokenId >= _tokenRange.minId)) {
-            return _owner;
-        }
-
-        return address(0);
+        ownerOf(tokenId);
+        return _issuer;
     }
 
     /**
@@ -198,20 +180,21 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      * @dev See {IERC721-setApprovalForAll}.
      */
     function setApprovalForAll(
-        address operator,
-        bool approved
+        address /*operator*/,
+        bool /*approved*/
     ) public virtual override {
-        _setApprovalForAll(_msgSender(), operator, approved);
+        // _setApprovalForAll(_msgSender(), operator, approved);
+        require(false, "not support");
     }
 
     /**
      * @dev See {IERC721-isApprovedForAll}.
      */
     function isApprovedForAll(
-        address owner,
-        address operator
+        address /* owner */,
+        address /* operator */
     ) public view virtual override returns (bool) {
-        return _operatorApprovals[owner][operator];
+        return false;
     }
 
     /**
@@ -291,15 +274,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     function _exists(
         uint256 tokenId
     ) internal view virtual returns (bool) {
-        if (_liquidPool[tokenId]) {
-            return _owners[tokenId] != address(0);
-        } else {
-            if ((tokenId < _tokenRange.maxId) && (tokenId >= _tokenRange.minId)) {
-                return true;
-            }
-        }
-
-        return false;
+        return _owners[tokenId] != address(0);
     }
 
     /**
@@ -370,7 +345,6 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
         require(tokenId <= _totalSupply, "ERC721: token id is overflow");
-
         _beforeTokenTransfer(address(0), to, tokenId);
 
         _balances[to] += 1;
@@ -453,21 +427,6 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     }
 
     /**
-     * @dev Approve `operator` to operate on all of `owner` tokens
-     *
-     * Emits a {ApprovalForAll} event.
-     */
-    function _setApprovalForAll(
-        address owner,
-        address operator,
-        bool approved
-    ) internal virtual {
-        require(owner != operator, "ERC721: approve to caller");
-        _operatorApprovals[owner][operator] = approved;
-        emit ApprovalForAll(owner, operator, approved);
-    }
-
-    /**
      * @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
      * The call is not executed if the target address is not a contract.
      *
@@ -533,14 +492,13 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
     function _afterTokenTransfer(
-        address /*from*/,
-        address /*to*/,
+        address from,
+        address to,
         uint256 tokenId
     ) internal virtual {
-        _liquidPool[tokenId] = true;
     }
 
-    function isssueTokenRange() view external returns(uint256 minId, uint256 maxId) {
-        return (_tokenRange.minId, _tokenRange.maxId);
-    }
+    // function isssueTokenRange() view external returns(uint256 minId, uint256 maxId) {
+    //     return (_tokenRange.minId, _tokenRange.maxId);
+    // }
 }

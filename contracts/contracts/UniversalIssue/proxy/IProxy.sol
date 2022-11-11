@@ -30,6 +30,7 @@ abstract contract IProxy is AdminControlledUpgradeable{
         uint256 indexed toChain,
         address asset,
         bool    proxied,
+        uint256 tokenId,
         bytes   burnInfo
     );
 
@@ -38,6 +39,7 @@ abstract contract IProxy is AdminControlledUpgradeable{
         uint256 indexed fromChain,
         uint256 indexed toChain,
         address asset,
+        uint256 tokenId,
         bytes   burnInfo
     );
 
@@ -46,6 +48,8 @@ abstract contract IProxy is AdminControlledUpgradeable{
         uint256 toChain;
         uint256 contractGroupId;
         address asset;
+        bool    proxied;
+        uint256 tokenId;
         bytes   burnInfo;
     }
 
@@ -107,12 +111,12 @@ abstract contract IProxy is AdminControlledUpgradeable{
         require(logInfo.topics.length == 4, "invalid the number of topics");
 
         //CrossTokenBurned        
-        require(logInfo.topics[0] == 0xa70303e63e54b781b5d1449833162f7194addb3b8728aa0ea87b60711b63e8e0, "invalid the function of topics");
+        require(logInfo.topics[0] == 0xa9d5e5c0ed90776577056a54142c17ed44ff62f340b7e801244ac493a9d69de7, "invalid the function of topics");
         receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
         receipt_.fromChain = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         receipt_.toChain = abi.decode(abi.encodePacked(logInfo.topics[3]), (uint256));
 
-        (receipt_.asset, , receipt_.burnInfo) = abi.decode(logInfo.data, (address, bool, bytes));
+        (receipt_.asset, receipt_.proxied, receipt_.tokenId, receipt_.burnInfo) = abi.decode(logInfo.data, (address, bool, uint256, bytes));
         contractAddress_ = logInfo.contractAddress;
     }
 }

@@ -130,7 +130,7 @@ describe('GeneralContractor', () => {
         console.log("proxyRegistry "  + proxyRegistry.address)	        
         
         await coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)
-        await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address)
+        await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address, nfrFactory.address)
     
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -169,7 +169,7 @@ describe('GeneralContractor', () => {
     
         console.log("proxyRegistry "  + proxyRegistry1.address)
 
-        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address)
+        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
     
         issueInfo = {
@@ -250,14 +250,6 @@ describe('GeneralContractor', () => {
         })
     })
 
-    describe('bindTemplate', () => {
-        it('bind template', async () => {
-            await expect(generalContractor.bindTemplate(0, AddressZero)).
-                to.be.revertedWith('address is not contract')
-            await generalContractor.bindTemplate(0, nfrFactory.address)
-        })
-    })
-
     describe('issue', () => {
         it('issue', async () => {
             issueInfo1 = {
@@ -307,27 +299,23 @@ describe('GeneralContractor', () => {
             }
 
             let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
-            await generalContractor.bindTemplate(0, nfrFactory.address)
-            await expect(generalContractor.issue(1, bytesOfIssue)).
-            to.be.revertedWith('template is not exist')
-            await expect(generalContractor.issue(0, bytesOfIssue)).
+            await expect(generalContractor.issue(bytesOfIssue)).
             to.be.revertedWith('chain is not bound')
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            await generalContractor.issue(0, bytesOfIssue)
+            await generalContractor.issue(bytesOfIssue)
             bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await expect(generalContractor.issue(0, bytesOfIssue)).
+            await expect(generalContractor.issue(bytesOfIssue)).
             to.be.revertedWith('must issue on main chain')
         })
     })
 
     describe('bindContractGroup', () => {
         it('bindContractGroup', async () => {
-            await generalContractor.bindTemplate(0, nfrFactory.address)
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
 
             let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
             //========================================================================
-            let tx = await generalContractor.issue(0, bytesOfIssue)
+            let tx = await generalContractor.issue(bytesOfIssue)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
       
@@ -345,7 +333,6 @@ describe('GeneralContractor', () => {
             let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             let buffer = borsh.serialize(schema, value);
 
-            await subContractor.bindTemplate(0, nfrFactory1.address)
             tx = await subContractor.subIssue(buffer)
             rc = await tx.wait()
             //========================================================================
@@ -368,7 +355,7 @@ describe('GeneralContractor', () => {
             buffer = borsh.serialize(schema, value);
             await generalContractor.bindContractGroup(buffer)
             await expect(generalContractor.bindContractGroup(buffer)).
-            to.be.revertedWith('fail to bind contract group')
+            to.be.revertedWith('event of proof cannot be reused')
         })
     })
 
@@ -419,12 +406,11 @@ describe('GeneralContractor', () => {
                     }
                 ]
             }
-            await generalContractor.bindTemplate(0, nfrFactory.address)
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
 
             let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
             //========================================================================
-            let tx = await generalContractor.issue(0, bytesOfIssue)
+            let tx = await generalContractor.issue(bytesOfIssue)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
             console.log(event)
@@ -447,7 +433,6 @@ describe('GeneralContractor', () => {
             let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             let buffer = borsh.serialize(schema, value);
 
-            await subContractor.bindTemplate(0, nfrFactory1.address)
             tx = await subContractor.subIssue(buffer)
             rc = await tx.wait()
             //========================================================================
@@ -469,7 +454,7 @@ describe('GeneralContractor', () => {
             buffer = borsh.serialize(schema, value);
             await generalContractor.bindContractGroup(buffer)
             await expect(generalContractor.bindContractGroup(buffer)).
-            to.be.revertedWith('fail to bind contract group')
+            to.be.revertedWith('event of proof cannot be reused')
 
             erc20SampleInstance = await erc20TokenSampleCon.attach(templateAddr)
             await expect(erc20SampleInstance.connect(admin).burn(1)).to.be.revertedWith('ERC721: operator query for nonexistent token')
@@ -533,7 +518,7 @@ describe('SubContractor', () => {
         console.log("proxyRegistry "  + proxyRegistry.address)	
 
         await coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)
-        await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address)
+        await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address, nfrFactory.address)
     
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -572,7 +557,7 @@ describe('SubContractor', () => {
     
         console.log("proxyRegistry "  + proxyRegistry1.address)	
     
-        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address)
+        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
     
         issueInfo = {
@@ -637,22 +622,13 @@ describe('SubContractor', () => {
         }
     })
 
-    describe('bindTemplate', () => {
-        it('bind template', async () => {
-            await expect(subContractor.bindTemplate(0, AddressZero)).
-            to.be.revertedWith('address is not contract')
-            await subContractor.bindTemplate(0, nfrFactory.address)
-        })
-    })
-
     describe('subIssue', () => {
         it('sub issue', async () => {
-            await generalContractor.bindTemplate(0, nfrFactory.address)
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
 
             let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
             //========================================================================
-            let tx = await generalContractor.issue(0, bytesOfIssue)
+            let tx = await generalContractor.issue(bytesOfIssue)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
       
@@ -669,10 +645,6 @@ describe('SubContractor', () => {
             let blockHash = keccak256(proof.header.buffer)
             let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             let buffer = borsh.serialize(schema, value);
-            await expect(subContractor.subIssue(buffer)).
-            to.be.revertedWith('template is not exist')
-
-            await subContractor.bindTemplate(0, nfrFactory1.address)
             await subContractor.subIssue(buffer)
             await expect(subContractor.subIssue(buffer)).
             to.be.revertedWith('proof is reused')
@@ -680,7 +652,7 @@ describe('SubContractor', () => {
             subContractorCon1 = await ethers.getContractFactory("SubContractor");
             subContractor1 = await subContractorCon1.deploy();
             await subContractor1.deployed();
-            await subContractor1.initialize(edgeProxy.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address)
+            await subContractor1.initialize(edgeProxy.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
             await expect(subContractor1.subIssue(buffer)).
             to.be.revertedWith('general contractor address is error')
 
@@ -732,7 +704,7 @@ describe('SubContractor', () => {
 
             bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
             //========================================================================
-            tx = await generalContractor.issue(0, bytesOfIssue)
+            tx = await generalContractor.issue(bytesOfIssue)
             rc = await tx.wait()
             event = rc.events.find(event=>event.event === "GeneralContractorIssue")
       

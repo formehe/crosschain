@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "../../common/Borsh.sol";
-// import "hardhat/console.sol";
 
 library LogExtractor {
     using Borsh for Borsh.Data;

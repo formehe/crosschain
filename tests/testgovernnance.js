@@ -134,7 +134,7 @@ describe('Governance', () => {
         console.log("proxyRegistry "  + proxyRegistry.address)
 
         await coreProxy.initialize(generalContractor.address, 1, coreGovernance.address, multiLimit.address)
-        await generalContractor.initialize(coreProxy.address, 1, coreGovernance.address, 0, 0, proxyRegistry.address)
+        await generalContractor.initialize(coreProxy.address, 1, coreGovernance.address, 0, 0, proxyRegistry.address, nfrFactory.address)
     
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -173,7 +173,7 @@ describe('Governance', () => {
     
         console.log("proxyRegistry "  + proxyRegistry1.address)	
 
-        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, edgeGovernance.address, 0, proxyRegistry1.address)
+        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, edgeGovernance.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, edgeGovernance.address, limit.address)
 
         await coreGovernance.initialize(1, admin.address)

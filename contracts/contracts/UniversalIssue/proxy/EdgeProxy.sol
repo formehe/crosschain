@@ -10,7 +10,7 @@ import "../governance/IGovernanceCapability.sol";
 
 contract EdgeProxy is IProxy, IGovernanceCapability{
     struct ProxiedAsset{
-        uint256 groupId;
+        address asset;
         address templateCode;
     }
 
@@ -19,7 +19,7 @@ contract EdgeProxy is IProxy, IGovernanceCapability{
         address indexed asset
     );
 
-    mapping(address => ProxiedAsset) public assets;
+    mapping(uint256 => ProxiedAsset) public assets;
     address public subContractor;
     uint256 public chainId;
     ILimit public limit;
@@ -66,9 +66,10 @@ contract EdgeProxy is IProxy, IGovernanceCapability{
     ) external {
         require(msg.sender == subContractor, "just subcontractor can bind");
         require(Address.isContract(asset), "from proxy address are not to be contract address");
-        require(assets[asset].groupId == 0, "can not modify the bind asset");
         require(contractGroupId != 0, "contract group id can not be 0");
-        assets[asset] = ProxiedAsset(contractGroupId, templateCode);
+
+        require(assets[contractGroupId].asset == address(0), "can not modify the bind asset");
+        assets[contractGroupId] = ProxiedAsset(asset, templateCode);
         emit ContractGroupBound(contractGroupId, asset);
     }
 
@@ -76,37 +77,40 @@ contract EdgeProxy is IProxy, IGovernanceCapability{
         bytes memory proof
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_MINT) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
-        ProxiedAsset memory proxyAsset = assets[receipt.data.asset];
-        require((proxyAsset.groupId != 0) && (proxyAsset.groupId == receipt.data.contractGroupId), "chain is not permit");
+        _saveProof(receipt.data.fromChain, receipt.blockHash, receipt.receiptIndex, receipt.proofIndex);
+        require(receipt.data.proxied, "receipt must from core");
+        ProxiedAsset memory proxyAsset = assets[receipt.data.contractGroupId];
+        require((proxyAsset.asset != address(0)) && (proxyAsset.asset == receipt.data.asset), "chain is not permit");
         require(receipt.data.toChain == chainId, "not to mine");
         require(limit.forbiddens(receipt.proofIndex) == false, "receipt id has already been forbidden");
         require(limit.checkFrozen(proxyAsset.templateCode, receipt.time),'tx is frozen');
         
         // call contract
-        bytes memory codes = ITokenFactory(proxyAsset.templateCode).constrcutMint(receipt.data.burnInfo);
+        bytes memory codes = ITokenFactory(proxyAsset.templateCode).constructMint(receipt.data.burnInfo);
         (bool success,) = (receipt.data.asset).call(codes);
         require(success, "fail to mint");
-        _saveProof(receipt.data.fromChain, receipt.blockHash, receipt.receiptIndex, receipt.proofIndex);
-        emit CrossTokenMinted(proxyAsset.groupId, receipt.data.fromChain, receipt.data.toChain, receipt.data.asset, receipt.data.burnInfo);
+        emit CrossTokenMinted(receipt.data.contractGroupId, receipt.data.fromChain, receipt.data.toChain, receipt.data.asset, receipt.data.tokenId, receipt.data.burnInfo);
     }
 
     function burnTo(
         uint256 toChainId,
-        address asset,
+        uint256 contractGroupId,
         address receiver,
         uint256 tokenId
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_BURN) {
         require(receiver != address(0), "invalid parameter");
-        ProxiedAsset memory proxyAsset = assets[asset];
-        require(proxyAsset.groupId != 0, "asset is not bound");
+        require(contractGroupId != 0, "invalid contract group id");
         require(toChainId != chainId, "only support cross chain tx");
 
+        ProxiedAsset memory proxyAsset = assets[contractGroupId];
+        require(proxyAsset.asset != address(0), "asset is not bound");
+
         bytes memory codes = abi.encodeWithSignature("burn(uint256)", tokenId);
-        (bool success, bytes memory result) = asset.call(codes);
+        (bool success, bytes memory result) = (proxyAsset.asset).call(codes);
         require(success, "fail to burn");
 
-        bytes memory value = ITokenFactory(proxyAsset.templateCode).constrcutBurn(result, receiver, tokenId);
-        emit CrossTokenBurned(proxyAsset.groupId, chainId, toChainId, asset, false, value);
+        bytes memory value = ITokenFactory(proxyAsset.templateCode).constructBurn(result, receiver, tokenId);
+        emit CrossTokenBurned(contractGroupId, chainId, toChainId, proxyAsset.asset, false, tokenId, value);
     }
 
     /// Parses the provided proof and consumes it if it's not already used.
@@ -128,11 +132,11 @@ contract EdgeProxy is IProxy, IGovernanceCapability{
         bytes memory action
     ) external pure override returns (bool) {
         bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
-        
-        // if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || 
-        //      (subClass == BLACK_MINT_ROLE) || (subClass == BLACK_BURN_ROLE))) {
-        //     return false;
-        // }
+        (, bytes32 role,) = abi.decode(abi.encodePacked(bytes28(0), action), (bytes32,bytes32,address));
+
+        if (subClass != role) {
+            return false;
+        }
 
         if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ROLE))) {
             return false;

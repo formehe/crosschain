@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "../../common/IssueCoder.sol";
 import "../ITokenFactory.sol";
-import "hardhat/console.sol";
 
 contract NFTFactory is ITokenFactory{
     constructor(address code_, address contractor_) ITokenFactory(code_, contractor_) {
@@ -51,6 +50,7 @@ contract NFTFactory is ITokenFactory{
         for (uint256 i = 0; i < issueInfo.issueOfChains.length; ++i){
             (issueWithRange.issueRangeOfChains[i], tokenIndex) = _applyRightsAndToken(issueInfo.issueOfChains[i], tokenIndex);
             chainIds[i] = issueInfo.issueOfChains[i].chainId;
+            require(!_exist(chainIds, i, chainIds[i]), "chains id is repeated");
         }
 
         require(tokenIndex > 1, "none token issue");
@@ -107,7 +107,7 @@ contract NFTFactory is ITokenFactory{
         return (circulationRangePerChain, tokenIndex);
     }
 
-    function constrcutMint(
+    function constructMint(
         bytes calldata info
     ) external pure override returns(bytes memory) {
         (address receiver, uint256 tokenId) = abi.decode(info, (address, uint256));
@@ -115,7 +115,7 @@ contract NFTFactory is ITokenFactory{
         return codes;
     }
 
-    function constrcutBurn(
+    function constructBurn(
         bytes calldata, 
         address to, 
         uint256 asset

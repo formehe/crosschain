@@ -4,7 +4,7 @@ import "../NFR/Issuer.sol";
 import "../NFR/ERC721Chunk.sol";
 import "../../common/IssueCoder.sol";
 import "../ProxyRegistry.sol";
-import "hardhat/console.sol";
+
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
  * the Metadata extension, but not including the Enumerable extension, which is available separately as

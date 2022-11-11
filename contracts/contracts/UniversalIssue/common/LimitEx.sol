@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../governance/IGovernanceCapability.sol";
 import "../../common/Utils.sol";
-//import "hardhat/console.sol";
 
 contract LimitEx is AccessControl, IGovernanceCapability {
     //keccak256("OWNER.ROLE");
@@ -120,7 +119,12 @@ contract LimitEx is AccessControl, IGovernanceCapability {
         bytes memory action
     ) external pure override returns (bool) {
         bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
-        
+        (, bytes32 role,) = abi.decode(abi.encodePacked(bytes28(0), action),(bytes32,bytes32,address));
+
+        if (subClass != role) {
+            return false;
+        }
+
         if (!((subClass == ADMIN_ROLE) || (subClass == FORBIDEN_ROLE))) {
             return false;
         }

@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "../prover/IProver.sol";
 import "../../common/AdminControlledUpgradeable.sol";
 import "./IGovernanceCapability.sol";
-import "hardhat/console.sol";
 
 contract CoreGovernance is AdminControlledUpgradeable{
     uint256 public chainId;

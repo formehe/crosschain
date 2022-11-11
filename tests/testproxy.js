@@ -130,7 +130,7 @@ describe('proxy', () => {
         console.log("proxyRegistry "  + proxyRegistry.address)	
 
         await coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)
-        await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address)
+        await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address, nfrFactory.address)
     
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -169,7 +169,7 @@ describe('proxy', () => {
     
         console.log("proxyRegistry "  + proxyRegistry1.address)	
     
-        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address)
+        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
     
         issueInfo = {
@@ -233,17 +233,16 @@ describe('proxy', () => {
             ]
         }
 
-      await generalContractor.bindTemplate(0, nfrFactory.address)
       await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-      await subContractor.bindTemplate(0, nfrFactory1.address)
     
       let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
       //========================================================================
-      let tx = await generalContractor.issue(0, bytesOfIssue)
+      let tx = await generalContractor.issue(bytesOfIssue)
       let rc = await tx.wait()
       let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
-      
-      templateAddr1 = "0x"+ (rc.events[0].topics[3]).substring(26)
+
+      let event1 = rc.events.find(event=>event.topics[0] === "0xc1889a90696bd45dab537e0a41003065c4a8ab9a81b243f49ba039064e149dad")
+      templateAddr1 = "0x"+ (event1.topics[3]).substring(26)
       console.log(templateAddr1)
 
       // construct receipt proof
@@ -267,6 +266,7 @@ describe('proxy', () => {
       console.log(event.topics[3])
       console.log((event.topics[3]))
       templateAddr = "0x"+ (event.topics[3]).substring(26)
+      contractGroupId = event.topics[2]
       // construct receipt proof
       getProof = new GetProof("http://127.0.0.1:8545")
       proof = await getProof.receiptProof(tx.hash)
@@ -285,30 +285,30 @@ describe('proxy', () => {
 
       coreProxy.bindPeerChain(2,ethLikeProver.address, edgeProxy.address)
       erc20SampleInstance = await erc20TokenSampleCon.attach(templateAddr)
-      await erc20SampleInstance.connect(miner).attachRight(51,1,51)
+      await erc20SampleInstance.connect(miner).attachRight(51,1)
       await erc20SampleInstance.connect(miner).approve(edgeProxy.address, 51)
 
-      await erc20SampleInstance.connect(miner).attachRight(52,1,52)
+      await erc20SampleInstance.connect(miner).attachRight(52,1)
       await erc20SampleInstance.connect(miner).approve(edgeProxy.address, 52)
 
       erc20SampleInstance = await erc20TokenSampleCon.attach(templateAddr1)
-      await erc20SampleInstance.connect(miner).attachRight(1,1,1)
+      await erc20SampleInstance.connect(miner).attachRight(1,1)
       await erc20SampleInstance.connect(miner).approve(coreProxy.address, 1)
       
-      await erc20SampleInstance.connect(miner).attachRight(50,1,50)
+      await erc20SampleInstance.connect(miner).attachRight(50,1)
       await erc20SampleInstance.connect(miner).approve(coreProxy.address, 50)
 
     })
 
     describe('burn and mint', () => {
         it('edge burn, core mint', async () => {
-            await expect(edgeProxy.connect(miner).burnTo(2, templateAddr, user1.address, 51)).
+            await expect(edgeProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 51)).
             to.be.revertedWith('only support cross chain tx')
 
-            await expect(edgeProxy.connect(miner).burnTo(1, generalContractor.address, user1.address, 51)).
+            await expect(edgeProxy.connect(miner).burnTo(1, 100, user1.address, 51)).
             to.be.revertedWith('asset is not bound')
 
-            let tx = await edgeProxy.connect(miner).burnTo(3, templateAddr, user1.address, 51)
+            let tx = await edgeProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 51)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "CrossTokenBurned")
             // construct receipt proof
@@ -326,7 +326,7 @@ describe('proxy', () => {
             let buffer = borsh.serialize(schema, value);
             await expect(coreProxy.mint(buffer)).to.be.revertedWith('to chain is not permit')
 
-            tx = await edgeProxy.connect(miner).burnTo(1, templateAddr, user1.address, 52)
+            tx = await edgeProxy.connect(miner).burnTo(1, contractGroupId, user1.address, 52)
             rc = await tx.wait()
             event = rc.events.find(event=>event.event === "CrossTokenBurned")
             // construct receipt proof
@@ -346,14 +346,14 @@ describe('proxy', () => {
         })
 
         it('core burn, edge mint', async () => {
-            await expect(coreProxy.connect(miner).burnTo(1, templateAddr, user1.address, 1)).
+            await expect(coreProxy.connect(miner).burnTo(1, contractGroupId, user1.address, 1)).
             to.be.revertedWith('only support cross chain tx')
 
-            await expect(coreProxy.connect(miner).burnTo(2, generalContractor.address, user1.address, 1)).
-            to.be.revertedWith('asset is not bound')
+            await expect(coreProxy.connect(miner).burnTo(2, 100, user1.address, 1)).
+            to.be.revertedWith('from asset can not be 0')
 
-            await expect(coreProxy.connect(miner).burnTo(3, templateAddr1, user1.address, 1)).to.be.revertedWith('to asset can not be 0')
-            let tx = await coreProxy.connect(miner).burnTo(2, templateAddr1, user1.address, 50)
+            await expect(coreProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 1)).to.be.revertedWith('to asset can not be 0')
+            let tx = await coreProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 50)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "CrossTokenBurned")
             // construct receipt proof

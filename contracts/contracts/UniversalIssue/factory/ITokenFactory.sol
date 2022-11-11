@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "hardhat/console.sol";
 
 abstract contract ITokenFactory is Initializable {
     event ContractCreated(
@@ -41,9 +40,24 @@ abstract contract ITokenFactory is Initializable {
         emit ContractCreated(chainId, saltId, asset, templateCode, minter);
     }
 
+    function _exist(
+        uint256[] memory dataSet,
+        uint256 count,
+        uint256 expectData
+    ) internal pure returns (bool) {
+        require(dataSet.length >= count, "data overflow");
+        for (uint256 i = 0; i < count; i++) {
+            if (dataSet[i] == expectData) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function initialize(uint256 chainId, address code, bytes calldata rangeOfIssue, address minter) internal virtual;
     function issue(bytes calldata issueInfo) external pure virtual returns(bytes memory, uint256[] memory);
     function expand(address contractCode, uint256 peerChainId, address issuer) external view virtual returns(bytes memory);
-    function constrcutMint(bytes calldata info) external pure virtual returns(bytes memory);
-    function constrcutBurn(bytes calldata info, address to, uint256 asset) external pure virtual returns(bytes memory);
+    function constructMint(bytes calldata info) external pure virtual returns(bytes memory);
+    function constructBurn(bytes calldata info, address to, uint256 asset) external pure virtual returns(bytes memory);
 }

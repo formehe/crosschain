@@ -16,7 +16,6 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
     using LogExtractor for Borsh.Data;
     
     struct VerifiedEvent {
-        uint256 templateId;
         uint256 contractGroupId;
         uint256 saltId;
         bytes   data;
@@ -32,11 +31,6 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         uint256  indexed chainId,
         uint256  indexed contractGroupId,
         address  indexed asset
-    );
-
-    event CodeTemplateBound(
-        uint256 indexed templateId,
-        address indexed template
     );
 
     event SubContractorIssue(
@@ -65,9 +59,8 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
     IProver public prover;
     uint256 public minContractGroupId;
     address public minterProxy;
+    ITokenFactory public tokenFactory;
     
-    //templateId --- address
-    mapping(uint256 => address) templateCodes;
     mapping(bytes32 => bool) public usedProofs;
 
     function initialize(
@@ -77,14 +70,17 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         IProver prover_, 
         address owner_,
         uint256 maxHistoryContractGroupId_,
-        address minterProxy_
+        address minterProxy_,
+        ITokenFactory tokenFactory_
     ) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(generalContractor_ != address(0), "invalid general contractor");
         require(Address.isContract(localProxy_), "invalid local proxy");
         require(Address.isContract(address(prover_)), "invalid prover");
         require(Address.isContract(minterProxy_), "invalid minter proxy");
+        require(Address.isContract(address(tokenFactory_)), "invalid token factory address");
 
+        tokenFactory = tokenFactory_;
         generalContractor = generalContractor_;
         chainId = chainId_;
         proxy = localProxy_;
@@ -107,22 +103,10 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         _grantRole(ADMIN_ROLE, _msgSender());
     }
 
-    function bindTemplate(
-        uint256 templateId,
-        address code
-    ) external onlyRole(ADMIN_ROLE){
-        require(templateCodes[templateId] == address(0), "template has been bound");
-        require(Address.isContract(code), "address is not contract");
-        templateCodes[templateId] = code;
-        emit CodeTemplateBound(templateId, code);
-    }
-
     function bindHistoryContractGroup(
          bytes memory proof
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_HISTORY_CONTRACT_GROUP_BOUND) {
-        VerifiedReceipt memory result= _verify(0xac2fca6a4028ff9e74a127c2c4421ca02b2a57a31c008002f5736cd984a9cf74, proof);
-        address code =  templateCodes[result.data.templateId];
-        require(code != address(0), "template is not exist");
+        VerifiedReceipt memory result= _verify(0xba9e79d09071599cc29ca033a03ce206531bcd76b66290555809f44ff4fd5299, proof);
         require(result.data.contractGroupId != 0, "contract group id can not be 0");
         require(result.data.contractGroupId <= minContractGroupId, "contract group id is bigger");
         require(localContractGroupAsset[result.data.contractGroupId] == address(0), "asset has been bound");
@@ -133,7 +117,7 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         for (uint256 i = 0; i < chains.length; i++) {
             if (chains[i] == chainId) {
                 require(Address.isContract(assets[i]), "invalid asset address");
-                bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256,address)", assets[i], result.data.contractGroupId, code);
+                bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256,address)", assets[i], result.data.contractGroupId, address(tokenFactory));
                 (bool success, ) = proxy.call(payload);
                 require(success, "fail to bind contract group");
                 localContractGroupAsset[result.data.contractGroupId] = assets[i];
@@ -146,12 +130,10 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
     function subIssue(
         bytes memory proof
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_SUBISSUE){
-        VerifiedReceipt memory result= _verify(0x8dfe5a421d6022c8b67da5c0acc654ce179fa7c7ba0ddda3fabd5f126d9198e9, proof);
-        address code =  templateCodes[result.data.templateId];
-        require(code != address(0), "template is not exist");
+        VerifiedReceipt memory result= _verify(0xf71e72e69608003da7cffbcbd14897fc930cfcbd0847c576ea242e21de04eaa5, proof);
         (bytes memory generalIssueInfo) = abi.decode(result.data.data, (bytes));
-        address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, result.data.saltId, minterProxy);
-        bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256,address)", asset, result.data.contractGroupId, code);
+        address asset = tokenFactory.clone(chainId, generalIssueInfo, result.data.saltId, minterProxy);
+        bytes memory payload = abi.encodeWithSignature("bindAssetGroup(address,uint256,address)", asset, result.data.contractGroupId, address(tokenFactory));
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
         localContractGroupAsset[result.data.contractGroupId] = asset;
@@ -205,14 +187,13 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         bytes memory log
     ) private pure returns (VerifiedEvent memory receipt_, address contractAddress_) {
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
-        require(logInfo.topics.length == 4, "wrong number of topic");
+        require(logInfo.topics.length == 3, "wrong number of topic");
 
         //GeneralContractorIssue
         require(logInfo.topics[0] == eventSignature, "invalid signature");
         receipt_.data = logInfo.data;
-        receipt_.templateId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
-        receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
-        receipt_.saltId = abi.decode(abi.encodePacked(logInfo.topics[3]), (uint256));
+        receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
+        receipt_.saltId = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         contractAddress_ = logInfo.contractAddress;
     }
 
@@ -220,13 +201,14 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         bytes32 /*classId*/,
         bytes32 subClass,
         bytes memory action
-    ) external pure override returns (bool) {
+    ) external override returns (bool) {
         bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
-        
-        // if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ISSUE_ROLE))) {
-        //     return false;
-        // }
-        
+        (, bytes32 role,) = abi.decode(abi.encodePacked(bytes28(0), action),(bytes32,bytes32,address));
+
+        if (subClass != role) {
+            return false;
+        }
+                
         if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ROLE))) {
             return false;
         }
@@ -234,6 +216,8 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
             return false;
         }
+
+        console.log("success");
 
         return true;
     }

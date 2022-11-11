@@ -4,15 +4,12 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./IRightMetadata.sol";
 import "../../common/IssueCoder.sol";
-import "hardhat/console.sol";
 
 /**
 * @dev Required interface of an ERC3721 compliant contract.
 */
 abstract contract Right is Initializable, IRightMetadata {
-    event RightAttached(uint256 indexed rightKind, uint256 indexed rightId);
-    event RightBurned(uint256 indexed rightKind, uint256 indexed rightId);
-    event RightMinted(uint256 indexed rightKind, uint256 indexed rightId);
+    event RightAttached(uint256 indexed rightKind, uint256 amount);
     
     struct RightInfo {
         string name;
@@ -21,29 +18,22 @@ abstract contract Right is Initializable, IRightMetadata {
         uint256 totalAmount;
     }
 
-    struct RightScope {
-        uint256 minId;
-        uint256 maxId;
-    }
-
     enum State{UNATTACHED, ATTACHED, BURNED}
 
     //store the id of right kind
     uint256[] private _rightKindIndexes;
-    // rightKind id ---- right
     mapping(uint256 => RightInfo) private _rightKinds;
-    mapping(uint256 => RightScope) private _rightRanges;
-    address private _owner;
-
-    mapping(uint256 => mapping(uint256 => State)) private _stateOfRights;
+    mapping(uint256 => uint256) public _rightRemains;
+    // mapping(address => mapping(uint256 => uint256)) private _rightOwners;
+    address private _issuer;
     
     function initialize(
-        address owner_,
+        address issuer_,
         IssueCoder.IssueRight[] calldata rigthKinds_,
-        IssueCoder.RightRange[] calldata rightRanges_
+        IssueCoder.CirculationPerRight[] calldata rightRanges_
     ) internal onlyInitializing {
-        require(owner_ != address(0), "opertion can not be 0");
-        _owner = owner_;
+        require(issuer_ != address(0), "opertion can not be 0");
+        _issuer = issuer_;
 
         for (uint256 i = 0; i < rigthKinds_.length; i++) {
             uint256 rightKind = rigthKinds_[i].id;
@@ -54,47 +44,28 @@ abstract contract Right is Initializable, IRightMetadata {
         for (uint256 i = 0; i < rightRanges_.length; i++) {
             uint256 rightKind = rightRanges_[i].id;
             require(bytes(_rightKinds[rightKind].name).length != 0, "invalid right");
-            require(rightRanges_[i].baseIndex != 0, "right id cannot be 0");
-            _rightRanges[rightKind] = RightScope(rightRanges_[i].baseIndex, rightRanges_[i].baseIndex + rightRanges_[i].cap);
+            _rightRemains[rightKind] = rightRanges_[i].amount;
+            // _rightOwners[issuer_][rightKind] = rightRanges_[i].amount;
         }
     }
 
+    function _checkRight(
+        uint256 rightKind
+    ) internal virtual view{
+        require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
+    }
+
     function _attachRight(
-        address owner,
-        uint256 rightKind,
-        uint256 rightId
+        uint256 rightKind
     ) internal virtual{
-        require(rightId != 0, "rightId can not be 0");
-        require(_owner == owner, "just owner can attach");
         require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
-        require(rightId <= _rightKinds[rightKind].totalAmount, "right id is overflow");
-        require(_stateOfRights[rightKind][rightId] == State.UNATTACHED, "token right has been bound");
-        RightScope memory range = _rightRanges[rightKind];
-        require((rightId >= range.minId) && (rightId < range.maxId), "token right id is out of range");
-        _stateOfRights[rightKind][rightId] = State.ATTACHED;
-        emit RightAttached(rightKind, rightId);
+        require(_rightRemains[rightKind] != 0, "no right");
+        _rightRemains[rightKind]--;
+        emit RightAttached(rightKind, 1);
     }
 
-    function _mintRight(
-        uint256 rightKind,
-        uint256 rightId
-    ) internal {
-        require(rightId != 0, "rightId can not be 0");
-        require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
-        require(rightId <= _rightKinds[rightKind].totalAmount, "right id is overflow");
-        require(_stateOfRights[rightKind][rightId] != State.ATTACHED, "right is not attached");
-        _stateOfRights[rightKind][rightId] = State.ATTACHED;
-        emit RightMinted(rightKind, rightId);
-    }
-
-    function _burnRight(
-        uint256 rightKind,
-        uint256 rightId
-    ) internal {
-        require(bytes(_rightKinds[rightKind].name).length != 0, "right kind is not exist");
-        require(_stateOfRights[rightKind][rightId] == State.ATTACHED, "right is not attached");
-        _stateOfRights[rightKind][rightId] = State.BURNED;
-        emit RightBurned(rightKind, rightId);
+    function rightKinds() internal view returns(uint256[] memory) {
+        return _rightKindIndexes;
     }
 
     //======================== IERC3721Metadata =================================
@@ -133,11 +104,5 @@ abstract contract Right is Initializable, IRightMetadata {
             rightDescWithId.right.agreement = rightInfo.agreement;
             rigthKinds_[i] = rightDescWithId;
         }
-    }
-    
-    function rightIssueRange(
-        uint256 rightkind
-    ) external view returns (uint256 minId, uint256 maxId){
-        return (_rightRanges[rightkind].minId, _rightRanges[rightkind].maxId);
     }
 }

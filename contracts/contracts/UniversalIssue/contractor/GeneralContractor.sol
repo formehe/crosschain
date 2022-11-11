@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-// import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../prover/IProver.sol";
 import "../factory/ITokenFactory.sol";
@@ -28,7 +27,6 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     );
 
     event HistoryContractorGroupBound(
-        uint256  indexed templateId,
         uint256  indexed contractGroupId,
         uint256  indexed saltId,
         uint256[] chains,
@@ -53,7 +51,6 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     }
 
     struct AssetInfo {
-        uint256 templateId;
         uint256 saltId;
         address asset;
     }
@@ -63,14 +60,10 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     uint constant PAUSED_EXPAND = 1 << 1;
     uint constant PAUSED_BOUND = 1 << 2;
 
-    // bytes32 constant BLACK_ISSUE_ROLE = 0x98f43c3febbd0625021d7f077378e120db2ef156f39714519f9299a5e2ec80d6;//keccak256("BLACK.ISSUE.ROLE")
-
     // chainId --- chainInfo
     mapping(uint256 => SubContractorInfo) public subContractors;
     // groupid --- templateId
     mapping(uint256 => AssetInfo) public localContractGroupAsset;
-    // templateId --- template address
-    mapping(uint256 => address) public templateCodes;
 
     uint256 public chainId;
     uint256 public saltId;
@@ -79,10 +72,11 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     uint256 public contractGroupId;
     address public proxy;
     address public minterProxy;
+    ITokenFactory public tokenFactory;
+
     mapping(uint256 => mapping(bytes32 => bool)) public usedProofs;
 
     event GeneralContractorIssue(
-        uint256 indexed templateId,
         uint256 indexed contractGroupId,
         uint256 indexed saltId,
         bytes issue
@@ -94,22 +88,21 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         address indexed prover
     );
 
-    event CodeTemplateBound(
-        uint256 indexed templateId,
-        address indexed template
-    );
-
     function initialize(
         address localProxy_,
         uint256 chainId_,
         address owner_,
         uint256 maxHistorySaltId_,
         uint256 maxHistoryContractGroupId_,
-        address minterProxy_
+        address minterProxy_,
+        ITokenFactory tokenFactory_
     ) external initializer {
         require(owner_ != address(0), "invalid owner");
         require(Address.isContract(localProxy_), "invalid local proxy");
         require(Address.isContract(minterProxy_), "invalid minter proxy");
+        require(Address.isContract(address(tokenFactory_)), "invalid token factory address");
+
+        tokenFactory = tokenFactory_;
 
         proxy = localProxy_;
         chainId = chainId_;
@@ -145,35 +138,22 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         emit SubContractorBound(chainId_, subContractor_, address(prover_));
     }
 
-    function bindTemplate(
-        uint256 templateId,
-        address code
-    ) external onlyRole(ADMIN_ROLE){
-        require(templateCodes[templateId] == address(0), "template has been bound");
-        require(Address.isContract(code), "address is not contract");
-        templateCodes[templateId] = code;
-        emit CodeTemplateBound(templateId, code);
-    }
-
     function bindContractGroup(
         bytes calldata proof
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_BOUND) {
         VerifiedReceipt memory receipt = _parseAndConsumeProof(proof);
+        _saveProof(receipt.data.chainId, receipt.blockHash, receipt.receiptIndex);
         AssetInfo memory asset = localContractGroupAsset[receipt.data.contractGroupId];
-        address code = templateCodes[asset.templateId];
-        require(code != address(0), "template is not exist");
-        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId, code);
+        require(asset.asset != address(0), "contract group is not exist");
+        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", receipt.data.asset, receipt.data.chainId, receipt.data.contractGroupId, address(tokenFactory));
         (bool success,) = proxy.call(payload);
         require(success, "fail to bind contract group");
-        _saveProof(receipt.data.chainId, receipt.blockHash, receipt.receiptIndex);
-
         emit ContractorGroupBound(receipt.data.chainId, receipt.data.contractGroupId, receipt.data.asset);
     }
 
     // support for load in data
     function bindHistoryContractGroup(
         uint256 contractGroupId_,
-        uint256 templateId_,
         uint256 saltId_,
         uint256[] calldata chains_,
         address[] calldata assets_
@@ -184,16 +164,13 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         require(saltId_ <= minSaltId, "salt id is overflow");
         require(chains_.length == assets_.length, "invalid chains info");
 
-        address code = templateCodes[templateId_];
-        require(code != address(0), "template is not exist");
-
-        require(localContractGroupAsset[contractGroupId_].templateId == 0, "asset generate info has been bound");
+        require(localContractGroupAsset[contractGroupId_].saltId == 0, "asset generate info has been bound");
         _checkChains(chains_);
 
         address localAsset;
         for (uint256 i = 0; i < chains_.length; i++) {
             require(assets_[i] != address(0), "invalid asset address");
-            bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", assets_[i], chains_[i], contractGroupId_, code);
+            bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", assets_[i], chains_[i], contractGroupId_, address(tokenFactory));
             (bool success, ) = proxy.call(payload);
             require(success, "fail to bind contract group");
             if (chains_[i] == chainId) {
@@ -203,28 +180,24 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
 
         require(Address.isContract(localAsset), "local asset is not exist");
 
-        localContractGroupAsset[contractGroupId_] = AssetInfo(templateId_, saltId_, localAsset);
-        emit HistoryContractorGroupBound(templateId_, contractGroupId_, saltId_, chains_, assets_);
+        localContractGroupAsset[contractGroupId_] = AssetInfo(saltId_, localAsset);
+        emit HistoryContractorGroupBound(contractGroupId_, saltId_, chains_, assets_);
     }
 
     function issue(
-        uint256 templateId,
         bytes calldata issueInfo
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_ISSUE){
-        address code = templateCodes[templateId];
-        require(code != address(0), "template is not exist");
-
-        (bytes memory generalIssueInfo, uint256[] memory chainIds) = ITokenFactory(code).issue(issueInfo);
+        (bytes memory generalIssueInfo, uint256[] memory chainIds) = tokenFactory.issue(issueInfo);
         uint256 saltId_ = applySaltId();
         uint256 contractGroupId_ = applyGroupId();
         _checkChains(chainIds);
-        address asset = ITokenFactory(code).clone(chainId, generalIssueInfo, saltId_, minterProxy);
-        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", asset, chainId, contractGroupId_, code);
+        address asset = tokenFactory.clone(chainId, generalIssueInfo, saltId_, minterProxy);
+        bytes memory payload = abi.encodeWithSignature("bindAssetProxyGroup(address,uint256,uint256,address)", asset, chainId, contractGroupId_, address(tokenFactory));
         (bool success, ) = proxy.call(payload);
         require(success, "fail to bind contract group");
-        localContractGroupAsset[contractGroupId] = AssetInfo(templateId, saltId, asset);
+        localContractGroupAsset[contractGroupId] = AssetInfo(saltId, asset);
 
-        emit GeneralContractorIssue(templateId, contractGroupId_, saltId_, generalIssueInfo);
+        emit GeneralContractorIssue(contractGroupId_, saltId_, generalIssueInfo);
     }
 
     function expand(
@@ -236,8 +209,8 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         require(assetInfo.asset != address(0), "group id has not issued");
         require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
         require(peerChainId != chainId, "expand chain id can not be main chain");
-        bytes memory  generalIssueInfo = ITokenFactory(templateCodes[assetInfo.templateId]).expand(assetInfo.asset, peerChainId, issuer);
-        emit GeneralContractorIssue(assetInfo.templateId, groupId, assetInfo.saltId, generalIssueInfo);
+        bytes memory  generalIssueInfo = tokenFactory.expand(assetInfo.asset, peerChainId, issuer);
+        emit GeneralContractorIssue(groupId, assetInfo.saltId, generalIssueInfo);
     }
 
     function applySaltId() internal returns(uint256) {
@@ -318,10 +291,12 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     ) external pure override returns (bool) {
         bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
         
-        // if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ISSUE_ROLE))) {
-        //     return false;
-        // }
+        (, bytes32 role,) = abi.decode(abi.encodePacked(bytes28(0), action),(bytes32,bytes32,address));
 
+        if (subClass != role) {
+            return false;
+        }
+        
         if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ROLE))) {
             return false;
         }

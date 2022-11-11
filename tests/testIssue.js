@@ -144,7 +144,7 @@ describe('IssueCoder', () => {
 
     
     await coreProxy.initialize(generalContractor.address, 1, wallet.address, multiLimit.address)
-    await generalContractor.initialize(coreProxy.address, 1, wallet.address, 0, 0, proxyRegistry.address)
+    await generalContractor.initialize(coreProxy.address, 1, wallet.address, 0, 0, proxyRegistry.address, nfrFactory.address)
 
     // sub general
     headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -183,7 +183,7 @@ describe('IssueCoder', () => {
 
     console.log("proxyRegistry "  + proxyRegistry1.address)
 
-    await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, wallet.address, 0, proxyRegistry1.address)
+    await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, wallet.address, 0, proxyRegistry1.address, nfrFactory1.address)
     await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, wallet.address, limit.address)
 
     issueInfo = {
@@ -211,7 +211,7 @@ describe('IssueCoder', () => {
                     uri: "right2 uri",
                     agreement: "right2 agreement"
                 },
-            }
+            },
         ],
         issueOfChains:[
             {
@@ -262,13 +262,11 @@ describe('IssueCoder', () => {
 
   describe('general issue', () => {
     it('general issue', async () => {
-      await generalContractor.bindTemplate(0, nfrFactory.address)
       await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-      await subContractor.bindTemplate(0, nfrFactory1.address)
     
       let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
       //========================================================================
-      let tx = await generalContractor.issue(0, bytesOfIssue)
+      let tx = await generalContractor.issue(bytesOfIssue)
       let rc = await tx.wait()
       let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
 
@@ -314,10 +312,10 @@ describe('IssueCoder', () => {
       console.log("attach right")
       coreProxy.bindPeerChain(2,ethLikeProver.address, edgeProxy.address)
       erc20SampleInstance = await erc20TokenSampleCon.attach(templateAddr)
-      await erc20SampleInstance.connect(wallet2).attachRight(51,1,51)
+      await erc20SampleInstance.connect(wallet2).attachRight(51,1)
       await erc20SampleInstance.connect(wallet2).approve(edgeProxy.address, 51)
       
-      tx = await edgeProxy.connect(wallet2).burnTo(1, templateAddr, wallet3.address, 51)
+      tx = await edgeProxy.connect(wallet2).burnTo(1, event.topics[2], wallet3.address, 51)
       rc = await tx.wait()
       event = rc.events.find(event=>event.event === "CrossTokenBurned")
       // construct receipt proof

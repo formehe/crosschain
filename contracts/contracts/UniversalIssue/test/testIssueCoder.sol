@@ -2,16 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "../common/IssueCoder.sol";
-import "hardhat/console.sol";
 
 contract testIssueCoder {
     constructor(){
 
-    }
-
-    function encodeCirculationRangeOfRights(IssueCoder.RightRange[] memory rangeOfRights) public pure returns(bytes memory) {
-        bytes memory returnValue = IssueCoder.encodeCirculationRangeOfRights(rangeOfRights);
-        return returnValue;
     }
 
     function encodeIssueInfo(IssueCoder.IssueInfo memory issueInfo) public pure returns(bytes memory){

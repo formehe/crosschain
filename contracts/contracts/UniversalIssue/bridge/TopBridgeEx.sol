@@ -264,7 +264,12 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
         bytes memory action
     ) external pure override returns (bool) {
         bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
-        
+        (, bytes32 role,) = abi.decode(abi.encodePacked(bytes28(0), action),(bytes32,bytes32,address));
+
+        if (subClass != role) {
+            return false;
+        }
+                
         if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || 
              (subClass == ADDBLOCK_ROLE))) {
             return false;

@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../../../lib/external_lib/RLPEncode.sol";
 import "../../../lib/external_lib/RLPDecode.sol";
-import "hardhat/console.sol";
+
 library IssueCoder {
     using RLPDecode for RLPDecode.RLPItem;
     using RLPDecode for RLPDecode.Iterator;
@@ -52,15 +52,9 @@ library IssueCoder {
         CirculationPerChain[]   issueOfChains;
     }
 
-    struct RightRange {
-        uint256 id;
-        uint256 baseIndex;
-        uint256 cap;
-    }
-
     struct CirculationRangePerchain {
         address issuer;
-        RightRange[] rangeOfRights;
+        CirculationPerRight[] rangeOfRights;
         uint256 baseIndexOfToken;
         uint256 capOfToken;
         uint256 chainId;
@@ -101,12 +95,6 @@ library IssueCoder {
             else it.next();
             idx++;
         }
-
-        // console.log("============decode issuer==============");
-        // console.log(issuer.name);
-        // console.log(issuer.certification);
-        // console.log(issuer.agreement);
-        // console.log(issuer.uri);
     }
 
     function encodeRightDesc(RightDesc memory right) internal pure returns (bytes memory) {
@@ -127,11 +115,6 @@ library IssueCoder {
             else it.next();
             idx++;
         }
-
-        // console.log("============decode right desc==============");
-        // console.log(right.name);
-        // console.log(right.uri);
-        // console.log(right.agreement);
     }
 
     function encodeRights(RightDescWithId[] memory rightWithIds) internal pure returns (bytes memory) {
@@ -158,9 +141,6 @@ library IssueCoder {
                     else it.next();
                     idx++;
                 }
-
-                // console.log("=============decode right=============");
-                // console.logUint(rightWithIds[i].id);
             }
         }
     }
@@ -191,9 +171,6 @@ library IssueCoder {
                     else it.next();
                     idx++;
                 }
-
-                // console.log("=============decode right=============");
-                // console.logUint(rightWithIds[i].id);
             }
         }
     }
@@ -223,9 +200,6 @@ library IssueCoder {
                     else it.next();
                     idx++;
                 }
-                // console.log("=============decode circulation of right=============");
-                // console.logUint(circulationOfRights[i].id);
-                // console.logUint(circulationOfRights[i].amount);
             }
         }
     }
@@ -259,48 +233,6 @@ library IssueCoder {
                     else it.next();
                     idx++;
                 }
-
-                // console.log("=============decode circulation of chain=============");
-                // console.logAddress(circulations[i].issuer);
-                // console.logUint(circulations[i].chainId);
-                // console.logUint(circulations[i].amountOfToken);
-            }
-        }
-    }
-
-    function encodeCirculationRangeOfRights(RightRange[] memory rangeOfRights) internal pure returns(bytes memory){
-        // console.logUint(rangeOfRights.length);
-        bytes[] memory circulations = new bytes[](rangeOfRights.length);
-        for (uint i = 0; i < rangeOfRights.length; i++) {
-            bytes[] memory circulation = new bytes[](3);
-            circulation[0] = RLPEncode.encodeUint(rangeOfRights[i].id);
-            circulation[1] = RLPEncode.encodeUint(rangeOfRights[i].baseIndex);
-            circulation[2] = RLPEncode.encodeUint(rangeOfRights[i].cap);
-            circulations[i] = RLPEncode.encodeList(circulation);
-        }
-
-        return RLPEncode.encodeList(circulations);
-    }
-
-    function decodeCirculationRangeOfRights(RLPDecode.RLPItem memory itemBytes) internal pure returns(RightRange[] memory rangeOfRights){
-        RLPDecode.RLPItem[] memory ls = itemBytes.toList();
-        if (ls.length > 0) { 
-            rangeOfRights = new RightRange[](ls.length);
-            for (uint256 i = 0; i < ls.length; i++) {
-                RLPDecode.Iterator memory it = ls[i].iterator();
-                uint idx;
-                while(it.hasNext()) {
-                    if ( idx == 0 )      rangeOfRights[i].id   = it.next().toUint();
-                    else if ( idx == 1 ) rangeOfRights[i].baseIndex = it.next().toUint();
-                    else if ( idx == 2 ) rangeOfRights[i].cap       = it.next().toUint();
-                    else it.next();
-                    idx++;
-                }
-
-                // console.log("=============decode circulation range of right=============");
-                // console.logUint(rangeOfRights[i].id);
-                // console.logUint(rangeOfRights[i].baseIndex);
-                // console.logUint(rangeOfRights[i].cap);
             }
         }
     }
@@ -310,7 +242,7 @@ library IssueCoder {
         for (uint i = 0; i < circulationRangeOfChains.length; i++) {
             bytes[] memory circulation = new bytes[](5);
             circulation[0] = RLPEncode.encodeBytes(abi.encodePacked(circulationRangeOfChains[i].issuer));
-            circulation[1] = encodeCirculationRangeOfRights(circulationRangeOfChains[i].rangeOfRights);
+            circulation[1] = encodeCirculationOfRights(circulationRangeOfChains[i].rangeOfRights);
             circulation[2] = RLPEncode.encodeUint(circulationRangeOfChains[i].baseIndexOfToken);
             circulation[3] = RLPEncode.encodeUint(circulationRangeOfChains[i].capOfToken);
             circulation[4] = RLPEncode.encodeUint(circulationRangeOfChains[i].chainId);
@@ -329,18 +261,13 @@ library IssueCoder {
                 uint idx;
                 while(it.hasNext()) {
                     if ( idx == 0 )      circulations[i].issuer  = it.next().toAddress();
-                    else if ( idx == 1 )      circulations[i].rangeOfRights  = decodeCirculationRangeOfRights(it.next());
+                    else if ( idx == 1 )      circulations[i].rangeOfRights  = decodeCirculationOfRights(it.next());
                     else if ( idx == 2 ) circulations[i].baseIndexOfToken   = it.next().toUint();
                     else if ( idx == 3 ) circulations[i].capOfToken = it.next().toUint();
                     else if ( idx == 4 ) circulations[i].chainId = it.next().toUint();
                     else it.next();
                     idx++;
                 }
-                // console.log("=============decode circulation range of chain=============");
-                // console.logAddress(circulations[i].issuer);
-                // console.logUint(circulations[i].baseIndexOfToken);
-                // console.logUint(circulations[i].capOfToken);
-                // console.logUint(circulations[i].chainId);
             }
         }
     }
@@ -367,10 +294,6 @@ library IssueCoder {
             else it.next();
             idx++;
         }
-
-        // console.log("=============decode issue info=============");
-        // console.log(issueInfo.name);
-        // console.log(issueInfo.symbol);
     }
 
     function encodeGeneralIssueInfo(GeneralIssueInfo memory generalIssue) internal pure returns(bytes memory) {
@@ -397,10 +320,6 @@ library IssueCoder {
             else it.next();
             idx++;
         }
-
-        // console.log("=============decode general issue info=============");
-        // console.log(generalIssueInfo.name );
-        // console.log(generalIssueInfo.symbol);
     }
 
     function encodeSubIssueInfo(SubIssueInfo memory subIssue) internal pure returns (bytes memory) {
@@ -422,10 +341,5 @@ library IssueCoder {
             else it.next();
             idx++;
         }
-
-        // console.log("=============decode sub issue info=============");
-        // console.logUint(subIssueInfo.chainId);
-        // console.logUint(subIssueInfo.contractGroupId);
-        // console.logAddress(subIssueInfo.asset);
     }
 }

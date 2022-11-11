@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "../../common/IssueCoder.sol";
 import "../ITokenFactory.sol";
-import "hardhat/console.sol";
 
 contract NFRFactory is ITokenFactory{
     constructor(address code_, address contractor_) ITokenFactory(code_, contractor_) {  
@@ -28,7 +27,7 @@ contract NFRFactory is ITokenFactory{
         }
 
         require(exist, "not issue on this chain");
-        bytes memory payload = abi.encodeWithSignature("initialize(address,string,string,uint256,(uint256,uint256,(string,string,string))[],(string,string,string,string),(address,(uint256,uint256,uint256)[],uint256,uint256,uint256))", 
+        bytes memory payload = abi.encodeWithSignature("initialize(address,string,string,uint256,(uint256,uint256,(string,string,string))[],(string,string,string,string),(address,(uint256,uint256)[],uint256,uint256,uint256))", 
             minter, generalIssue.name, generalIssue.symbol, generalIssue.totalAmountOfToken, generalIssue.rights, generalIssue.issuer, circulationPerChain);
         (bool success, ) = code.call(payload);
         require(success, "fail to initialize template code");
@@ -53,13 +52,16 @@ contract NFRFactory is ITokenFactory{
         for (uint256 i = 0; i < issueInfo.rights.length; ++i) {
             rightIndexes[i] = 1;
             rightIds[i] = issueInfo.rights[i].id;
+            require(!_exist(rightIds, i, rightIds[i]), "rights id is repeat");
         }
 
         uint256[] memory chainIds =  new uint256[](issueInfo.issueOfChains.length);
 
         for (uint256 i = 0; i < issueInfo.issueOfChains.length; ++i){
+            require(issueInfo.rights.length == issueInfo.issueOfChains[i].circulationOfRights.length, "number of rights is not equal");
             (issueWithRange.issueRangeOfChains[i], rightIndexes, tokenIndex) = _applyRightsAndToken(issueInfo.issueOfChains[i], rightIndexes, rightIds, tokenIndex);
             chainIds[i] = issueInfo.issueOfChains[i].chainId;
+            require(!_exist(chainIds, i, chainIds[i]), "chains id is repeated");
         }
 
         require(tokenIndex > 1, "none token issue");
@@ -125,35 +127,32 @@ contract NFRFactory is ITokenFactory{
         circulationRangePerChain.issuer = circulationPerChain.issuer;
         tokenIndex += circulationRangePerChain.capOfToken;
 
-        circulationRangePerChain.rangeOfRights = new IssueCoder.RightRange[](circulationPerChain.circulationOfRights.length);
+        circulationRangePerChain.rangeOfRights = circulationPerChain.circulationOfRights;
         for (uint256 i = 0; i < circulationPerChain.circulationOfRights.length; ++i) {
             require(rightIds[i] == circulationPerChain.circulationOfRights[i].id, "right id is not exist");
-            circulationRangePerChain.rangeOfRights[i].id    = circulationPerChain.circulationOfRights[i].id;
-            circulationRangePerChain.rangeOfRights[i].baseIndex  = rightIndexes[i];
             require(circulationPerChain.circulationOfRights[i].amount < (1 << 128), "right amount is overflow");
-            circulationRangePerChain.rangeOfRights[i].cap        = circulationPerChain.circulationOfRights[i].amount;
-            rightIndexes[i] += circulationRangePerChain.rangeOfRights[i].cap;
+            rightIndexes[i] += circulationPerChain.circulationOfRights[i].amount;
         }
 
         return (circulationRangePerChain, rightIndexes, tokenIndex);
     }
 
-    function constrcutMint(
+    function constructMint(
         bytes calldata info
     ) external pure override returns(bytes memory) {
-        (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = 
+        (address receiver, uint256 tokenId, uint256[] memory rightKinds, uint256[] memory rightQuantities, bytes memory additional) = 
                 abi.decode(info, (address, uint256, uint256[], uint256[], bytes));
-        bytes memory codes = abi.encodeWithSignature("mint(uint256,uint256[],uint256[],bytes,address)", tokenId, rightKinds, rightIds, additional, receiver);
+        bytes memory codes = abi.encodeWithSignature("mint(uint256,uint256[],uint256[],bytes,address)", tokenId, rightKinds, rightQuantities, additional, receiver);
         return codes;
     }
 
-    function constrcutBurn(
+    function constructBurn(
         bytes calldata info, 
         address to, 
         uint256 asset
     ) external pure override returns(bytes memory) {
-        (uint256[] memory rightKinds, uint256[] memory rightIds, bytes memory additional) = abi.decode(info, (uint256[], uint256[], bytes));
-        bytes memory value = abi.encode(to, asset, rightKinds, rightIds, additional);
+        (uint256[] memory rightKinds, uint256[] memory rightQuantities, bytes memory additional) = abi.decode(info, (uint256[], uint256[], bytes));
+        bytes memory value = abi.encode(to, asset, rightKinds, rightQuantities, additional);
         return value;
     }
 }
