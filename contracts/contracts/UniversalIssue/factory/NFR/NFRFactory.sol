@@ -46,11 +46,10 @@ contract NFRFactory is ITokenFactory{
         issueWithRange.issueRangeOfChains = new IssueCoder.CirculationRangePerchain[](issueInfo.issueOfChains.length);
 
         uint256   tokenIndex = 1;
-        uint256[] memory rightIndexes = new uint256[](issueInfo.rights.length);
+        uint256[] memory rightAmounts = new uint256[](issueInfo.rights.length);
         uint256[] memory rightIds = new uint256[](issueInfo.rights.length);
 
         for (uint256 i = 0; i < issueInfo.rights.length; ++i) {
-            rightIndexes[i] = 1;
             rightIds[i] = issueInfo.rights[i].id;
             require(!_exist(rightIds, i, rightIds[i]), "rights id is repeat");
         }
@@ -59,7 +58,7 @@ contract NFRFactory is ITokenFactory{
 
         for (uint256 i = 0; i < issueInfo.issueOfChains.length; ++i){
             require(issueInfo.rights.length == issueInfo.issueOfChains[i].circulationOfRights.length, "number of rights is not equal");
-            (issueWithRange.issueRangeOfChains[i], rightIndexes, tokenIndex) = _applyRightsAndToken(issueInfo.issueOfChains[i], rightIndexes, rightIds, tokenIndex);
+            (issueWithRange.issueRangeOfChains[i], rightAmounts, tokenIndex) = _applyRightsAndToken(issueInfo.issueOfChains[i], rightAmounts, rightIds, tokenIndex);
             chainIds[i] = issueInfo.issueOfChains[i].chainId;
             require(!_exist(chainIds, i, chainIds[i]), "chains id is repeated");
         }
@@ -68,8 +67,8 @@ contract NFRFactory is ITokenFactory{
         issueWithRange.totalAmountOfToken = tokenIndex - 1;
         
         for (uint256 i = 0; i < issueInfo.rights.length; ++i) {
-            require(rightIndexes[i] > 1, "no right issue");
-            issueWithRange.rights[i].totalAmount = rightIndexes[i] - 1;
+            require(rightAmounts[i] > 0, "no right issue");
+            issueWithRange.rights[i].totalAmount = rightAmounts[i];
             issueWithRange.rights[i].id = issueInfo.rights[i].id;
             issueWithRange.rights[i].right = issueInfo.rights[i].right;
         }
@@ -99,12 +98,12 @@ contract NFRFactory is ITokenFactory{
 
         payload = abi.encodeWithSignature("symbol()");
         (success, returnData) = contractCode.staticcall(payload);
-        require(success, "name interface is not exist");
+        require(success, "symbol interface is not exist");
         (issueWithRange.symbol) = abi.decode(returnData, (string));
 
         payload = abi.encodeWithSignature("totalSupply()");
         (success, returnData) = contractCode.staticcall(payload);
-        require(success, "name interface is not exist");
+        require(success, "totalSupply interface is not exist");
         (issueWithRange.totalAmountOfToken) = abi.decode(returnData, (uint256));
         
         issueWithRange.issueRangeOfChains = new IssueCoder.CirculationRangePerchain[](1);
@@ -116,7 +115,7 @@ contract NFRFactory is ITokenFactory{
 
     function _applyRightsAndToken(
         IssueCoder.CirculationPerChain memory circulationPerChain, 
-        uint256[] memory rightIndexes,
+        uint256[] memory rightAmounts,
         uint256[] memory rightIds,
         uint256 tokenIndex
     ) internal pure returns(IssueCoder.CirculationRangePerchain memory circulationRangePerChain, uint256[] memory, uint256) {
@@ -129,12 +128,12 @@ contract NFRFactory is ITokenFactory{
 
         circulationRangePerChain.rangeOfRights = circulationPerChain.circulationOfRights;
         for (uint256 i = 0; i < circulationPerChain.circulationOfRights.length; ++i) {
-            require(rightIds[i] == circulationPerChain.circulationOfRights[i].id, "right id is not exist");
+            require(rightIds[i] == circulationPerChain.circulationOfRights[i].id, "right kind is not exist");
             require(circulationPerChain.circulationOfRights[i].amount < (1 << 128), "right amount is overflow");
-            rightIndexes[i] += circulationPerChain.circulationOfRights[i].amount;
+            rightAmounts[i] += circulationPerChain.circulationOfRights[i].amount;
         }
 
-        return (circulationRangePerChain, rightIndexes, tokenIndex);
+        return (circulationRangePerChain, rightAmounts, tokenIndex);
     }
 
     function constructMint(

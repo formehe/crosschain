@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "hardhat/console.sol";
 
 abstract contract ITokenFactory is Initializable {
     event ContractCreated(
@@ -15,6 +16,8 @@ abstract contract ITokenFactory is Initializable {
     );
     address templateCode;
     address contractor;
+    uint128 nonce2;
+
     constructor(address code_, address contractor_) {
         require(Address.isContract(code_), "invalid address");
         require(Address.isContract(contractor_), "invalid address");
@@ -29,15 +32,21 @@ abstract contract ITokenFactory is Initializable {
         address minter
     ) external returns(address asset){
         require(msg.sender == contractor, "caller is not permit");
+        
+        for (uint256 i = 0; i < 20; i ++) {
+            bytes32 salt = _saltId(keccak256(rangeOfIssue), saltId);
+            address predictAddr = Clones.predictDeterministicAddress(templateCode, salt);
+            if (Address.isContract(predictAddr)) {
+                continue;
+            }
 
-        address predictAddr = Clones.predictDeterministicAddress(templateCode, bytes32(saltId));
-        if (Address.isContract(predictAddr)) {
-            return predictAddr;  
+            asset = Clones.cloneDeterministic(templateCode, bytes32(saltId));
+            initialize(chainId, asset, rangeOfIssue, minter);
+            emit ContractCreated(chainId, saltId, asset, templateCode, minter);
+            return asset;
         }
 
-        asset = Clones.cloneDeterministic(templateCode, bytes32(saltId));
-        initialize(chainId, asset, rangeOfIssue, minter);
-        emit ContractCreated(chainId, saltId, asset, templateCode, minter);
+        require(false, "fail to clone");
     }
 
     function _exist(
@@ -53,6 +62,16 @@ abstract contract ITokenFactory is Initializable {
         }
 
         return false;
+    }
+
+    function _saltId(bytes32 key, uint256 nonce1) internal returns(bytes32){
+        uint256 number = block.number;
+        if (number > 0) {
+            number = number - 1;
+        }
+
+        uint256 nonce = (nonce1 << 128) + (nonce2++);
+        return keccak256(abi.encode(tx.origin, key, address(this), blockhash(number), nonce));
     }
 
     function initialize(uint256 chainId, address code, bytes calldata rangeOfIssue, address minter) internal virtual;

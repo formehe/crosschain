@@ -83,9 +83,9 @@ describe('ERC3721', () => {
         proxyRegistry = await proxyRegistryCon.deploy(deployer.address, deployer.address);
         await proxyRegistry.deployed();
     
-        console.log("proxyRegistry "  + proxyRegistry.address)	
+        console.log("proxyRegistry "  + proxyRegistry.address)
 
-        await nfrContract.initialize(proxyRegistry.address, "nfr token", "nfr symbol", 50, rightWithIds, issuerInfo, perChain)
+        await nfrContract.initialize(proxyRegistry.address, "nfr token", "nfr symbol", 100, rightWithIds, issuerInfo, perChain)
     })
 
     describe('initialize', () => {
@@ -101,7 +101,7 @@ describe('ERC3721', () => {
         })
 
         it('burn and mint', async () => {
-            await expect(nfrContract.mint(51, [0,1], [1,1], '0x1111', user.address)).to.be.revertedWith('ERC721: token id is overflow')
+            await expect(nfrContract.mint(101, [0,1], [1,1], '0x1111', user.address)).to.be.revertedWith('ERC721: token id is overflow')
             await nfrContract.connect(admin).burn(1)
             await nfrContract.mint(1, [0,1], [1,1], '0x1111', user.address)
         })
@@ -125,7 +125,14 @@ describe('ERC3721', () => {
 
     describe('attach token', () => {
         it('token is not approved', async () => {
-            await expect(nfrContract.attachRight(1, 0)).
+            await nfrContract.connect(admin).transferFrom(admin.address, user.address, 1)
+            await expect(nfrContract.connect(user).attachRight(1,0)).
+            to.be.revertedWith('only issuer can attach right of token')
+
+            await expect(nfrContract.connect(admin).attachRight(1,0)).
+            to.be.revertedWith('only issuer can attach right of token')
+            
+            await expect(nfrContract.attachRight(2, 0)).
             to.be.revertedWith('not owner or approver')
         })
 
@@ -191,11 +198,11 @@ describe('ERC3721', () => {
             await nfrContract.connect(admin).attachRight(1,0)
             await nfrContract.connect(admin).approve(user1.address, 1)
             await nfrContract.connect(user1).transferFrom(admin.address, user1.address, 1)
-            await expect(nfrContract.connect(user).burnRight(1, 0)).
+            await expect(nfrContract.connect(user).burnRights(1, 0)).
             to.be.revertedWith('caller is not owner nor approved')
-            await expect(nfrContract.connect(admin).burnRight(1, 0)).
+            await expect(nfrContract.connect(admin).burnRights(1, 0)).
             to.be.revertedWith('caller is not owner nor approved')
-            await nfrContract.connect(user1).burnRight(1, 0)
+            await nfrContract.connect(user1).burnRights(1, 0)
         })
     })
 
@@ -203,13 +210,13 @@ describe('ERC3721', () => {
         it('burn right success', async () => {
             await nfrContract.connect(admin).attachRight(1, 0)
             await nfrContract.connect(admin).approve(user1.address, 1)
-            await nfrContract.connect(user1).burnRight(1,0)
+            await nfrContract.connect(user1).burnRights(1,0)
         })
 
         it('burn not attach right of token', async () => {
             await nfrContract.connect(admin).attachRight(2, 0)
             await nfrContract.connect(admin).approve(user1.address, 1)
-            await expect(nfrContract.connect(user1).burnRight(1,0)).
+            await expect(nfrContract.connect(user1).burnRights(1,0)).
             to.be.revertedWith('has no right')
         })
     })
@@ -218,22 +225,26 @@ describe('ERC3721', () => {
         it('transfer right of token', async () => {
             await nfrContract.connect(admin).attachRight(1, 0)
             await nfrContract.connect(admin).attachRight(2, 1)
-            await nfrContract.connect(admin).transferRight(1, 2, 0, '0x0111')
+            await nfrContract.connect(admin).transferRights(1, 2, 0, '0x0111')
+            await expect(nfrContract.connect(admin).transferRights(2, 51, 1, '0x0111')).
+            to.be.revertedWith('to token is not exist')
+            await expect(nfrContract.connect(admin).transferRights(2, 2, 1, '0x0111')).
+            to.be.revertedWith('from token and to token can not equal')
         })
 
         it('burn transfer-out right of token', async () => {
             await nfrContract.connect(admin).attachRight(1, 0)
             await nfrContract.connect(admin).attachRight(2, 1)
-            await nfrContract.connect(admin).transferRight(1, 2, 0, '0x0111')
-            await expect(nfrContract.connect(admin).burnRight(1, 0)).
+            await nfrContract.connect(admin).transferRights(1, 2, 0, '0x0111')
+            await expect(nfrContract.connect(admin).burnRights(1, 0)).
             to.be.revertedWith('has no right')
         })
 
         it('burn transfered in right of token', async () => {
             await nfrContract.connect(admin).attachRight(1, 0)
             await nfrContract.connect(admin).attachRight(2, 1)
-            await nfrContract.connect(admin).transferRight(1, 2, 0, '0x0111')
-            await nfrContract.connect(admin).burnRight(2, 0)
+            await nfrContract.connect(admin).transferRights(1, 2, 0, '0x0111')
+            await nfrContract.connect(admin).burnRights(2, 0)
         })
     })
 })
@@ -335,7 +346,7 @@ describe('Right', () => {
                 name: "forme",
                 certification: "test certification",
                 agreement: "test agreement",
-                uri:"test uri"
+                uri: "test uri"
             }
     
             perChain1 = {
@@ -350,7 +361,7 @@ describe('Right', () => {
                         amount:50
                     }
                 ],
-                baseIndexOfToken:0,
+                baseIndexOfToken:1,
                 capOfToken:50,
                 chainId: 1
             }

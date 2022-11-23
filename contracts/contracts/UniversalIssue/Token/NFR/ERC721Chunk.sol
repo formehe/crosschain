@@ -51,16 +51,20 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         address issuer_,
         uint256 totalAmount_
     ) internal virtual onlyInitializing {
-        require(maxId_ >= minId_, "maxId is smaller than maxId");
+        require(maxId_ >= minId_, "maxId is smaller than minId");
         require(issuer_ != address(0), "invalid owner");
+        require((totalAmount_ + 1) >= maxId_, "invalid totalAmount");
         _name = name_;
         _symbol = symbol_;
+        if (maxId_ > minId_) {
+            require(minId_ != 0, "minId can not be 0");
+        }
         
         _issuer = issuer_;
         _balances[issuer_] = maxId_ - minId_;
         _uri = uri_;
         _totalSupply = totalAmount_;
-        for (uint i = minId_; i < maxId_; i++) {
+        for (uint256 i = minId_; i < maxId_; i++) {
             _mint(issuer_, i);
         }
     }
@@ -94,6 +98,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         uint256 tokenId
     ) public view virtual override returns (address) {
         address owner = _owners[tokenId];
+        require(tokenId !=0, "invalid token id");
         require(owner != address(0), "ERC721: owner query for nonexistent token on this chain");
         return owner;
     }
@@ -121,7 +126,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
      */
     function tokenURI(
         uint256 tokenId
-    ) public view virtual override returns (string memory) {
+    ) external view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
         string memory baseURI = _baseURI();
@@ -153,7 +158,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     function approve(
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) external virtual override {
         address owner = ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
@@ -182,7 +187,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
     function setApprovalForAll(
         address /*operator*/,
         bool /*approved*/
-    ) public virtual override {
+    ) external virtual override {
         // _setApprovalForAll(_msgSender(), operator, approved);
         require(false, "not support");
     }
@@ -204,7 +209,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) external virtual override {
         //solhint-disable-next-line max-line-length
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
 
@@ -289,6 +294,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         uint256 tokenId
     ) internal view virtual returns (bool) {
         require(_exists(tokenId), "ERC721: operator query for nonexistent token");
+        require(spender != address(0), "invalid spender");
         address owner = ownerOf(tokenId);
         return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender));
     }
@@ -396,6 +402,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         address to,
         uint256 tokenId
     ) internal virtual {
+        require(from != to, "can not transfer to myself");
         require(ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
         require(to != address(0), "ERC721: transfer to the zero address");
 
@@ -497,8 +504,4 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         uint256 tokenId
     ) internal virtual {
     }
-
-    // function isssueTokenRange() view external returns(uint256 minId, uint256 maxId) {
-    //     return (_tokenRange.minId, _tokenRange.maxId);
-    // }
 }

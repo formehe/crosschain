@@ -9,7 +9,6 @@ import "../factory/ITokenFactory.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/AdminControlledUpgradeable.sol";
 import "../governance/IGovernanceCapability.sol";
-import "hardhat/console.sol";
 
 contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
     using Borsh for Borsh.Data;
@@ -198,26 +197,18 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
     }
 
     function isSupportCapability(
-        bytes32 /*classId*/,
-        bytes32 subClass,
         bytes memory action
-    ) external override returns (bool) {
+    ) external override pure returns (bool) {
         bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
         (, bytes32 role,) = abi.decode(abi.encodePacked(bytes28(0), action),(bytes32,bytes32,address));
-
-        if (subClass != role) {
-            return false;
-        }
                 
-        if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || (subClass == BLACK_ROLE))) {
+        if (!((role == ADMIN_ROLE)  || (role == CONTROLLED_ROLE) || (role == BLACK_ROLE))) {
             return false;
         }
 
         if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
             return false;
         }
-
-        console.log("success");
 
         return true;
     }

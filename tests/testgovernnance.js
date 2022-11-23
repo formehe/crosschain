@@ -176,8 +176,8 @@ describe('Governance', () => {
         await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, edgeGovernance.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, edgeGovernance.address, limit.address)
 
-        await coreGovernance.initialize(1, admin.address)
-        await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address)
+        await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+        await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
 
         await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
         await coreGovernance.bindGovernedContract(generalContractor.address)
@@ -198,7 +198,7 @@ describe('Governance', () => {
                 }]
             }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
 
-            await coreGovernance.propose('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', '0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', [1,2], abiCall)
+            await expect(coreGovernance.propose(abiCall)).to.be.revertedWith('invalid method')
             expect (await generalContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(false)
 
             abiCall = Web3EthAbi.encodeFunctionCall({
@@ -214,10 +214,12 @@ describe('Governance', () => {
             }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
 
             //========================================================================
-            let tx = await coreGovernance.propose('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', '0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', [1,2], abiCall)
+            let tx = await coreGovernance.propose(abiCall)
             let rc = await tx.wait()
-            let event = rc.events.find(event=>event.event === "GovernanceProposal")
-
+            let event = rc.events.find(event=>event.event === "GovernanceProposed")
+            console.log(event)
+            console.log(event.topics[1])
+            await coreGovernance.accept(event.topics[1])
             expect (await generalContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
       
             // construct receipt proof
@@ -234,9 +236,9 @@ describe('Governance', () => {
             let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             let buffer = borsh.serialize(schema, value);
 
-            tx = await edgeGovernance.applyProposal(buffer)
+            tx = await edgeGovernance.propose(buffer)
             rc = await tx.wait()
-
+            await edgeGovernance.accept(event.topics[1])
             expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
         })
 
@@ -254,9 +256,10 @@ describe('Governance', () => {
             }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
 
             //========================================================================
-            let tx = await coreGovernance.propose('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', '0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', [1,2], abiCall)
+            let tx = await coreGovernance.propose(abiCall)
             let rc = await tx.wait()
-            let event = rc.events.find(event=>event.event === "GovernanceProposal")
+            let event = rc.events.find(event=>event.event === "GovernanceProposed")
+            await coreGovernance.accept(event.topics[1])
             expect (await generalContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
             // construct receipt proof
             getProof = new GetProof("http://127.0.0.1:8545")
@@ -272,8 +275,9 @@ describe('Governance', () => {
             let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             let buffer = borsh.serialize(schema, value);
 
-            tx = await edgeGovernance.applyProposal(buffer)
+            tx = await edgeGovernance.propose(buffer)
             rc = await tx.wait()
+            await edgeGovernance.accept(event.topics[1])
             expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
 
             abiCall = Web3EthAbi.encodeFunctionCall({
@@ -289,10 +293,10 @@ describe('Governance', () => {
             }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
 
             //========================================================================
-            tx = await coreGovernance.propose('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', '0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', [1,2], abiCall)
+            tx = await coreGovernance.propose(abiCall)
             rc = await tx.wait()
-            event = rc.events.find(event=>event.event === "GovernanceProposal")
-
+            event = rc.events.find(event=>event.event === "GovernanceProposed")
+            await coreGovernance.accept(event.topics[1])
             expect (await generalContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(false)
       
             // construct receipt proof
@@ -309,9 +313,9 @@ describe('Governance', () => {
             schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             buffer = borsh.serialize(schema, value);
 
-            tx = await edgeGovernance.applyProposal(buffer)
+            tx = await edgeGovernance.propose(buffer)
             rc = await tx.wait()
-
+            await edgeGovernance.accept(event.topics[1])
             expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(false)
         })
     })

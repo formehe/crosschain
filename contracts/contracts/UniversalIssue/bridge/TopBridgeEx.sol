@@ -42,7 +42,6 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
     Epoch[2] internal epochs;
     uint private currentEpochIdex;
 
-    uint64[] heights;
     mapping(uint64 => bytes32) public blockHashes;
     mapping(uint64 => bytes32) public blockMerkleRoots;
     mapping(uint64 => uint256) public blockHeights;
@@ -81,48 +80,14 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
 
         Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
 
-        require(topBlock.inner_lite.height >= minHeight, "invalid block height");
         require(topBlock.inner_lite.next_bps.some, "Initialization block must contain next_bps");
         setBlockProducers(topBlock.inner_lite.next_bps.blockProducers,topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
         blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.inner_lite.height] = block.timestamp;
-        heights.push(topBlock.inner_lite.height);
         maxMainHeight = topBlock.inner_lite.height;
         emit BlockBridgeInitial(topBlock.inner_lite.height, topBlock.block_hash, msg.sender);
     }
-
-    // function fork(bytes memory epoch0, bytes memory epoch1, bytes memory forkpoint) public onlyRole(ADMIN_ROLE) {
-    //     Deserialize.LightClientBlock memory topForkpoint = Deserialize.decodeLightClientBlock(forkpoint);
-    //     for (uint256 i = 0; i < heights.length; i++) {
-    //         uint64 height = heights[i];
-    //         if (height >= topForkpoint.inner_lite.height) {
-    //             delete blockHashes[height];
-    //             delete blockMerkleRoots[height];
-    //             delete blockHeights[height];
-    //         }
-    //     }
-
-    //     currentEpochIdex = 0;
-    //     delete heights;
-
-    //     Deserialize.LightClientBlock memory topEpoch0 = Deserialize.decodeLightClientBlock(epoch0);
-    //     require(topEpoch0.inner_lite.next_bps.some, "Initialization block must contain next_bps");
-    //     setBlockProducers(topEpoch0.inner_lite.next_bps.blockProducers,topEpoch0.inner_lite.next_bps.epochId, topEpoch0.inner_lite.height);
-    //     blockHashes[topEpoch0.inner_lite.height] = topEpoch0.block_hash;
-    //     blockMerkleRoots[topEpoch0.inner_lite.height] = topEpoch0.inner_lite.block_merkle_root;
-    //     blockHeights[topEpoch0.inner_lite.height] = block.timestamp;
-    //     maxMainHeight = topEpoch0.inner_lite.height;
-
-    //     bytes32 epoch1Hash = keccak256(epoch1);
-    //     if (epoch1Hash != keccak256(epoch0)) {
-    //         addLightClientBlock(epoch1);
-    //     }
-        
-    //     if (epoch1Hash != keccak256(forkpoint)) {
-    //         addLightClientBlock(forkpoint);
-    //     }
-    // }
 
     struct BridgeState {
         uint currentHeight; // Height of the current confirmed block
@@ -146,6 +111,7 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
         uint8  _v = signature.v + (signature.v < 27 ? 27 : 0);
         bytes memory signatureBytes = abi.encodePacked(signature.r,signature.s,_v);
         (address _address,) = ECDSA.tryRecover(block_hash,signatureBytes);
+        require(_address != address(0), "invalid signatrue");
         return _address == publicKey.signer;
     }
 
@@ -161,11 +127,8 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
 
     function addLightClientBlock(bytes memory data) internal {
         Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
-        if(uint(topBlock.inner_lite.receipts_root_hash) != 0){
-            return;
-        }
-
-        require(topBlock.inner_lite.height >= minHeight, "invalid block height");
+        require(uint(topBlock.inner_lite.receipts_root_hash) != 0, "invalid receipt root hash");
+        require(topBlock.inner_lite.height > minHeight, "invalid block height");
         require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
 
         require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");
@@ -180,9 +143,8 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
             }
 
             bool success = _checkValidatorSignature(topBlock.signature_hash, approval.signature, thisEpoch.keys[i]);
-            if(success){
-                votedFor++;
-            }
+            require(success, "invalid signature");
+            votedFor++;
         }
 
         require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
@@ -192,7 +154,6 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
             setBlockProducers(topBlock.inner_lite.next_bps.blockProducers, topBlock.inner_lite.next_bps.epochId, topBlock.inner_lite.height);
         }
 
-        heights.push(topBlock.inner_lite.height);
         blockHashes[topBlock.inner_lite.height] = topBlock.block_hash;
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.inner_lite.height] = block.timestamp;
@@ -227,16 +188,10 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
     /// @dev Gets the validated election block
     function getValidationEpoch(uint64 epochId) private view returns(Epoch memory epoch){
         uint cnt = epochs.length;
-        for ((uint i, uint num) = (currentEpochIdex, 0); num < cnt; num++) {
+        for (uint i = 0; i < cnt; i++) {
             if(epochs[i].epochId == epochId){
                 epoch = epochs[i];
                 break;
-            }
-
-            if (i == (cnt - 1)) {
-                i = 0;
-            } else {
-                i++;
             }
         }
 
@@ -259,19 +214,13 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
     }
 
     function isSupportCapability(
-        bytes32 /*classId*/,
-        bytes32 subClass,
         bytes memory action
     ) external pure override returns (bool) {
         bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
         (, bytes32 role,) = abi.decode(abi.encodePacked(bytes28(0), action),(bytes32,bytes32,address));
 
-        if (subClass != role) {
-            return false;
-        }
-                
-        if (!((subClass == ADMIN_ROLE)  || (subClass == CONTROLLED_ROLE) || 
-             (subClass == ADDBLOCK_ROLE))) {
+        if (!((role == ADMIN_ROLE)  || (role == CONTROLLED_ROLE) || 
+             (role == ADDBLOCK_ROLE))) {
             return false;
         }
 

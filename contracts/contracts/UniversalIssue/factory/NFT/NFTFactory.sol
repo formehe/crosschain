@@ -78,12 +78,12 @@ contract NFTFactory is ITokenFactory{
 
         payload = abi.encodeWithSignature("symbol()");
         (success, returnData) = contractCode.staticcall(payload);
-        require(success, "name interface is not exist");
+        require(success, "symbol interface is not exist");
         (issueWithRange.symbol) = abi.decode(returnData, (string));
 
         payload = abi.encodeWithSignature("totalSupply()");
         (success, returnData) = contractCode.staticcall(payload);
-        require(success, "name interface is not exist");
+        require(success, "totalSupply interface is not exist");
         (issueWithRange.totalAmountOfToken) = abi.decode(returnData, (uint256));
         
         issueWithRange.issueRangeOfChains = new IssueCoder.CirculationRangePerchain[](1);

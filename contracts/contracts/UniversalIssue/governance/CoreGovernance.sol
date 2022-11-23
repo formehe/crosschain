@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "../prover/IProver.sol";
 import "../../common/AdminControlledUpgradeable.sol";
 import "./IGovernanceCapability.sol";
+import "hardhat/console.sol";
 
 contract CoreGovernance is AdminControlledUpgradeable{
     uint256 public chainId;
@@ -20,11 +21,13 @@ contract CoreGovernance is AdminControlledUpgradeable{
         address indexed prover
     );
 
-    event GovernanceProposal(
-        bytes32  indexed classId,
-        bytes32  indexed subClass,
-        uint256[] chains,
+    event GovernanceProposed(
+        uint256 indexed proposalId,
         bytes   action
+    );
+
+    event GovernanceAccepted(
+        uint256 indexed proposalId
     );
 
     struct EdgeGovernanceInfo {
@@ -36,6 +39,8 @@ contract CoreGovernance is AdminControlledUpgradeable{
     //bytes32 constant BLACK_GOVERNANCE_ROLE = 0x5815e0e9225333c89575398fc48947fa6c0b7306b87716d0fcefc6b814f0e647;
     //keccak256("GOVERNANCE.PROPOSER.ROLE")
     bytes32 constant GOVERNANCE_PROPOSER_ROLE = 0xd5a906cf3ac93205af230c14cfaf12c82bbb6d36751ef6c37d190b7d9d4f3b4a;
+    //keccak256("GOVERNANCE.ACCEPTOR.ROLE")
+    bytes32 constant GOVERNANCE_ACCEPTOR_ROLE = 0xfc92b525942db851e26d6ddeefc837c5302abdf38e02f1f2ab96ce0cd4235c20;
 
     uint constant UNPAUSED_ALL = 0;
     uint constant PAUSE_GOVERNANCE_PROPOSAL = 1 << 0;
@@ -43,10 +48,15 @@ contract CoreGovernance is AdminControlledUpgradeable{
     // chainId --- chainInfo
     mapping(uint256 => EdgeGovernanceInfo) public edgeGovernances;
     address[] public governedContracts;
+    uint256 proposalId;
+    mapping(uint256 => bytes) public proposals;
 
     function initialize(
         uint256 chainId_,
-        address owner_
+        address owner_,
+        address proposer_,
+        address acceptor_,
+        uint256 maxHistoricalProposalId_
     ) external initializer {
         require(owner_ != address(0), "invalid owner");
 
@@ -55,12 +65,14 @@ contract CoreGovernance is AdminControlledUpgradeable{
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
 
-        _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(GOVERNANCE_PROPOSER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
+        // _setRoleAdmin(GOVERNANCE_PROPOSER_ROLE, ADMIN_ROLE);
 
-        _grantRole(GOVERNANCE_PROPOSER_ROLE, _msgSender());
+        _grantRole(GOVERNANCE_PROPOSER_ROLE, proposer_);
+        _grantRole(GOVERNANCE_ACCEPTOR_ROLE, acceptor_);
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
+        proposalId = maxHistoricalProposalId_;
     }
 
     function bindEdgeGovernance(
@@ -93,35 +105,35 @@ contract CoreGovernance is AdminControlledUpgradeable{
     }
 
     function propose(
-        bytes32 classId,
-        bytes32 subClass,
-        uint256[] calldata chains,
         bytes calldata action //method abi
     ) external onlyRole(GOVERNANCE_PROPOSER_ROLE){
-        bool exist;
-        for (uint256 i = 0; i < chains.length; i++) {
-            if (chains[i] == chainId) {
-                exist = true;
-            } else {
-                require(edgeGovernances[chains[i]].edgeGovernance != address(0), "chain is not bound");
-            }
+        bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
+        abi.decode(abi.encodePacked(bytes28(0), action),(bytes32,bytes32,address));
+        
+        if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
+            require(false, "invalid method");
         }
-
-        if (exist) {
-            applyGovernance(classId, subClass, action);
-        }
-
-        emit GovernanceProposal(classId, subClass, chains, action);
+        proposalId++;
+        proposals[proposalId] = action;
+        emit GovernanceProposed(proposalId, action);
     }
 
-    function applyGovernance(
-        bytes32 classId,
-        bytes32 subClass,
+    function accept(
+        uint256 proposalId_
+    ) external onlyRole(GOVERNANCE_ACCEPTOR_ROLE){
+        bytes memory proposal = proposals[proposalId_];
+        require(proposal.length > 0, "proposal is not exist");
+        _applyGovernance(proposal);
+        delete proposals[proposalId_];
+        emit GovernanceAccepted(proposalId_);
+    }
+
+    function _applyGovernance(
         bytes memory action //method abi
     ) internal {
         for (uint256 i = 0; i < governedContracts.length; i++) {
             address governanceContract = governedContracts[i];
-            bool success = IGovernanceCapability(governanceContract).isSupportCapability(classId, subClass, action);
+            bool success = IGovernanceCapability(governanceContract).isSupportCapability(action);
             if (!success) {
                 continue;
             }

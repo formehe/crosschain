@@ -24,19 +24,14 @@ abstract contract Right is Initializable, IRightMetadata {
     uint256[] private _rightKindIndexes;
     mapping(uint256 => RightInfo) private _rightKinds;
     mapping(uint256 => uint256) public _rightRemains;
-    // mapping(address => mapping(uint256 => uint256)) private _rightOwners;
-    address private _issuer;
     
     function initialize(
-        address issuer_,
         IssueCoder.IssueRight[] calldata rigthKinds_,
         IssueCoder.CirculationPerRight[] calldata rightRanges_
     ) internal onlyInitializing {
-        require(issuer_ != address(0), "opertion can not be 0");
-        _issuer = issuer_;
-
         for (uint256 i = 0; i < rigthKinds_.length; i++) {
             uint256 rightKind = rigthKinds_[i].id;
+            require(bytes(rigthKinds_[i].right.name).length != 0, "right name can not be zero");
             _rightKindIndexes.push(rightKind);
             _rightKinds[rightKind] = RightInfo(rigthKinds_[i].right.name, rigthKinds_[i].right.uri, rigthKinds_[i].right.agreement, rigthKinds_[i].totalAmount);
         }
@@ -45,7 +40,6 @@ abstract contract Right is Initializable, IRightMetadata {
             uint256 rightKind = rightRanges_[i].id;
             require(bytes(_rightKinds[rightKind].name).length != 0, "invalid right");
             _rightRemains[rightKind] = rightRanges_[i].amount;
-            // _rightOwners[issuer_][rightKind] = rightRanges_[i].amount;
         }
     }
 
