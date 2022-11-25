@@ -69,6 +69,7 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     ) external virtual {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
         _delRightOfToken(tokenId, rightKind, 1);
+        _approve(address(0), tokenId);
         emit BurnTokenRights(tokenId, rightKind, 1);
     }
     
@@ -152,12 +153,13 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
         require(_msgSender() == ProxyRegistry(minter).proxy(), "only for minter");
         require(rightKinds_.length == rightQuantities_.length, "invalid right kind numbers");
         require(owner_ != address(0), "invalid owner");
+        require(tokenId_ != 0, "token id can not be 0");
         _safeMint(owner_, tokenId_);
         for (uint256 i = 0; i < rightKinds_.length; i++) {
             uint256 rightKind = rightKinds_[i];
             uint256 amount = rightQuantities_[i];
+            _checkRight(rightKind);
             if (amount != 0) {
-                _checkRight(rightKind);
                 _addRightOfToken(tokenId_, rightKind, amount);
             }
         }

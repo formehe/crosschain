@@ -176,7 +176,7 @@ describe('proxy', () => {
             name: "nfr",
             symbol: "nfr",
             issuer: {
-                name: "forme",
+                name: "test user",
                 certification: "test certification",
                 agreement: "test agreement",
                 uri:"test uri"

@@ -262,7 +262,6 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         (receipt_.data, contractAddress) = _parseLog(log);
         require(contractAddress != address(0), "Invalid Token lock address");
         require(subContractors[receipt_.data.chainId].subContractor == contractAddress, "proxy is not bound");
-        // require(limiter.forbiddens(proofIndex) == false, "receipt id has already been forbidden");
 
         (bool success, bytes32 blockHash, uint256 receiptIndex, ) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
         require(success, "Proof should be valid");

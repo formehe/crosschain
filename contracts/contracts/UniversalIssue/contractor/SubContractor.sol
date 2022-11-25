@@ -174,7 +174,6 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         require(contractAddress != address(0), "general contractor address is zero");
         require(contractAddress == generalContractor, "general contractor address is error");
 
-        // require(limit.forbiddens(proofIndex) == false, "tx is forbidden");
         (bool success, bytes32 blockHash, uint256 receiptIndex, ) = prover.verify(proofData);
         require(success, "proof is invalid");
         _receipt.blockHash = blockHash;

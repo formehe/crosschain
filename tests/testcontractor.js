@@ -171,12 +171,52 @@ describe('GeneralContractor', () => {
 
         await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
+
+        // sub general
+        headerSyncMockCon1 = await ethers.getContractFactory("HeaderSyncMock");
+        headerSyncMock1 = await headerSyncMockCon1.deploy();
+        await headerSyncMock1.deployed();
     
+        console.log("headerSyncMock "  + headerSyncMock1.address)
+    
+        ethLikeProverCon1 = await ethers.getContractFactory("EthLikeProver");
+        ethLikeProver1 = await ethLikeProverCon1.deploy(headerSyncMock1.address);
+        await ethLikeProver1.deployed();
+    
+        console.log("ethLikeProver "  + ethLikeProver1.address)
+    
+        subContractorCon1 = await ethers.getContractFactory("SubContractor");
+        subContractor1 = await subContractorCon1.deploy();
+        await subContractor1.deployed();
+    
+        console.log("subContractor "  + subContractor1.address)
+    
+        edgeProxyCon1 = await ethers.getContractFactory("EdgeProxy");
+        edgeProxy1 = await edgeProxyCon1.deploy();
+        await edgeProxy1.deployed();
+    
+        console.log("edgeProxy "  + edgeProxy1.address)
+    
+        nfrFactoryCon2 = await ethers.getContractFactory("NFRFactory");
+        nfrFactory2 = await nfrFactoryCon2.deploy(erc20TokenSample.address, subContractor1.address);
+        await nfrFactory2.deployed();
+    
+        console.log("nfrFactory "  + nfrFactory2.address)
+    
+        proxyRegistryCon2 = await ethers.getContractFactory("ProxyRegistry");
+        proxyRegistry2 = await proxyRegistryCon2.deploy(edgeProxy1.address, admin.address);
+        await proxyRegistry2.deployed();
+    
+        console.log("proxyRegistry "  + proxyRegistry2.address)
+
+        await subContractor1.initialize(generalContractor.address, 3, edgeProxy1.address, ethLikeProver1.address, admin.address, 0, proxyRegistry2.address, nfrFactory2.address)
+        await edgeProxy1.initialize(ethLikeProver1.address, subContractor1.address, coreProxy.address, 1, 2, admin.address, limit.address)
+
         issueInfo = {
             name: "nfr",
             symbol: "nfr",
             issuer: {
-                name: "forme",
+                name: "test user",
                 certification: "test certification",
                 agreement: "test agreement",
                 uri:"test uri"
@@ -251,12 +291,18 @@ describe('GeneralContractor', () => {
     })
 
     describe('issue', () => {
-        it('issue', async () => {
+        it('issue nfr success', async () => {
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
+            await generalContractor.issue(bytesOfIssue)
+        })
+
+        it('not issue on main chain', async () => {
             issueInfo1 = {
                 name: "nfr",
                 symbol: "nfr",
                 issuer: {
-                    name: "forme",
+                    name: "test user",
                     certification: "test certification",
                     agreement: "test agreement",
                     uri:"test uri"
@@ -298,19 +344,577 @@ describe('GeneralContractor', () => {
                 ]
             }
 
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
-            await expect(generalContractor.issue(bytesOfIssue)).
-            to.be.revertedWith('chain is not bound')
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            await generalContractor.issue(bytesOfIssue)
             bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
             await expect(generalContractor.issue(bytesOfIssue)).
             to.be.revertedWith('must issue on main chain')
         })
+
+        it('issue on not bind chain', async () => {
+            issueInfo1 = {
+                name: "nfr",
+                symbol: "nfr",
+                issuer: {
+                    name: "test user",
+                    certification: "test certification",
+                    agreement: "test agreement",
+                    uri:"test uri"
+                },
+                rights: [
+                    {
+                        id:0, 
+                        right: {
+                            name: "right1",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        }
+                    },
+                    {
+                        id:1, 
+                        right: {
+                            name: "right2",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        },
+                    }
+                ],
+                issueOfChains:[
+                    {
+                        issuer: miner.address,
+                        chainId: 1,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 2,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 3,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            await expect(generalContractor.issue(bytesOfIssue)).
+            to.be.revertedWith('chain is not bound')
+        })
+
+        it('issue nfr,number of rights is not equal', async () => {
+            issueInfo1 = {
+                name: "nfr",
+                symbol: "nfr",
+                issuer: {
+                    name: "test user",
+                    certification: "test certification",
+                    agreement: "test agreement",
+                    uri:"test uri"
+                },
+                rights: [
+                    {
+                        id:0, 
+                        right: {
+                            name: "right1",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        }
+                    },
+                    {
+                        id:1, 
+                        right: {
+                            name: "right2",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        },
+                    }
+                ],
+                issueOfChains:[
+                    {
+                        issuer: miner.address,
+                        chainId: 1,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            }
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 2,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            await expect(generalContractor.issue(bytesOfIssue)).
+            to.be.revertedWith('number of rights is not equal')
+        })
+
+        it('issue nfr,right kind is not exist', async () => {
+            issueInfo1 = {
+                name: "nfr",
+                symbol: "nfr",
+                issuer: {
+                    name: "test user",
+                    certification: "test certification",
+                    agreement: "test agreement",
+                    uri:"test uri"
+                },
+                rights: [
+                    {
+                        id:0, 
+                        right: {
+                            name: "right1",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        }
+                    },
+                    {
+                        id:1, 
+                        right: {
+                            name: "right2",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        },
+                    }
+                ],
+                issueOfChains:[
+                    {
+                        issuer: miner.address,
+                        chainId: 1,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:2,
+                                amount:50
+                            }
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 2,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            await expect(generalContractor.issue(bytesOfIssue)).
+            to.be.revertedWith('right kind is not exist')
+        })
+
+        it('issue nfr,right kind is not consistent', async () => {
+            issueInfo1 = {
+                name: "nfr",
+                symbol: "nfr",
+                issuer: {
+                    name: "test user",
+                    certification: "test certification",
+                    agreement: "test agreement",
+                    uri:"test uri"
+                },
+                rights: [
+                    {
+                        id:0, 
+                        right: {
+                            name: "right1",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        }
+                    },
+                    {
+                        id:1, 
+                        right: {
+                            name: "right2",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        },
+                    }
+                ],
+                issueOfChains:[
+                    {
+                        issuer: miner.address,
+                        chainId: 1,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:0,
+                                amount:50
+                            }
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 2,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            await expect(generalContractor.issue(bytesOfIssue)).
+            to.be.revertedWith('right kind is not exist')
+        })
+
+        it('issue nfr,rights id is repeat', async () => {
+            issueInfo1 = {
+                name: "nfr",
+                symbol: "nfr",
+                issuer: {
+                    name: "test user",
+                    certification: "test certification",
+                    agreement: "test agreement",
+                    uri:"test uri"
+                },
+                rights: [
+                    {
+                        id:0, 
+                        right: {
+                            name: "right1",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        }
+                    },
+                    {
+                        id:0, 
+                        right: {
+                            name: "right2",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        },
+                    }
+                ],
+                issueOfChains:[
+                    {
+                        issuer: miner.address,
+                        chainId: 1,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:0,
+                                amount:50
+                            }
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 2,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            await expect(generalContractor.issue(bytesOfIssue)).
+            to.be.revertedWith('rights id is repeat')
+        })
+
+        it('issue nfr,chain is repeat', async () => {
+            issueInfo1 = {
+                name: "nfr",
+                symbol: "nfr",
+                issuer: {
+                    name: "test user",
+                    certification: "test certification",
+                    agreement: "test agreement",
+                    uri:"test uri"
+                },
+                rights: [
+                    {
+                        id:0, 
+                        right: {
+                            name: "right1",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        }
+                    },
+                    {
+                        id:1, 
+                        right: {
+                            name: "right2",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        },
+                    }
+                ],
+                issueOfChains:[
+                    {
+                        issuer: miner.address,
+                        chainId: 1,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 2,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 2,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    }
+                ]
+            }
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            await expect(generalContractor.issue(bytesOfIssue)).
+            to.be.revertedWith('chains id is repeated')
+        })
+
+        it('issue nft success', async () => {
+            issueInfo1 = {
+                name: "nfr",
+                symbol: "nfr",
+                issuer: {
+                    name: "test user",
+                    certification: "test certification",
+                    agreement: "test agreement",
+                    uri:"test uri"
+                },
+                rights: [
+                ],
+                issueOfChains:[
+                    {
+                        issuer: miner.address,
+                        chainId: 1,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                        ]
+                    },
+                    {
+                        issuer: miner.address,
+                        chainId: 2,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                        ]
+                    }
+                ]
+            }
+
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            await generalContractor.issue(bytesOfIssue)
+        })
     })
 
     describe('bindContractGroup', () => {
-        it('bindContractGroup', async () => {
+        it('bindContractGroup success', async () => {
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
+            //========================================================================
+            let tx = await generalContractor.issue(bytesOfIssue)
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
+      
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            let re = Receipt.fromRpc(targetReceipt)
+            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            let rlplog = Log.fromRpc(rlpLog)
+            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            let blockHash = keccak256(proof.header.buffer)
+            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value);
+
+            tx = await subContractor.subIssue(buffer)
+            rc = await tx.wait()
+            //========================================================================
+            event = rc.events.find(event=>event.event === "SubContractorIssue")
+            console.log(event.topics[3])
+            console.log((event.topics[3]))
+            templateAddr = "0x"+ (event.topics[3]).substring(26)
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await generalContractor.bindContractGroup(buffer)
+        })
+
+        it('repeat bindContractGroup', async () => {
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
+            //========================================================================
+            let tx = await generalContractor.issue(bytesOfIssue)
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
+      
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            let re = Receipt.fromRpc(targetReceipt)
+            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            let rlplog = Log.fromRpc(rlpLog)
+            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            let blockHash = keccak256(proof.header.buffer)
+            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value);
+
+            tx = await subContractor.subIssue(buffer)
+            rc = await tx.wait()
+            //========================================================================
+            event = rc.events.find(event=>event.event === "SubContractorIssue")
+            console.log(event.topics[3])
+            console.log((event.topics[3]))
+            templateAddr = "0x"+ (event.topics[3]).substring(26)
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await generalContractor.bindContractGroup(buffer)
+            await expect(generalContractor.bindContractGroup(buffer)).
+            to.be.revertedWith('event of proof cannot be reused')
+        })
+
+        it('repeat bindContractGroup', async () => {
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
 
             let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
@@ -365,7 +969,7 @@ describe('GeneralContractor', () => {
                 name: "nfr",
                 symbol: "nfr",
                 issuer: {
-                    name: "forme",
+                    name: "test user",
                     certification: "test certification",
                     agreement: "test agreement",
                     uri:"test uri"
@@ -564,7 +1168,7 @@ describe('SubContractor', () => {
             name: "nfr",
             symbol: "nfr",
             issuer: {
-                name: "forme",
+                name: "test user",
                 certification: "test certification",
                 agreement: "test agreement",
                 uri:"test uri"
@@ -623,7 +1227,109 @@ describe('SubContractor', () => {
     })
 
     describe('subIssue', () => {
-        it('sub issue', async () => {
+        it('not subissue on this chain', async () => {
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            issueInfo1= {
+                name: "nfr",
+                symbol: "nfr",
+                issuer: {
+                    name: "test user",
+                    certification: "test certification",
+                    agreement: "test agreement",
+                    uri:"test uri"
+                },
+                rights: [
+                    {
+                        id:0, 
+                        right: {
+                            name: "right1",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        }
+                    },
+                    {
+                        id:1, 
+                        right: {
+                            name: "right2",
+                            uri: "right uri",
+                            agreement: "right agreement"
+                        }
+                    }
+                ],
+                issueOfChains:[
+                    {
+                        issuer: miner.address,
+                        chainId: 1,
+                        amountOfToken: 50,
+                        circulationOfRights: [
+                            {
+                                id:0,
+                                amount:50
+                            },
+                            {
+                                id:1,
+                                amount:50
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            //========================================================================
+            let tx = await generalContractor.issue(bytesOfIssue)
+            let rc = await tx.wait()
+            event = rc.events.find(event=>event.event === "GeneralContractorIssue")
+      
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value);
+            await expect(subContractor.subIssue(buffer)).
+            to.be.revertedWith('not issue on this chain')
+        })
+
+        it('not issue by general contractor address', async () => {
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
+            //========================================================================
+            let tx = await generalContractor.issue(bytesOfIssue)
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
+      
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            let re = Receipt.fromRpc(targetReceipt)
+            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            let rlplog = Log.fromRpc(rlpLog)
+            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            let blockHash = keccak256(proof.header.buffer)
+            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value);
+
+            subContractorCon1 = await ethers.getContractFactory("SubContractor");
+            subContractor1 = await subContractorCon1.deploy();
+            await subContractor1.deployed();
+            await subContractor1.initialize(edgeProxy.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
+            await expect(subContractor1.subIssue(buffer)).
+            to.be.revertedWith('general contractor address is error')
+        })
+
+        it('repeat subIssue', async () => {
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
 
             let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
@@ -648,81 +1354,55 @@ describe('SubContractor', () => {
             await subContractor.subIssue(buffer)
             await expect(subContractor.subIssue(buffer)).
             to.be.revertedWith('proof is reused')
+        })
 
-            subContractorCon1 = await ethers.getContractFactory("SubContractor");
-            subContractor1 = await subContractorCon1.deploy();
-            await subContractor1.deployed();
-            await subContractor1.initialize(edgeProxy.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
-            await expect(subContractor1.subIssue(buffer)).
-            to.be.revertedWith('general contractor address is error')
+        it('wrong proof', async () => {
+            let tx = await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "SubContractorBound")
+            console.log(rc)
+            console.log("==================")
+            console.log(event)
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            let re = Receipt.fromRpc(targetReceipt)
+            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            let rlplog = Log.fromRpc(rlpLog)
+            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            let blockHash = keccak256(proof.header.buffer)
+            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value);
+            await expect(subContractor.subIssue(buffer)).
+            to.be.revertedWith('wrong number of topic')
+        })
 
-            issueInfo1= {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "forme",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                    {
-                        id:0, 
-                        right: {
-                            name: "right1",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        }
-                    },
-                    {
-                        id:1, 
-                        right: {
-                            name: "right2",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        },
-                    }
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 1,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    }
-                ]
-            }
+        it('subIssue success', async () => {
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
 
-            bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
+            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
             //========================================================================
-            tx = await generalContractor.issue(bytesOfIssue)
-            rc = await tx.wait()
-            event = rc.events.find(event=>event.event === "GeneralContractorIssue")
+            let tx = await generalContractor.issue(bytesOfIssue)
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
       
             // construct receipt proof
             getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
             rpcInstance = new rpc("http://127.0.0.1:8545")
-            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
-            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
-            re = Receipt.fromRpc(targetReceipt)
-            rlpLog = new LOGRLP(rc.logs[event.logIndex])
-            rlplog = Log.fromRpc(rlpLog)
-            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
-            blockHash = keccak256(proof.header.buffer)
-            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
-            buffer = borsh.serialize(schema, value);
-            await expect(subContractor.subIssue(buffer)).
-            to.be.revertedWith('not issue on this chain')
+            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            let re = Receipt.fromRpc(targetReceipt)
+            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            let rlplog = Log.fromRpc(rlpLog)
+            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            let blockHash = keccak256(proof.header.buffer)
+            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value);
+            await subContractor.subIssue(buffer)
         })
     })
 })
