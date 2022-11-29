@@ -139,7 +139,7 @@ describe('proxy', () => {
     
         console.log("headerSyncMock "  + headerSyncMock.address)
     
-        ethLikeProverCon = await ethers.getContractFactory("EthLikeProver");
+        ethLikeProverCon = await ethers.getContractFactory("TestEthLikeProver");
         ethLikeProver = await ethLikeProverCon.deploy(headerSyncMock.address);
         await ethLikeProver.deployed();
     
@@ -279,11 +279,9 @@ describe('proxy', () => {
       value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
       blockHash = keccak256(proof.header.buffer)
       schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
-      buffer = borsh.serialize(schema, value);
-      tx = await generalContractor.bindContractGroup(buffer)
-      rc = await tx.wait()
+      buffer1 = borsh.serialize(schema, value);
 
-      coreProxy.bindPeerChain(2,ethLikeProver.address, edgeProxy.address)
+      await coreProxy.bindPeerChain(2,ethLikeProver.address, edgeProxy.address)
       erc20SampleInstance = await erc20TokenSampleCon.attach(templateAddr)
       await erc20SampleInstance.connect(miner).attachRight(51,1)
       await erc20SampleInstance.connect(miner).approve(edgeProxy.address, 51)
@@ -301,12 +299,26 @@ describe('proxy', () => {
     })
 
     describe('burn and mint', () => {
+        it('bind peer chain', async () => {
+            await expect(coreProxy.bindPeerChain(2,ethLikeProver.address, edgeProxy.address)).
+            to.be.revertedWith('chain had bind prove')
+            await expect(coreProxy.bindPeerChain(23, user.address, edgeProxy.address)).
+            to.be.revertedWith('address of prover can not be 0')
+            await expect(coreProxy.bindPeerChain(23,ethLikeProver.address, AddressZero)).
+            to.be.revertedWith('address of proxy can not be 0')
+        })
+
         it('edge burn, core mint', async () => {
+            await expect(edgeProxy.connect(miner).burnTo(2, contractGroupId, AddressZero, 51)).
+            to.be.revertedWith('invalid parameter')
+            await expect(edgeProxy.connect(miner).burnTo(2, 0, user1.address, 51)).
+            to.be.revertedWith('invalid contract group id')
             await expect(edgeProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 51)).
             to.be.revertedWith('only support cross chain tx')
-
             await expect(edgeProxy.connect(miner).burnTo(1, 100, user1.address, 51)).
             to.be.revertedWith('asset is not bound')
+            await expect(edgeProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 48)).
+            to.be.revertedWith('fail to burn')
 
             let tx = await edgeProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 51)
             let rc = await tx.wait()
@@ -324,6 +336,9 @@ describe('proxy', () => {
             let blockHash = keccak256(proof.header.buffer)
             let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             let buffer = borsh.serialize(schema, value);
+            await expect(coreProxy.mint(buffer)).to.be.revertedWith('from chain is not permit')
+            tx1 = await generalContractor.bindContractGroup(buffer1)
+            rc1 = await tx1.wait()
             await expect(coreProxy.mint(buffer)).to.be.revertedWith('to chain is not permit')
 
             tx = await edgeProxy.connect(miner).burnTo(1, contractGroupId, user1.address, 52)
@@ -335,6 +350,100 @@ describe('proxy', () => {
             rpcInstance = new rpc("http://127.0.0.1:8545")
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            
+            // wrong contract address
+            let contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = AddressZero
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].address = AddressZero
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('Invalid Token lock address')
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+            
+            // wrong group id
+            let groupId = targetReceipt.logs[event.logIndex].topics[1]
+            targetReceipt.logs[event.logIndex].topics[1] = 100
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].topics[1] = 100
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('chain is not permit')
+            targetReceipt.logs[event.logIndex].topics[1] = groupId
+            rc.logs[event.logIndex].topics[1] = groupId
+
+            // wrong from chainId
+            let chainId = targetReceipt.logs[event.logIndex].topics[2]
+            targetReceipt.logs[event.logIndex].topics[2] = 100
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].topics[2] = 100
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('peer is not bound')
+            targetReceipt.logs[event.logIndex].topics[2]= chainId
+            rc.logs[event.logIndex].topics[2] = chainId
+
+            // wrong to chainId
+            chainId = targetReceipt.logs[event.logIndex].topics[3]
+            targetReceipt.logs[event.logIndex].topics[3] = 100
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].topics[3] = 100
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('to chain is not permit')
+            targetReceipt.logs[event.logIndex].topics[3]= chainId
+            rc.logs[event.logIndex].topics[3] = chainId
+
+            // wrong asset
+            let byteValue = targetReceipt.logs[event.logIndex].data
+            let newValue = (targetReceipt.logs[event.logIndex].data).substr(0,30) + '3'+ (targetReceipt.logs[event.logIndex].data).substr(31)
+            targetReceipt.logs[event.logIndex].data = newValue
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].data = newValue
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('from chain is not permit')
+            targetReceipt.logs[event.logIndex].data = byteValue
+            rc.logs[event.logIndex].data  = byteValue
+
+            // wrong proxy
+            byteValue = targetReceipt.logs[event.logIndex].data
+            newValue = (targetReceipt.logs[event.logIndex].data).substr(0,129) + '1'+ (targetReceipt.logs[event.logIndex].data).substr(130)
+            targetReceipt.logs[event.logIndex].data = newValue
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].data = newValue
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('receipt must from edge')
+            targetReceipt.logs[event.logIndex].data = byteValue
+            rc.logs[event.logIndex].data  = byteValue
+            
+            //fail to mint
             re = Receipt.fromRpc(targetReceipt)
             rlpLog = new LOGRLP(rc.logs[event.logIndex])
             rlplog = Log.fromRpc(rlpLog)
@@ -342,17 +451,73 @@ describe('proxy', () => {
             blockHash = keccak256(proof.header.buffer)
             schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             buffer = borsh.serialize(schema, value);
+            await proxyRegistry.set(user.address)
+            tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('fail to mint')
+            
+            // success
+            await proxyRegistry.set(coreProxy.address)
             tx = await coreProxy.mint(buffer)
+            tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('The burn event proof cannot be reused')
+        })
+
+        it('core proxy bind asset group', async () => {
+            coreProxyCon1 = await ethers.getContractFactory("CoreProxy");
+            coreProxy1 = await coreProxyCon1.deploy();
+            await coreProxy1.deployed();
+
+            testProxyCon1 = await ethers.getContractFactory("TestProxy");
+            testProxy1 = await testProxyCon1.deploy(coreProxy1.address);
+            await testProxy1.deployed();
+            
+            await coreProxy1.initialize(testProxy1.address, 1, admin.address, multiLimit.address)
+            await expect(coreProxy1.connect(user).bindAssetProxyGroup(coreProxy1.address, 1, 1, coreProxy1.address)).
+            to.be.revertedWith('only for general contractor')
+            await expect(testProxy1.connect(admin).bindAssetProxyGroup(AddressZero, 1, 1, coreProxy1.address)).
+            to.be.revertedWith('from proxy address are not to be contract address')
+            await expect(testProxy1.connect(admin).bindAssetProxyGroup(coreProxy1.address, 1, 0, coreProxy1.address)).
+            to.be.revertedWith('contract group id can not be 0')
+            await testProxy1.connect(admin).bindAssetProxyGroup(coreProxy1.address, 1, 1, coreProxy1.address)
+            await expect(testProxy1.connect(admin).bindAssetProxyGroup(coreProxy1.address, 1, 1, coreProxy1.address)).
+            to.be.revertedWith('asset has been bound')
+        })
+
+        it('edge proxy bind asset group', async () => {
+            edgeProxyCon1 = await ethers.getContractFactory("EdgeProxy");
+            edgeProxy1 = await edgeProxyCon1.deploy();
+            await edgeProxy1.deployed();
+
+            testProxyCon1 = await ethers.getContractFactory("TestProxy");
+            testProxy1 = await testProxyCon1.deploy(edgeProxy1.address);
+            await testProxy1.deployed();
+            
+            await edgeProxy1.initialize(ethLikeProver.address, testProxy1.address, coreProxy.address, 1, 2, admin.address, limit.address)
+            await expect(edgeProxy1.connect(user).bindAssetGroup(edgeProxy1.address, 1, edgeProxy1.address)).
+            to.be.revertedWith('just subcontractor can bind')
+            await expect(testProxy1.connect(admin).bindAssetGroup(user.address, 1, edgeProxy1.address)).
+            to.be.revertedWith('from proxy address are not to be contract address')
+            await expect(testProxy1.connect(admin).bindAssetGroup(edgeProxy1.address, 0, edgeProxy1.address)).
+            to.be.revertedWith('contract group id can not be 0')
+            await testProxy1.connect(admin).bindAssetGroup(edgeProxy1.address, 1, edgeProxy1.address)
+            await expect(testProxy1.connect(admin).bindAssetGroup(edgeProxy1.address, 1, edgeProxy1.address)).
+            to.be.revertedWith('can not modify the bind asset')
         })
 
         it('core burn, edge mint', async () => {
+            tx1 = await generalContractor.bindContractGroup(buffer1)
+            rc1 = await tx1.wait()
             await expect(coreProxy.connect(miner).burnTo(1, contractGroupId, user1.address, 1)).
             to.be.revertedWith('only support cross chain tx')
-
+            await expect(coreProxy.connect(miner).burnTo(2, contractGroupId, AddressZero, 1)).
+            to.be.revertedWith('invalid parameter')
+            await expect(coreProxy.connect(miner).burnTo(2, 0, user1.address, 1)).
+            to.be.revertedWith('invalid contract group id')
             await expect(coreProxy.connect(miner).burnTo(2, 100, user1.address, 1)).
             to.be.revertedWith('from asset can not be 0')
+            await expect(coreProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 1)).
+            to.be.revertedWith('to asset can not be 0')
+            await expect(coreProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 101)).
+            to.be.revertedWith('fail to burn')
 
-            await expect(coreProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 1)).to.be.revertedWith('to asset can not be 0')
             let tx = await coreProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 50)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "CrossTokenBurned")
@@ -369,7 +534,114 @@ describe('proxy', () => {
             let blockHash = keccak256(proof.header.buffer)
             let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             let buffer = borsh.serialize(schema, value);
+                        
+            // wrong contract address
+            let contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = AddressZero
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].address = AddressZero
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('Invalid Token lock address')
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+            
+            // wrong group id
+            let groupId = targetReceipt.logs[event.logIndex].topics[1]
+            targetReceipt.logs[event.logIndex].topics[1] = 100
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].topics[1] = 100
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('chain is not permit')
+            targetReceipt.logs[event.logIndex].topics[1] = groupId
+            rc.logs[event.logIndex].topics[1] = groupId
+
+            // wrong from chainId
+            let chainId = targetReceipt.logs[event.logIndex].topics[2]
+            targetReceipt.logs[event.logIndex].topics[2] = 100
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].topics[2] = 100
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('peer is not bound')
+            targetReceipt.logs[event.logIndex].topics[2]= chainId
+            rc.logs[event.logIndex].topics[2] = chainId
+
+            // wrong to chainId
+            chainId = targetReceipt.logs[event.logIndex].topics[3]
+            targetReceipt.logs[event.logIndex].topics[3] = 100
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].topics[3] = 100
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('not to mine')
+            targetReceipt.logs[event.logIndex].topics[3]= chainId
+            rc.logs[event.logIndex].topics[3] = chainId
+
+            // wrong asset
+            let byteValue = targetReceipt.logs[event.logIndex].data
+            let newValue = (targetReceipt.logs[event.logIndex].data).substr(0,30) + '3'+ (targetReceipt.logs[event.logIndex].data).substr(31)
+            targetReceipt.logs[event.logIndex].data = newValue
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].data = newValue
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('chain is not permit')
+            targetReceipt.logs[event.logIndex].data = byteValue
+            rc.logs[event.logIndex].data  = byteValue
+
+            // wrong proxy
+            byteValue = targetReceipt.logs[event.logIndex].data
+            newValue = (targetReceipt.logs[event.logIndex].data).substr(0,129) + '0'+ (targetReceipt.logs[event.logIndex].data).substr(130)
+            targetReceipt.logs[event.logIndex].data = newValue
+            re = Receipt.fromRpc(targetReceipt)
+            rc.logs[event.logIndex].data = newValue
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('receipt must from core')
+            targetReceipt.logs[event.logIndex].data = byteValue
+            rc.logs[event.logIndex].data  = byteValue
+            
+            // fail to mint
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await proxyRegistry1.set(user.address)
+            tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('fail to mint')
+
+            // success
+            await proxyRegistry1.set(edgeProxy.address)
             tx = await edgeProxy.mint(buffer)
+            tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('The burn event proof cannot be reused')
         })
     })
 })

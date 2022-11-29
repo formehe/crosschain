@@ -139,7 +139,7 @@ describe('GeneralContractor', () => {
     
         console.log("headerSyncMock "  + headerSyncMock.address)
     
-        ethLikeProverCon = await ethers.getContractFactory("EthLikeProver");
+        ethLikeProverCon = await ethers.getContractFactory("TestEthLikeProver");
         ethLikeProver = await ethLikeProverCon.deploy(headerSyncMock.address);
         await ethLikeProver.deployed();
     
@@ -179,7 +179,7 @@ describe('GeneralContractor', () => {
     
         console.log("headerSyncMock "  + headerSyncMock1.address)
     
-        ethLikeProverCon1 = await ethers.getContractFactory("EthLikeProver");
+        ethLikeProverCon1 = await ethers.getContractFactory("TestEthLikeProver");
         ethLikeProver1 = await ethLikeProverCon1.deploy(headerSyncMock1.address);
         await ethLikeProver1.deployed();
     
@@ -856,6 +856,53 @@ describe('GeneralContractor', () => {
             rpcInstance = new rpc("http://127.0.0.1:8545")
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+
+            // wrong contract address
+            let contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = AddressZero
+            rc.logs[event.logIndex].address = AddressZero
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('Invalid Token lock address')
+
+            // wrong chainId
+            let chainId = targetReceipt.logs[event.logIndex].topics[1]
+            targetReceipt.logs[event.logIndex].topics[1] = 100
+            rc.logs[event.logIndex].topics[1] = 100
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].topics[1] = chainId
+            rc.logs[event.logIndex].topics[1] = chainId
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('proxy is not bound')
+
+            // wrong groupid
+            let groupId = targetReceipt.logs[event.logIndex].topics[2]
+            targetReceipt.logs[event.logIndex].topics[2] = 100
+            rc.logs[event.logIndex].topics[2] = 100
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].topics[2] = groupId
+            rc.logs[event.logIndex].topics[2] = groupId
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('contract group is not exist')
+
+            //success
             re = Receipt.fromRpc(targetReceipt)
             rlpLog = new LOGRLP(rc.logs[event.logIndex])
             rlplog = Log.fromRpc(rlpLog)
@@ -864,100 +911,7 @@ describe('GeneralContractor', () => {
             schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             buffer = borsh.serialize(schema, value);
             await generalContractor.bindContractGroup(buffer)
-        })
-
-        it('repeat bindContractGroup', async () => {
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
-            //========================================================================
-            let tx = await generalContractor.issue(bytesOfIssue)
-            let rc = await tx.wait()
-            let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
-      
-            // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
-            proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
-            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
-            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
-            let re = Receipt.fromRpc(targetReceipt)
-            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
-            let rlplog = Log.fromRpc(rlpLog)
-            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
-            let blockHash = keccak256(proof.header.buffer)
-            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
-            let buffer = borsh.serialize(schema, value);
-
-            tx = await subContractor.subIssue(buffer)
-            rc = await tx.wait()
-            //========================================================================
-            event = rc.events.find(event=>event.event === "SubContractorIssue")
-            console.log(event.topics[3])
-            console.log((event.topics[3]))
-            templateAddr = "0x"+ (event.topics[3]).substring(26)
-            // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
-            proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
-            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
-            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
-            re = Receipt.fromRpc(targetReceipt)
-            rlpLog = new LOGRLP(rc.logs[event.logIndex])
-            rlplog = Log.fromRpc(rlpLog)
-            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
-            blockHash = keccak256(proof.header.buffer)
-            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
-            buffer = borsh.serialize(schema, value);
-            await generalContractor.bindContractGroup(buffer)
-            await expect(generalContractor.bindContractGroup(buffer)).
-            to.be.revertedWith('event of proof cannot be reused')
-        })
-
-        it('repeat bindContractGroup', async () => {
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
-            //========================================================================
-            let tx = await generalContractor.issue(bytesOfIssue)
-            let rc = await tx.wait()
-            let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
-      
-            // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
-            proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
-            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
-            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
-            let re = Receipt.fromRpc(targetReceipt)
-            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
-            let rlplog = Log.fromRpc(rlpLog)
-            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
-            let blockHash = keccak256(proof.header.buffer)
-            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
-            let buffer = borsh.serialize(schema, value);
-
-            tx = await subContractor.subIssue(buffer)
-            rc = await tx.wait()
-            //========================================================================
-            event = rc.events.find(event=>event.event === "SubContractorIssue")
-            console.log(event.topics[3])
-            console.log((event.topics[3]))
-            templateAddr = "0x"+ (event.topics[3]).substring(26)
-            // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
-            proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
-            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
-            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
-            re = Receipt.fromRpc(targetReceipt)
-            rlpLog = new LOGRLP(rc.logs[event.logIndex])
-            rlplog = Log.fromRpc(rlpLog)
-            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
-            blockHash = keccak256(proof.header.buffer)
-            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
-            buffer = borsh.serialize(schema, value);
-            await generalContractor.bindContractGroup(buffer)
+            //repeat bindContractGroup
             await expect(generalContractor.bindContractGroup(buffer)).
             to.be.revertedWith('event of proof cannot be reused')
         })
@@ -1018,6 +972,9 @@ describe('GeneralContractor', () => {
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
             console.log(event)
+
+            await expect(generalContractor.expand(100, 2, admin.address)).to.be.revertedWith('group id has not issued')
+            await expect(generalContractor.expand(event.topics[2], 100, admin.address)).to.be.revertedWith('chain is not bound')
 
             tx = await generalContractor.expand(event.topics[2], 2, admin.address)
             rc = await tx.wait()
@@ -1402,6 +1359,44 @@ describe('SubContractor', () => {
             let blockHash = keccak256(proof.header.buffer)
             let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             let buffer = borsh.serialize(schema, value);
+
+            // wrong contract address
+            let contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = AddressZero
+            rc.logs[event.logIndex].address = AddressZero
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+            await expect(subContractor.subIssue(buffer)).to.be.revertedWith('general contractor address is zero')
+
+            // wrong contract address
+            contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = user.address
+            rc.logs[event.logIndex].address = user.address
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+            await expect(subContractor.subIssue(buffer)).to.be.revertedWith('general contractor address is error')
+            
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
             await subContractor.subIssue(buffer)
         })
     })

@@ -21,6 +21,7 @@ const toWei = ethers.utils.parseEther
 describe('ERC3721', () => {
     beforeEach(async () => {
         [deployer, admin, miner, user, user1, redeemaccount] = await hardhat.ethers.getSigners()
+        const {testNfrMintCases, testNfrBurnCases} = require('./helpers/testnfrconfig')
         provider = hardhat.ethers.provider
         console.log("wallet "+ deployer.address)
         console.log("wallet2 "+ admin.address)
@@ -95,34 +96,45 @@ describe('ERC3721', () => {
     })
 
     describe('mint', () => {
-        it('mint only for minter', async () => {
-            await expect(nfrContract.connect(miner).mint(51, [0,1], [1,1], '0x1111', user.address))
-            .to.be.revertedWith('only for minter')
+        it('mint ', async () => {
+            for (i in testNfrMintCases) {
+                if (testNfrMintCases[i].expect.length != 0) {
+                    await expect(nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner.address))
+                    .to.be.revertedWith(testNfrMintCases[i].expect)   
+                } else {
+                    await nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner.address)
+                }
+            }
         })
 
-        it('mint token id overflow', async () => {
-            await expect(nfrContract.mint(101, [0,1], [1,1], '0x1111', user.address))
-            .to.be.revertedWith('ERC721: token id is overflow')
-        })
+        // it('mint only for minter', async () => {
+        //     await expect(nfrContract.connect(miner).mint(51, [0,1], [1,1], '0x1111', user.address))
+        //     .to.be.revertedWith('only for minter')
+        // })
 
-        it('mint token id downflow', async () => {
-            await expect(nfrContract.mint(0, [0,1], [1,1], '0x1111', user.address))
-            .to.be.revertedWith('token id can not be 0')
-        })
+        // it('mint token id overflow', async () => {
+        //     await expect(nfrContract.mint(101, [0,1], [1,1], '0x1111', user.address))
+        //     .to.be.revertedWith('ERC721: token id is overflow')
+        // })
 
-        it('mint right of token id is not exist', async () => {
-            await expect(nfrContract.mint(51, [0,2], [1,1], '0x1111', user.address))
-            .to.be.revertedWith('right kind is not exist')
-        })
+        // it('mint token id downflow', async () => {
+        //     await expect(nfrContract.mint(0, [0,1], [1,1], '0x1111', user.address))
+        //     .to.be.revertedWith('token id can not be 0')
+        // })
+
+        // it('mint right of token id is not exist', async () => {
+        //     await expect(nfrContract.mint(51, [0,2], [1,1], '0x1111', user.address))
+        //     .to.be.revertedWith('right kind is not exist')
+        // })
 
         // it('mint quality of right is overflow', async () => {
         //     await expect(nfrContract.mint(51, [0,1], [50,101], '0x1111', user.address))
         //     .to.be.revertedWith('only for minter')
         // })
 
-        it('mint success', async () => {
-            await nfrContract.mint(100, [0,1], [1,1], '0x1111', user.address)
-        })
+        // it('mint success', async () => {
+        //     await nfrContract.mint(100, [0,1], [1,1], '0x1111', user.address)
+        // })
 
         it('burn and mint', async () => {
             await nfrContract.connect(admin).burn(1)
@@ -131,24 +143,36 @@ describe('ERC3721', () => {
     })
 
     describe('burn token', () => {
-        it('burn token success', async () => {
-            await nfrContract.connect(admin).burn(1)
+        it('burn token', async () => {
+            for (i in testNfrBurnCases) {
+                if (testNfrBurnCases[i].expect.length != 0) {
+                    await expect(nfrContract.connect(testNfrBurnCases[i].caller).burn(testNfrBurnCases[i].tokenId))
+                    .to.be.revertedWith(testNfrBurnCases[i].expect)   
+                } else {
+                    await nfrContract.connect(testNfrBurnCases[i].caller).burn(testNfrBurnCases[i].tokenId)
+                }
+            }
         })
+        
 
-        it('burn token success', async () => {
-            await expect(nfrContract.burn(1)).
-            to.be.revertedWith('caller is not owner nor approved')
-        })
+        // it('burn token success', async () => {
+        //     await nfrContract.connect(admin).burn(1)
+        // })
 
-        it('burn token id is overflow', async () => {
-            await expect(nfrContract.burn(51)).
-            to.be.revertedWith('ERC721: operator query for nonexistent token')
-        })
+        // it('not approve', async () => {
+        //     await expect(nfrContract.burn(1)).
+        //     to.be.revertedWith('caller is not owner nor approved')
+        // })
 
-        it('burn token id is downflow', async () => {
-            await expect(nfrContract.burn(0)).
-            to.be.revertedWith('ERC721: operator query for nonexistent token')
-        })
+        // it('burn token id is overflow', async () => {
+        //     await expect(nfrContract.burn(51)).
+        //     to.be.revertedWith('ERC721: operator query for nonexistent token')
+        // })
+
+        // it('burn token id is downflow', async () => {
+        //     await expect(nfrContract.burn(0)).
+        //     to.be.revertedWith('ERC721: operator query for nonexistent token')
+        // })
 
         it('approve and burn token success', async () => {
             await nfrContract.connect(admin).approve(user1.address, 1)

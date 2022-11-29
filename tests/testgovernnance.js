@@ -180,8 +180,18 @@ describe('Governance', () => {
         await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
 
         await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
+        await expect(coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)).
+        to.be.revertedWith('chain has been bound')
+        await expect(coreGovernance.bindEdgeGovernance(1, AddressZero, ethLikeProver.address)).
+        to.be.revertedWith('invalid edgeGovernance address')
+        await expect(coreGovernance.bindEdgeGovernance(1, edgeGovernance.address, AddressZero)).
+        to.be.revertedWith('invalid prover address')
         await coreGovernance.bindGovernedContract(generalContractor.address)
+        await expect(coreGovernance.bindGovernedContract(AddressZero)).to.be.revertedWith('invalid governed contract')
+        await expect(coreGovernance.bindGovernedContract(generalContractor.address)).to.be.revertedWith('contract is existed')
         await edgeGovernance.bindGovernedContract(subContractor.address)
+        await expect(edgeGovernance.bindGovernedContract(AddressZero)).to.be.revertedWith('invalid governed contract')
+        await expect(edgeGovernance.bindGovernedContract(subContractor.address)).to.be.revertedWith('contract is existed')
     })
 
     describe('grantRole', () => {
@@ -237,6 +247,7 @@ describe('Governance', () => {
             let buffer = borsh.serialize(schema, value);
 
             tx = await edgeGovernance.propose(buffer)
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('proof is reused')
             rc = await tx.wait()
             await edgeGovernance.accept(event.topics[1])
             expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
@@ -276,6 +287,7 @@ describe('Governance', () => {
             let buffer = borsh.serialize(schema, value);
 
             tx = await edgeGovernance.propose(buffer)
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('proof is reused')
             rc = await tx.wait()
             await edgeGovernance.accept(event.topics[1])
             expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)

@@ -81,7 +81,7 @@ contract CoreGovernance is AdminControlledUpgradeable{
         IProver prover_
     ) external onlyRole(ADMIN_ROLE){
         require(edgeGovernances[chainId_].edgeGovernance == address(0), "chain has been bound");
-        require(edgeGovernance_ != address(0), "invalid subcontractor address");
+        require(edgeGovernance_ != address(0), "invalid edgeGovernance address");
         require(Address.isContract(address(prover_)), "invalid prover address");
         edgeGovernances[chainId_] = EdgeGovernanceInfo(edgeGovernance_, prover_);
         emit EdgeGovernanceBound(chainId_, edgeGovernance_, address(prover_));
