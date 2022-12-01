@@ -131,6 +131,7 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         address subContractor_,
         IProver prover_
     ) external onlyRole(ADMIN_ROLE){
+        require(chainId_ != chainId, "can not bind on main chain");
         require(subContractors[chainId_].subContractor == address(0), "chain has been bound");
         require(subContractor_ != address(0), "invalid subcontractor address");
         require(Address.isContract(address(prover_)), "invalid prover address");
@@ -160,7 +161,7 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     ) external onlyRole(ADMIN_ROLE) {
         require(contractGroupId_ != 0, "contract group id can not be 0");
         require(contractGroupId_ <= minContractGroupId , "contract group id is overflow");
-        require(saltId_ != 0, "contract group id can not be 0");
+        require(saltId_ != 0, "salt id can not be 0");
         require(saltId_ <= minSaltId, "salt id is overflow");
         require(chains_.length == assets_.length, "invalid chains info");
 
@@ -208,7 +209,6 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         AssetInfo memory assetInfo = localContractGroupAsset[groupId];
         require(assetInfo.asset != address(0), "group id has not issued");
         require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
-        require(peerChainId != chainId, "expand chain id can not be main chain");
         bytes memory  generalIssueInfo = tokenFactory.expand(assetInfo.asset, peerChainId, issuer);
         emit GeneralContractorIssue(groupId, assetInfo.saltId, generalIssueInfo);
     }
@@ -260,11 +260,11 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
 
         address contractAddress;
         (receipt_.data, contractAddress) = _parseLog(log);
-        require(contractAddress != address(0), "Invalid Token lock address");
-        require(subContractors[receipt_.data.chainId].subContractor == contractAddress, "proxy is not bound");
+        require(contractAddress != address(0), "invalid peer sub contractor");
+        require(subContractors[receipt_.data.chainId].subContractor == contractAddress, "peer sub contractor is not bound");
 
         (bool success, bytes32 blockHash, uint256 receiptIndex, ) = (subContractors[receipt_.data.chainId].prover).verify(proofData);
-        require(success, "Proof should be valid");
+        require(success, "proof is invalid");
         receipt_.blockHash = blockHash;
         receipt_.receiptIndex = receiptIndex;
     }
@@ -273,10 +273,10 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         bytes memory log
     ) internal virtual view returns (VerifiedEvent memory receipt_, address contractAddress_) {
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
-        require(logInfo.topics.length == 4, "invalid the number of topics");
+        require(logInfo.topics.length == 4, "wrong number of topics");
         
         //SubContractorIssue
-        require(logInfo.topics[0] == 0x60e046922dfd2b185e920419aac28e54bd4b5f0260376067224500f93e02459c, "invalid the function of topics");
+        require(logInfo.topics[0] == 0x60e046922dfd2b185e920419aac28e54bd4b5f0260376067224500f93e02459c, "invalid signature");
         receipt_.chainId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
         receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         receipt_.asset = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));

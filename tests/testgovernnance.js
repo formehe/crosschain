@@ -143,7 +143,7 @@ describe('Governance', () => {
     
         console.log("headerSyncMock "  + headerSyncMock.address)
     
-        ethLikeProverCon = await ethers.getContractFactory("EthLikeProver");
+        ethLikeProverCon = await ethers.getContractFactory("TestEthLikeProver");
         ethLikeProver = await ethLikeProverCon.deploy(headerSyncMock.address);
         await ethLikeProver.deployed();
     
@@ -164,6 +164,10 @@ describe('Governance', () => {
         nfrFactoryCon1 = await ethers.getContractFactory("NFRFactory");
         nfrFactory1 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractor.address);
         await nfrFactory1.deployed();
+
+        testGovernedCon = await ethers.getContractFactory("TestGoverned");
+        testGoverned = await testGovernedCon.deploy();
+        await testGoverned.deployed();
     
         console.log("nfrFactory "  + nfrFactory1.address)
     
@@ -175,27 +179,74 @@ describe('Governance', () => {
 
         await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, edgeGovernance.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, edgeGovernance.address, limit.address)
+   })
 
-        await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
-        await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+    describe('initialize', () => {
+        it('EdgeGovernance', async () => {
+            await expect(edgeGovernance.initialize(AddressZero, 2, ethLikeProver.address, admin.address, deployer.address)).
+            to.be.revertedWith("invalid core governance")
+            await expect(edgeGovernance.initialize(coreGovernance.address, 2, user.address, admin.address, deployer.address)).
+            to.be.revertedWith("invalid prover")
+            await expect(edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, AddressZero, deployer.address)).
+            to.be.revertedWith("invalid owner")
+            await expect(edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, AddressZero)).
+            to.be.revertedWith("invalid acceptor")
+            await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+        })
 
-        await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
-        await expect(coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)).
-        to.be.revertedWith('chain has been bound')
-        await expect(coreGovernance.bindEdgeGovernance(1, AddressZero, ethLikeProver.address)).
-        to.be.revertedWith('invalid edgeGovernance address')
-        await expect(coreGovernance.bindEdgeGovernance(1, edgeGovernance.address, AddressZero)).
-        to.be.revertedWith('invalid prover address')
-        await coreGovernance.bindGovernedContract(generalContractor.address)
-        await expect(coreGovernance.bindGovernedContract(AddressZero)).to.be.revertedWith('invalid governed contract')
-        await expect(coreGovernance.bindGovernedContract(generalContractor.address)).to.be.revertedWith('contract is existed')
-        await edgeGovernance.bindGovernedContract(subContractor.address)
-        await expect(edgeGovernance.bindGovernedContract(AddressZero)).to.be.revertedWith('invalid governed contract')
-        await expect(edgeGovernance.bindGovernedContract(subContractor.address)).to.be.revertedWith('contract is existed')
+        it('CoreGovernance', async () => {
+            await expect(coreGovernance.initialize(1, AddressZero, deployer.address, deployer.address, 0)).
+            to.be.revertedWith('invalid owner')
+            await expect(coreGovernance.initialize(1, admin.address, AddressZero, deployer.address, 0)).
+            to.be.revertedWith('invalid proposer')
+            await expect(coreGovernance.initialize(1, admin.address, deployer.address, AddressZero, 0)).
+            to.be.revertedWith('invalid acceptor')
+            await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+        })
+    })
+
+    describe('bindGovernedContract', () => {
+        it('EdgeGovernance', async () => {
+            await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+            await edgeGovernance.bindGovernedContract(subContractor.address)
+            await expect(edgeGovernance.bindGovernedContract(edgeGovernance.address)).to.be.revertedWith('not myself')
+            await expect(edgeGovernance.bindGovernedContract(AddressZero)).to.be.revertedWith('invalid governed contract')
+            await expect(edgeGovernance.bindGovernedContract(subContractor.address)).to.be.revertedWith('contract is existed')
+        })
+
+        it('CoreGovernance', async () => {
+            await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+            await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
+            await coreGovernance.bindGovernedContract(generalContractor.address)
+            await expect(coreGovernance.bindGovernedContract(coreGovernance.address)).to.be.revertedWith('not myself')
+            await expect(coreGovernance.bindGovernedContract(AddressZero)).to.be.revertedWith('invalid governed contract')
+            await expect(coreGovernance.bindGovernedContract(generalContractor.address)).to.be.revertedWith('contract is existed')
+        })
+    })
+
+    describe('bindEdgeGovernance', () => {
+        it('CoreGovernance', async () => {
+            await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+            await expect(coreGovernance.bindEdgeGovernance(1, edgeGovernance.address, ethLikeProver.address)).
+            to.be.revertedWith('not support bind myself')
+            await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
+            await expect(coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)).
+            to.be.revertedWith('chain has been bound')
+            await expect(coreGovernance.bindEdgeGovernance(3, AddressZero, ethLikeProver.address)).
+            to.be.revertedWith('invalid edge governance')
+            await expect(coreGovernance.bindEdgeGovernance(3, edgeGovernance.address, AddressZero)).
+            to.be.revertedWith('invalid prover')
+        })
     })
 
     describe('grantRole', () => {
         it('adminRole', async () => {
+            await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+            await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+            await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
+            await coreGovernance.bindGovernedContract(generalContractor.address)
+            await edgeGovernance.bindGovernedContract(subContractor.address)
+
             let abiCall = Web3EthAbi.encodeFunctionCall({
                 name: 'renounceRole',
                 type: 'function',
@@ -231,8 +282,142 @@ describe('Governance', () => {
             console.log(event.topics[1])
             await coreGovernance.accept(event.topics[1])
             expect (await generalContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
-      
+            await expect(coreGovernance.accept(1000)).to.be.revertedWith('proposal is not exist')
             // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            
+            // wrong contract address
+            let contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = AddressZero
+            rc.logs[event.logIndex].address = AddressZero
+            let re = Receipt.fromRpc(targetReceipt)
+            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            let rlplog = Log.fromRpc(rlpLog)
+            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            let blockHash = keccak256(proof.header.buffer)
+            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value)
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('core governance is zero')
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+
+            contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = user.address
+            rc.logs[event.logIndex].address = user.address
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('core governance is error')
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+
+            // wrong signature
+            let signature = targetReceipt.logs[event.logIndex].topics[0]
+            targetReceipt.logs[event.logIndex].topics[0] = user.address
+            rc.logs[event.logIndex].topics[0] = user.address
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value)
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('invalid signature')
+            targetReceipt.logs[event.logIndex].topics[0] = signature
+            rc.logs[event.logIndex].topics[0] = signature
+
+            // wrong method
+            let data = targetReceipt.logs[event.logIndex].data
+            let newData = (targetReceipt.logs[event.logIndex].data).substr(0,135) + '3'+ (targetReceipt.logs[event.logIndex].data).substr(136)
+            console.log(targetReceipt)
+            targetReceipt.logs[event.logIndex].data = newData
+            rc.logs[event.logIndex].data = newData
+            console.log(targetReceipt)
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value)
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('invalid method')
+            targetReceipt.logs[event.logIndex].data = data
+            rc.logs[event.logIndex].data = data
+
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await ethLikeProver.set(false)
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('proof is invalid')
+            await ethLikeProver.set(true)
+            tx = await edgeGovernance.propose(buffer)
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('proof is reused')
+            rc = await tx.wait()
+            await edgeGovernance.accept(event.topics[1])
+            expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
+        })
+
+        it('core fail to apply governance', async () => {
+            await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+            await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+            await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
+            await coreGovernance.bindGovernedContract(generalContractor.address)
+            await coreGovernance.bindGovernedContract(testGoverned.address)
+            await edgeGovernance.bindGovernedContract(subContractor.address)
+            abiCall = Web3EthAbi.encodeFunctionCall({
+                name: 'grantRole',
+                type: 'function',
+                inputs: [{
+                    type: 'bytes32',
+                    name: 'role'
+                },{
+                    type: 'address',
+                    name: 'account'
+                }]
+            }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
+
+            //========================================================================
+            let tx = await coreGovernance.propose(abiCall)
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "GovernanceProposed")
+            await expect(coreGovernance.accept(event.topics[1])).to.be.revertedWith('fail to apply governance')
+        })
+
+        it('edge fail to apply governance', async () => {
+            await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+            await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+            await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
+            await coreGovernance.bindGovernedContract(generalContractor.address)
+            await edgeGovernance.bindGovernedContract(testGoverned.address)
+            await edgeGovernance.bindGovernedContract(subContractor.address)
+            abiCall = Web3EthAbi.encodeFunctionCall({
+                name: 'grantRole',
+                type: 'function',
+                inputs: [{
+                    type: 'bytes32',
+                    name: 'role'
+                },{
+                    type: 'address',
+                    name: 'account'
+                }]
+            }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
+
+            //========================================================================
+            let tx = await coreGovernance.propose(abiCall)
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "GovernanceProposed")
             getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
             rpcInstance = new rpc("http://127.0.0.1:8545")
@@ -247,13 +432,59 @@ describe('Governance', () => {
             let buffer = borsh.serialize(schema, value);
 
             tx = await edgeGovernance.propose(buffer)
-            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('proof is reused')
+            await expect(edgeGovernance.accept(event.topics[1])).to.be.revertedWith('fail to apply governance')
+        })
+
+        it('wrong number of topic', async () => {
+            await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+            await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+            await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
+            await coreGovernance.bindGovernedContract(generalContractor.address)
+            await edgeGovernance.bindGovernedContract(subContractor.address)
+
+            abiCall = Web3EthAbi.encodeFunctionCall({
+                name: 'grantRole',
+                type: 'function',
+                inputs: [{
+                    type: 'bytes32',
+                    name: 'role'
+                },{
+                    type: 'address',
+                    name: 'account'
+                }]
+            }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
+
+            //========================================================================
+            let tx = await coreGovernance.propose(abiCall)
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "GovernanceProposed")
+            tx = await coreGovernance.accept(event.topics[1])
             rc = await tx.wait()
-            await edgeGovernance.accept(event.topics[1])
-            expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
+            console.log(rc);
+            //construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            let re = Receipt.fromRpc(targetReceipt)
+            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            let rlplog = Log.fromRpc(rlpLog)
+            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            let blockHash = keccak256(proof.header.buffer)
+            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value);
+
+            await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('wrong number of topic')
         })
 
         it('revokeRole', async () => {
+            await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+            await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+            await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
+            await coreGovernance.bindGovernedContract(generalContractor.address)
+            await edgeGovernance.bindGovernedContract(subContractor.address)
+
             abiCall = Web3EthAbi.encodeFunctionCall({
                 name: 'grantRole',
                 type: 'function',
@@ -291,6 +522,7 @@ describe('Governance', () => {
             rc = await tx.wait()
             await edgeGovernance.accept(event.topics[1])
             expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
+            await expect(edgeGovernance.accept(1000)).to.be.revertedWith('proposal is not exist')
 
             abiCall = Web3EthAbi.encodeFunctionCall({
                 name: 'revokeRole',

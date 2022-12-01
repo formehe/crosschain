@@ -9,6 +9,7 @@ contract TestEthLikeProver is IProver{
     using EthProofDecoder for Borsh.Data;
 
     constructor(address bridge_) IProver(bridge_) {}
+    bool success = true;
 
     function verify(
         bytes calldata proofData
@@ -20,8 +21,12 @@ contract TestEthLikeProver is IProver{
         Deserialize.TransactionReceiptTrie memory receipt = Deserialize.toReceipt(proof.reciptData, proof.logIndex);
         Deserialize.BlockHeader memory header = Deserialize.toBlockHeader(proof.headerData);
         
-        require((keccak256(proof.logEntryData) == keccak256(receipt.log)), "Log is not found");
+        return (success, header.hash, proof.reciptIndex, 0);
+    }
 
-        return (true, header.hash, proof.reciptIndex, 0);
+    function set(
+        bool success_
+    ) external {
+        success = success_;
     }
 }

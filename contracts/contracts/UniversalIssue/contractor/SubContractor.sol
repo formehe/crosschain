@@ -185,7 +185,7 @@ contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
         bytes memory log
     ) private pure returns (VerifiedEvent memory receipt_, address contractAddress_) {
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
-        require(logInfo.topics.length == 3, "wrong number of topic");
+        require(logInfo.topics.length == 3, "wrong number of topics");
 
         //GeneralContractorIssue
         require(logInfo.topics[0] == eventSignature, "invalid signature");

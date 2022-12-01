@@ -130,7 +130,15 @@ describe('GeneralContractor', () => {
         console.log("proxyRegistry "  + proxyRegistry.address)	        
         
         await coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)
-        await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address, nfrFactory.address)
+        await expect(generalContractor.initialize(coreProxy.address, 1, AddressZero, 0, 0, proxyRegistry.address, nfrFactory.address)).
+        to.be.revertedWith('invalid owner')
+        await expect(generalContractor.initialize(user.address, 1, admin.address, 0, 0, proxyRegistry.address, nfrFactory.address)).
+        to.be.revertedWith('invalid local proxy')
+        await expect(generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 1, user.address, nfrFactory.address)).
+        to.be.revertedWith('invalid minter proxy')
+        await expect(generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address, user.address)).
+        to.be.revertedWith('invalid token factory address')
+        await generalContractor.initialize(coreProxy.address, 1, admin.address, 4, 4, proxyRegistry.address, nfrFactory.address)
     
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
@@ -169,7 +177,19 @@ describe('GeneralContractor', () => {
     
         console.log("proxyRegistry "  + proxyRegistry1.address)
 
-        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
+        await expect(subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, AddressZero, 0, proxyRegistry1.address, nfrFactory1.address)).
+        to.be.revertedWith('invalid owner')
+        await expect(subContractor.initialize(AddressZero, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)).
+        to.be.revertedWith('invalid general contractor')
+        await expect(subContractor.initialize(generalContractor.address, 2, user.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)).
+        to.be.revertedWith('invalid local proxy')
+        await expect(subContractor.initialize(generalContractor.address, 2, edgeProxy.address, user.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)).
+        to.be.revertedWith('invalid prover')
+        await expect(subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, user.address, nfrFactory1.address)).
+        to.be.revertedWith('invalid minter proxy')
+        await expect(subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, user.address)).
+        to.be.revertedWith('invalid token factory address')
+        await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 3, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
 
         // sub general
@@ -209,8 +229,8 @@ describe('GeneralContractor', () => {
     
         console.log("proxyRegistry "  + proxyRegistry2.address)
 
-        await subContractor1.initialize(generalContractor.address, 3, edgeProxy1.address, ethLikeProver1.address, admin.address, 0, proxyRegistry2.address, nfrFactory2.address)
-        await edgeProxy1.initialize(ethLikeProver1.address, subContractor1.address, coreProxy.address, 1, 2, admin.address, limit.address)
+        await subContractor1.initialize(generalContractor.address, 3, edgeProxy1.address, ethLikeProver1.address, admin.address, 3, proxyRegistry2.address, nfrFactory2.address)
+        await edgeProxy1.initialize(ethLikeProver1.address, generalContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
 
         issueInfo = {
             name: "nfr",
@@ -276,6 +296,8 @@ describe('GeneralContractor', () => {
 
     describe('bindSubContractor', () => {
         it('bind subcontractor', async () => {
+            await expect(generalContractor.bindSubContractor(1, subContractor.address, AddressZero)).
+            to.be.revertedWith('can not bind on main chain')
             await expect(generalContractor.bindSubContractor(2, subContractor.address, AddressZero)).
             to.be.revertedWith('invalid prover address')
             await expect(generalContractor.bindSubContractor(2, AddressZero, ethLikeProver.address)).
@@ -287,6 +309,177 @@ describe('GeneralContractor', () => {
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
             await expect(generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)).
             to.be.revertedWith('chain has been bound')
+        })
+    })
+
+    describe('bindHistoryContractGroup', () => {
+        it('bindHistoryContractGroup', async () => {
+            await expect(generalContractor.bindHistoryContractGroup(0, 1, [1,2], [user.address, admin.address])).
+            to.be.revertedWith('contract group id can not be 0')
+            await expect(generalContractor.bindHistoryContractGroup(5, 1, [1,2], [user.address, admin.address])).
+            to.be.revertedWith('contract group id is overflow')
+            await expect(generalContractor.bindHistoryContractGroup(1, 0, [1,2], [user.address, admin.address])).
+            to.be.revertedWith('salt id can not be 0')
+            await expect(generalContractor.bindHistoryContractGroup(1, 5, [1,2], [user.address, admin.address])).
+            to.be.revertedWith('salt id is overflow')
+            await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [user.address])).
+            to.be.revertedWith('invalid chains info')
+            await expect(generalContractor.bindHistoryContractGroup(1, 1, [2], [AddressZero])).
+            to.be.revertedWith('chain is not bound')
+            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            await expect(generalContractor.bindHistoryContractGroup(1, 1, [2], [AddressZero])).
+            to.be.revertedWith('must issue on main chain')
+            await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [AddressZero, admin.address])).
+            to.be.revertedWith('invalid asset address')
+            await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [user.address, admin.address])).
+            to.be.revertedWith('local asset is not exist')
+            let tx = await generalContractor.bindHistoryContractGroup(1, 1, [1,2], [ethLikeProver.address, user.address])
+            await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [ethLikeProver.address, subContractor.address])).
+            to.be.revertedWith('asset generate info has been bound')
+
+            let rc = await tx.wait()
+            let event = rc.events.find(event=>event.event === "HistoryContractorGroupBound")
+      
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            let block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            
+            let contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = AddressZero
+            rc.logs[event.logIndex].address = AddressZero
+            let re = Receipt.fromRpc(targetReceipt)
+            let rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            let rlplog = Log.fromRpc(rlpLog)
+            let value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            let blockHash = keccak256(proof.header.buffer)
+            let schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            let buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('general contractor address is zero')
+
+            contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = user.address
+            rc.logs[event.logIndex].address = user.address
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('general contractor address is error')
+
+            // wrong groupid
+            let groupId = targetReceipt.logs[event.logIndex].topics[1]
+            targetReceipt.logs[event.logIndex].topics[1] = 0
+            rc.logs[event.logIndex].topics[1] = 0
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].topics[1] = groupId
+            rc.logs[event.logIndex].topics[1] = groupId
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('contract group id can not be 0')
+
+            groupId = targetReceipt.logs[event.logIndex].topics[1]
+            targetReceipt.logs[event.logIndex].topics[1] = 4
+            rc.logs[event.logIndex].topics[1] = 4
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].topics[1] = groupId
+            rc.logs[event.logIndex].topics[1] = groupId
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('contract group id is bigger')
+            
+            // wrong signature
+            let signatrue = targetReceipt.logs[event.logIndex].topics[0]
+            targetReceipt.logs[event.logIndex].topics[0] = user.address
+            rc.logs[event.logIndex].topics[0] = user.address
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].topics[0] = signatrue
+            rc.logs[event.logIndex].topics[0] = signatrue
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('invalid signature')        
+            
+            // // wrong asset
+            //  let topics = targetReceipt.logs[event.logIndex].topics
+            //  targetReceipt.logs[event.logIndex].topics[3] = AddressZero
+            //  rc.logs[event.logIndex].topics[3] = AddressZero
+            //  re = Receipt.fromRpc(targetReceipt)
+            //  rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            //  rlplog = Log.fromRpc(rlpLog)
+            //  value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            //  blockHash = keccak256(proof.header.buffer)
+            //  schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            //  buffer = borsh.serialize(schema, value);
+            //  targetReceipt.logs[event.logIndex].topics = topics
+            //  rc.logs[event.logIndex].topics = topics
+            //  await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('wrong number of topics')
+
+            //invalid asset address
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await ethLikeProver.set(false)
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('proof is invalid')
+            await ethLikeProver.set(true)
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('invalid asset address')
+
+            //repeat bindContractGroup
+            tx = await generalContractor.bindHistoryContractGroup(4, 4, [1,2], [ethLikeProver.address, subContractor.address])
+            rc = await tx.wait()
+            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await expect(subContractor.bindHistoryContractGroup(buffer)).
+            to.be.revertedWith('contract group id is bigger')
+
+            await generalContractor.bindSubContractor(3, subContractor1.address, ethLikeProver.address)
+
+            tx = await generalContractor.bindHistoryContractGroup(3, 3, [1,2,3], [ethLikeProver.address, subContractor.address, subContractor.address])
+            rc = await tx.wait()
+            event = rc.events.find(event=>event.event === "HistoryContractorGroupBound")
+            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await subContractor.bindHistoryContractGroup(buffer)
+            await expect(subContractor1.bindHistoryContractGroup(buffer)).to.be.revertedWith('fail to bind contract group')
+            await expect(subContractor.bindHistoryContractGroup(buffer)).
+            to.be.revertedWith('proof is reused')
         })
     })
 
@@ -870,7 +1063,21 @@ describe('GeneralContractor', () => {
             buffer = borsh.serialize(schema, value);
             targetReceipt.logs[event.logIndex].address = contractAddress
             rc.logs[event.logIndex].address = contractAddress
-            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('Invalid Token lock address')
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('invalid peer sub contractor')
+
+            contractAddress = targetReceipt.logs[event.logIndex].address
+            targetReceipt.logs[event.logIndex].address = user.address
+            rc.logs[event.logIndex].address = user.address
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].address = contractAddress
+            rc.logs[event.logIndex].address = contractAddress
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('peer sub contractor is not bound')
 
             // wrong chainId
             let chainId = targetReceipt.logs[event.logIndex].topics[1]
@@ -885,7 +1092,7 @@ describe('GeneralContractor', () => {
             buffer = borsh.serialize(schema, value);
             targetReceipt.logs[event.logIndex].topics[1] = chainId
             rc.logs[event.logIndex].topics[1] = chainId
-            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('proxy is not bound')
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('peer sub contractor is not bound')
 
             // wrong groupid
             let groupId = targetReceipt.logs[event.logIndex].topics[2]
@@ -901,6 +1108,45 @@ describe('GeneralContractor', () => {
             targetReceipt.logs[event.logIndex].topics[2] = groupId
             rc.logs[event.logIndex].topics[2] = groupId
             await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('contract group is not exist')
+            
+             // wrong asset
+             let asset = targetReceipt.logs[event.logIndex].topics[3]
+             targetReceipt.logs[event.logIndex].topics[3] = AddressZero
+             rc.logs[event.logIndex].topics[3] = AddressZero
+             re = Receipt.fromRpc(targetReceipt)
+             rlpLog = new LOGRLP(rc.logs[event.logIndex])
+             rlplog = Log.fromRpc(rlpLog)
+             value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+             blockHash = keccak256(proof.header.buffer)
+             schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+             buffer = borsh.serialize(schema, value);
+             targetReceipt.logs[event.logIndex].topics[3] = asset
+             rc.logs[event.logIndex].topics[3] = asset
+             await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('fail to bind contract group')
+
+            // wrong signature
+            let signatrue = targetReceipt.logs[event.logIndex].topics[0]
+            targetReceipt.logs[event.logIndex].topics[0] = user.address
+            rc.logs[event.logIndex].topics[0] = user.address
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].topics[0] = signatrue
+            rc.logs[event.logIndex].topics[0] = signatrue
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('invalid signature')
+
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[0])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(0, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('wrong number of topics')
 
             //success
             re = Receipt.fromRpc(targetReceipt)
@@ -910,6 +1156,9 @@ describe('GeneralContractor', () => {
             blockHash = keccak256(proof.header.buffer)
             schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             buffer = borsh.serialize(schema, value);
+            await ethLikeProver.set(false)
+            await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('proof is invalid')
+            await ethLikeProver.set(true)
             await generalContractor.bindContractGroup(buffer)
             //repeat bindContractGroup
             await expect(generalContractor.bindContractGroup(buffer)).
@@ -1088,7 +1337,7 @@ describe('SubContractor', () => {
     
         console.log("headerSyncMock "  + headerSyncMock.address)
     
-        ethLikeProverCon = await ethers.getContractFactory("EthLikeProver");
+        ethLikeProverCon = await ethers.getContractFactory("TestEthLikeProver");
         ethLikeProver = await ethLikeProverCon.deploy(headerSyncMock.address);
         await ethLikeProver.deployed();
     
@@ -1389,7 +1638,11 @@ describe('SubContractor', () => {
             targetReceipt.logs[event.logIndex].address = contractAddress
             rc.logs[event.logIndex].address = contractAddress
             await expect(subContractor.subIssue(buffer)).to.be.revertedWith('general contractor address is error')
-            
+
+            // wrong signature
+            let signature = targetReceipt.logs[event.logIndex].topics[0]
+            targetReceipt.logs[event.logIndex].topics[0] = user.address
+            rc.logs[event.logIndex].topics[0] = user.address
             re = Receipt.fromRpc(targetReceipt)
             rlpLog = new LOGRLP(rc.logs[event.logIndex])
             rlplog = Log.fromRpc(rlpLog)
@@ -1397,6 +1650,29 @@ describe('SubContractor', () => {
             blockHash = keccak256(proof.header.buffer)
             schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
             buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].topics[0] = signature
+            rc.logs[event.logIndex].topics[0] = signature
+            await expect(subContractor.subIssue(buffer)).to.be.revertedWith('invalid signature')
+
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[0])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(0, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await expect(subContractor.subIssue(buffer)).to.be.revertedWith('wrong number of topics')
+
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            await ethLikeProver.set(false)
+            await expect(subContractor.subIssue(buffer)).to.be.revertedWith('proof is invalid')
+            await ethLikeProver.set(true)
             await subContractor.subIssue(buffer)
         })
     })

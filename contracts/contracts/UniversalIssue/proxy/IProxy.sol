@@ -77,9 +77,9 @@ abstract contract IProxy is AdminControlledUpgradeable{
         address prover_,
         address peerProxy_
     ) internal {
-        require (peers[chainId_].prover == address(0), "chain had bind prove");
-        require (Address.isContract(prover_), "address of prover can not be 0");
-        require (peerProxy_ != address(0), "address of proxy can not be 0");
+        require (peers[chainId_].prover == address(0), "prover is bound");
+        require (Address.isContract(prover_), "invalid prover");
+        require (peerProxy_ != address(0), "invalid proxy");
         peers[chainId_] = PeerChainInfo(prover_, peerProxy_);
         emit PeerChainBound(chainId_, prover_, peerProxy_);
     }
@@ -92,9 +92,9 @@ abstract contract IProxy is AdminControlledUpgradeable{
 
         PeerChainInfo memory peer = peers[receipt_.data.fromChain];
         require(peer.proxy != address(0), "peer is not bound");
-        require((contractAddress != address(0) && peer.proxy == contractAddress), "Invalid Token lock address");
+        require((contractAddress != address(0) && peer.proxy == contractAddress), "proxy of peer is not bound");
         (bool success, bytes32 blockHash, uint256 receiptIndex, uint256 time) = IProver(peer.prover).verify(proofData);
-        require(success, "Proof should be valid");
+        require(success, "proof is invalid");
         receipt_.blockHash = blockHash;
         receipt_.receiptIndex = receiptIndex;
         receipt_.proofIndex = keccak256(abi.encode(blockHash, receiptIndex));
@@ -108,10 +108,10 @@ abstract contract IProxy is AdminControlledUpgradeable{
         bytes memory log = borshData.decode();
         
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
-        require(logInfo.topics.length == 4, "invalid the number of topics");
+        require(logInfo.topics.length == 4, "wrong number of topics");
 
         //CrossTokenBurned        
-        require(logInfo.topics[0] == 0xa9d5e5c0ed90776577056a54142c17ed44ff62f340b7e801244ac493a9d69de7, "invalid the function of topics");
+        require(logInfo.topics[0] == 0xa9d5e5c0ed90776577056a54142c17ed44ff62f340b7e801244ac493a9d69de7, "invalid signatrue");
         receipt_.contractGroupId = abi.decode(abi.encodePacked(logInfo.topics[1]), (uint256));
         receipt_.fromChain = abi.decode(abi.encodePacked(logInfo.topics[2]), (uint256));
         receipt_.toChain = abi.decode(abi.encodePacked(logInfo.topics[3]), (uint256));

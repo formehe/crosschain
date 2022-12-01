@@ -68,7 +68,8 @@ contract EdgeGovernance is AdminControlledUpgradeable{
         address acceptor_
     ) external initializer {
         require(owner_ != address(0), "invalid owner");
-        require(coreGovernance_ != address(0), "invalid general contractor");
+        require(acceptor_ != address(0), "invalid acceptor");
+        require(coreGovernance_ != address(0), "invalid core governance");
         require(Address.isContract(address(prover_)), "invalid prover");
 
         coreGovernance = coreGovernance_;
@@ -90,6 +91,8 @@ contract EdgeGovernance is AdminControlledUpgradeable{
         address governedContract
     ) external onlyRole(ADMIN_ROLE) {
         require(Address.isContract(governedContract), "invalid governed contract");
+        require(address(this) != governedContract, "not myself");
+
         bool exist;
         for (uint256 i = 0; i < governedContracts.length; i++) {
             if (governedContracts[i] == governedContract) {
@@ -162,8 +165,8 @@ contract EdgeGovernance is AdminControlledUpgradeable{
 
         address contractAddress;
         (_receipt.data, contractAddress) = _parseLog(log);
-        require(contractAddress != address(0), "general contractor address is zero");
-        require(contractAddress == coreGovernance, "general contractor address is error");
+        require(contractAddress != address(0), "core governance is zero");
+        require(contractAddress == coreGovernance, "core governance is error");
 
         (bool success, bytes32 blockHash, uint256 receiptIndex, ) = prover.verify(proofData);
         require(success, "proof is invalid");

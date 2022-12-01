@@ -98,7 +98,7 @@ contract EdgeProxy is IProxy, IGovernanceCapability{
         address receiver,
         uint256 tokenId
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_BURN) {
-        require(receiver != address(0), "invalid parameter");
+        require(receiver != address(0), "invalid receiver");
         require(contractGroupId != 0, "invalid contract group id");
         require(toChainId != chainId, "only support cross chain tx");
 

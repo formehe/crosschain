@@ -69,6 +69,7 @@ contract CoreProxy is IProxy, IGovernanceCapability{
         address templateCode
     ) external {
         require(msg.sender == generalContractor, "only for general contractor");
+        require(Address.isContract(templateCode), "invalid template code");
         require(asset_ != address(0), "from proxy address are not to be contract address");
         require(contractGroupId_ != 0, "contract group id can not be 0");
         require(contractGroupMember[contractGroupId_][chainId_] == address(0), "asset has been bound");
@@ -95,7 +96,6 @@ contract CoreProxy is IProxy, IGovernanceCapability{
             emit CrossTokenBurned(chainId, receipt.data.toChain, receipt.data.contractGroupId, toAsset, true, receipt.data.tokenId, receipt.data.burnInfo);
         } else {
             address templateCode = assets[receipt.data.contractGroupId];
-            require(templateCode != address(0), "template is not exist");
             bytes memory codes = ITokenFactory(templateCode).constructMint(receipt.data.burnInfo);
             (bool success,) = (toAsset).call(codes);
             require(success, "fail to mint");
@@ -109,7 +109,7 @@ contract CoreProxy is IProxy, IGovernanceCapability{
         address receiver,
         uint256 tokenId
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_BURN){
-        require(receiver != address(0), "invalid parameter");
+        require(receiver != address(0), "invalid receiver");
         require(contractGroupId != 0, "invalid contract group id");
         require(toChainId != chainId, "only support cross chain tx");
         
@@ -125,7 +125,6 @@ contract CoreProxy is IProxy, IGovernanceCapability{
         require(success, "fail to burn");
 
         address templateCode = assets[contractGroupId];
-        require(templateCode != address(0), "template is not exist");
 
         bytes memory value = ITokenFactory(templateCode).constructBurn(result, receiver, tokenId);
         emit CrossTokenBurned(contractGroupId, chainId, toChainId, toAsset, true, tokenId, value);

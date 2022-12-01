@@ -59,6 +59,8 @@ contract CoreGovernance is AdminControlledUpgradeable{
         uint256 maxHistoricalProposalId_
     ) external initializer {
         require(owner_ != address(0), "invalid owner");
+        require(proposer_ != address(0), "invalid proposer");
+        require(acceptor_ != address(0), "invalid acceptor");
 
         chainId = chainId_;
         
@@ -80,9 +82,10 @@ contract CoreGovernance is AdminControlledUpgradeable{
         address edgeGovernance_,
         IProver prover_
     ) external onlyRole(ADMIN_ROLE){
+        require(chainId_ != chainId, "not support bind myself");
         require(edgeGovernances[chainId_].edgeGovernance == address(0), "chain has been bound");
-        require(edgeGovernance_ != address(0), "invalid edgeGovernance address");
-        require(Address.isContract(address(prover_)), "invalid prover address");
+        require(edgeGovernance_ != address(0), "invalid edge governance");
+        require(Address.isContract(address(prover_)), "invalid prover");
         edgeGovernances[chainId_] = EdgeGovernanceInfo(edgeGovernance_, prover_);
         emit EdgeGovernanceBound(chainId_, edgeGovernance_, address(prover_));
     }
@@ -91,6 +94,7 @@ contract CoreGovernance is AdminControlledUpgradeable{
         address governedContract
     ) external onlyRole(ADMIN_ROLE) {
         require(Address.isContract(governedContract), "invalid governed contract");
+        require(address(this) != governedContract, "not myself");
         bool exist;
         for (uint256 i = 0; i < governedContracts.length; i++) {
             if (governedContracts[i] == governedContract) {
