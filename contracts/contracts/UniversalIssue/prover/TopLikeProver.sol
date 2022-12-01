@@ -15,7 +15,7 @@ contract TopLikeProver is IProver{
 
     function verify(
         bytes calldata proofData
-    ) external override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
+    ) public override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         TopProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();
@@ -24,9 +24,10 @@ contract TopLikeProver is IProver{
         Deserialize.LightClientBlock memory header = Deserialize.decodeMiniLightClientBlock(proof.headerData);
         
         require((keccak256(proof.logEntryData) == keccak256(receipt.log)), "Log is not found");
+        console.logBytes32(header.inner_lite.receipts_root_hash);
         _verify(proof.reciptIndex, proof.reciptData, proof.reciptProof, header.inner_lite.receipts_root_hash);
         _verify(proof.blockIndex, abi.encodePacked(header.block_hash), proof.blockProof,  _getBlockMerkleRoot(proof.polyBlockHeight));
-        time = getAddLightClientTime(proof.polyBlockHeight);
+        time = _getAddLightClientTime(proof.polyBlockHeight);
         return (true, header.block_hash, proof.reciptIndex, time);
     }
 
@@ -41,7 +42,7 @@ contract TopLikeProver is IProver{
         return blockMerkleRoot;
     }
 
-    function getAddLightClientTime(
+    function _getAddLightClientTime(
         uint64 height
     ) internal view returns(uint256 time){
         bytes memory payload = abi.encodeWithSignature("blockHeights(uint64)", height);

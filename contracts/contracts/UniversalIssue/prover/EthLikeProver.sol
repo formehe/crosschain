@@ -12,7 +12,7 @@ contract EthLikeProver is IProver{
 
     function verify(
         bytes calldata proofData
-    ) external override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
+    ) public override view returns(bool valid, bytes32 blockHash, uint256 receiptIndex, uint256 time) {
         Borsh.Data memory borshData = Borsh.from(proofData);
         EthProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();

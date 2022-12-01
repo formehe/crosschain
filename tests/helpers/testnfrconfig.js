@@ -33,6 +33,22 @@ testNfrMintCases = [
     },
     {
         caller: deployer,
+        tokenId: 51,
+        rightKinds: [0],
+        rightAmounts: [1,1],
+        owner: user,
+        expect: "invalid right kind numbers"
+    },
+    {
+        caller: deployer,
+        tokenId: 51,
+        rightKinds: [],
+        rightAmounts: [],
+        owner: user,
+        expect: ""
+    },
+    {
+        caller: deployer,
         tokenId: 100,
         rightKinds: [0,1],
         rightAmounts: [1,1],

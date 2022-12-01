@@ -1,23 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../Eth/prover/TopProver.sol";
-import "../common/codec/TopProofDecoder.sol";
-import "../common/Deserialize.sol";
+import "../prover/TopLikeProver.sol";
+import "../../common/codec/TopProofDecoder.sol";
+import "../../common/Deserialize.sol";
 
-contract TopProverTest is TopProver{
+contract TestTopLikeProver is TopLikeProver{
     using Borsh for Borsh.Data;
     using TopProofDecoder for Borsh.Data;
     using MPT for MPT.MerkleProof;
 
-
     constructor(address _bridgeLight)
-    TopProver(_bridgeLight) {
+    TopLikeProver(_bridgeLight) {
+    }
+
+    function verifyTest(
+        bytes calldata proofData
+    ) external {
+        super.verify(proofData);
     }
 
     function verifyHash(bytes32 hash) public returns(bool valid, string memory reason){
         bytes memory payload = abi.encodeWithSignature("blockHashes(bytes32)", hash);
-        (bool success, bytes memory returnData) = bridgeLight.call(payload);
+        (bool success, bytes memory returnData) = bridge.call(payload);
         require(success, "Height is not confirmed");
 
         (success) = abi.decode(returnData, (bool));

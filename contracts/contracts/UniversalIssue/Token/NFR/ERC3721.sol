@@ -81,8 +81,7 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     function transferRights(
         uint256 fromTokenId,
         uint256 toTokenId,
-        uint256 rightKind,
-        bytes calldata data
+        uint256 rightKind
     ) external virtual{      
         require(fromTokenId != toTokenId, "from token and to token can not equal");
         require(_exists(toTokenId), "to token is not exist");
@@ -152,7 +151,6 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     ) external virtual {
         require(_msgSender() == ProxyRegistry(minter).proxy(), "only for minter");
         require(rightKinds_.length == rightQuantities_.length, "invalid right kind numbers");
-        require(owner_ != address(0), "invalid owner");
         require(tokenId_ != 0, "token id can not be 0");
         _safeMint(owner_, tokenId_);
         for (uint256 i = 0; i < rightKinds_.length; i++) {

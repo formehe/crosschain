@@ -18,7 +18,6 @@ contract TestEthLikeProver is IProver{
         EthProofDecoder.Proof memory proof = borshData.decode();
         borshData.done();
 
-        Deserialize.TransactionReceiptTrie memory receipt = Deserialize.toReceipt(proof.reciptData, proof.logIndex);
         Deserialize.BlockHeader memory header = Deserialize.toBlockHeader(proof.headerData);
         
         return (success, header.hash, proof.reciptIndex, 0);

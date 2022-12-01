@@ -169,7 +169,7 @@ describe('Governance', () => {
         testGoverned = await testGovernedCon.deploy();
         await testGoverned.deployed();
     
-        console.log("nfrFactory "  + nfrFactory1.address)
+        console.log("TestGoverned "  + nfrFactory1.address)
     
         proxyRegistryCon1 = await ethers.getContractFactory("ProxyRegistry");
         proxyRegistry1 = await proxyRegistryCon1.deploy(edgeProxy.address, admin.address);

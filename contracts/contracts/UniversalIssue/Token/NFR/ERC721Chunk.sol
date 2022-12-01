@@ -61,7 +61,6 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         }
         
         _issuer = issuer_;
-        _balances[issuer_] = maxId_ - minId_;
         _uri = uri_;
         _totalSupply = totalAmount_;
         for (uint256 i = minId_; i < maxId_; i++) {
@@ -98,7 +97,7 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         uint256 tokenId
     ) public view virtual override returns (address) {
         address owner = _owners[tokenId];
-        require(tokenId !=0, "invalid token id");
+        require(tokenId != 0, "invalid token id");
         require(owner != address(0), "ERC721: owner query for nonexistent token on this chain");
         return owner;
     }
