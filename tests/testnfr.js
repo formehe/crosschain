@@ -174,6 +174,8 @@ describe('ERC3721', () => {
             await expect(nfrContract1.initialize(miner.address, "nfr token", "nfr symbol", 50, rightWithIds1, issuerInfo, perChain)).
             to.be.revertedWith('right name can not be zero')
             await nfrContract1.initialize(miner.address, "nfr token", "nfr symbol", 50, rightWithIds, issuerInfo, perChain)
+            await expect(nfrContract1.initialize(miner.address, "nfr token", "nfr symbol", 50, rightWithIds, issuerInfo, perChain)).
+            to.be.revertedWith('Initializable: contract is already initialized')
         })
     })
 
@@ -320,16 +322,23 @@ describe('ERC3721', () => {
         })
     })
 
-    // describe('safe transfer token', () => {
-    //     it('safe transfer token', async () => {
-    //         await nfrContract.connect(admin).attachRight(1,0)
-    //         await expect(nfrContract.connect(user).safeTransferFrom1(admin.address, user.address, 1)).
-    //         to.be.revertedWith('ERC721: transfer caller is not owner nor approved')
-    //         await expect(nfrContract.connect(admin).safeTransferFrom1(admin.address, nfrContract.address, 1)).
-    //         to.be.revertedWith('ERC721: transfer to non ERC721Receiver implementer')
-    //         await nfrContract.connect(admin).safeTransferFrom1(admin.address, user.address, 1)
-    //     })
-    // })
+    describe('safe transfer token', () => {
+        it('safe transfer token', async () => {
+            await nfrContract.connect(admin).attachRight(1,0)
+            await expect(nfrContract.connect(user)["safeTransferFrom(address,address,uint256)"](admin.address, user.address, 1)).
+            to.be.revertedWith('ERC721: transfer caller is not owner nor approved')
+            await expect(nfrContract.connect(admin)["safeTransferFrom(address,address,uint256)"](admin.address, nfrContract.address, 1)).
+            to.be.revertedWith('ERC721: transfer to non ERC721Receiver implementer')
+
+            callbackFunCon = await ethers.getContractFactory("TestCallBackUser");
+            callbackFun = await callbackFunCon.deploy(nfrContract.address);
+            await callbackFun.deployed();
+    
+            await expect(nfrContract.connect(admin)["safeTransferFrom(address,address,uint256)"](admin.address, callbackFun.address, 1)).
+            to.be.revertedWith('ERC721: transfer to non ERC721Receiver implementer')
+            await nfrContract.connect(admin)["safeTransferFrom(address,address,uint256)"](admin.address, user.address, 1)
+        })
+    })
 
     describe('balance Of', () => {
         it('ERC721: balance query for the zero address', async () => {
@@ -511,22 +520,22 @@ describe('ERC3721', () => {
         it('transfer right of token', async () => {
             await nfrContract.connect(admin).attachRight(1, 0)
             await nfrContract.connect(admin).attachRight(2, 1)
-            await nfrContract.connect(admin).transferRights(1, 2, 0, '0x0111')
-            await expect(nfrContract.connect(user1).transferRights(1, 2, 0, '0x0111')).
+            await nfrContract.connect(admin).transferRights(1, 2, 0)
+            await expect(nfrContract.connect(user1).transferRights(1, 2, 0)).
             to.be.revertedWith('caller is not owner nor approved')
-            await expect(nfrContract.connect(admin).transferRights(2, 51, 1, '0x0111')).
+            await expect(nfrContract.connect(admin).transferRights(2, 51, 1)).
             to.be.revertedWith('to token is not exist')
             await nfrContract.mint(51, [], [], '0x1111', user1.address)
-            await expect(nfrContract.connect(user1).transferRights(51, 1, 0, '0x0111')).
+            await expect(nfrContract.connect(user1).transferRights(51, 1, 0)).
             to.be.revertedWith('has no right')
-            await expect(nfrContract.connect(admin).transferRights(2, 2, 1, '0x0111')).
+            await expect(nfrContract.connect(admin).transferRights(2, 2, 1)).
             to.be.revertedWith('from token and to token can not equal')
         })
 
         it('burn transfer-out right of token', async () => {
             await nfrContract.connect(admin).attachRight(1, 0)
             await nfrContract.connect(admin).attachRight(2, 1)
-            await nfrContract.connect(admin).transferRights(1, 2, 0, '0x0111')
+            await nfrContract.connect(admin).transferRights(1, 2, 0)
             await expect(nfrContract.connect(admin).burnRights(1, 0)).
             to.be.revertedWith('has no right')
         })
@@ -534,7 +543,7 @@ describe('ERC3721', () => {
         it('burn transfered in right of token', async () => {
             await nfrContract.connect(admin).attachRight(1, 0)
             await nfrContract.connect(admin).attachRight(2, 1)
-            await nfrContract.connect(admin).transferRights(1, 2, 0, '0x0111')
+            await nfrContract.connect(admin).transferRights(1, 2, 0)
             await nfrContract.connect(admin).burnRights(2, 0)
         })
     })

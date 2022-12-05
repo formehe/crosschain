@@ -36,7 +36,7 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     ) external initializer {
         require(minter_ != address(0), "minter can not be 0");
         minter = minter_;
-        ERC721Chunk.initialize(name_, symbol_, issuer_.uri, circulation_.baseIndexOfToken, circulation_.baseIndexOfToken + circulation_.capOfToken, circulation_.issuer, totalAmount);
+        ERC721Chunk.initialize(name_, symbol_, issuer_.uri, circulation_.baseIndexOfToken, circulation_.capOfToken, circulation_.issuer, totalAmount);
         Issuer.initialize(issuer_.name, issuer_.certification, issuer_.agreement, issuer_.uri);
         Right.initialize(rights_, circulation_.rangeOfRights);
     }
@@ -179,9 +179,10 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
         uint256 rightKind,
         uint256 amount
     ) internal virtual{
-        require(amount != 0, "amount cant not be 0");
-        require(_tokenRights[tokenId][rightKind] >= amount, "has no right");
-        _tokenRights[tokenId][rightKind] -= amount;
-        emit DecreaseTokenRights(tokenId, rightKind, amount);
+        if (amount != 0) {
+            require(_tokenRights[tokenId][rightKind] >= amount, "has no right");
+            _tokenRights[tokenId][rightKind] -= amount;
+            emit DecreaseTokenRights(tokenId, rightKind, amount);
+        }
     }
 }

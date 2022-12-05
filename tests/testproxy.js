@@ -137,7 +137,9 @@ describe('proxy', () => {
         to.be.revertedWith('invalid limit contractor')
         await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address, nfrFactory.address)
         await coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)
-
+        await expect(coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)).
+        to.be.revertedWith('Initializable: contract is already initialized')
+        
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
         headerSyncMock = await headerSyncMockCon.deploy();
@@ -187,6 +189,8 @@ describe('proxy', () => {
         await expect(edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, user.address)).
         to.be.revertedWith('invalid limit contract')
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
+        await expect(edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)).
+        to.be.revertedWith('Initializable: contract is already initialized')
 
         issueInfo = {
             name: "nfr",

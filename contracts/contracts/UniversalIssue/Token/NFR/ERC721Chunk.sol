@@ -47,24 +47,23 @@ contract ERC721Chunk is Context, ERC165, IERC721, IERC721Metadata, Initializable
         string memory symbol_,
         string memory uri_,
         uint256 minId_,
-        uint256 maxId_,
+        uint256 capOfToken_,
         address issuer_,
         uint256 totalAmount_
     ) internal virtual onlyInitializing {
-        require(maxId_ >= minId_, "maxId is smaller than minId");
         require(issuer_ != address(0), "invalid owner");
-        require((totalAmount_ + 1) >= maxId_, "invalid totalAmount");
+        require(totalAmount_ >= capOfToken_, "invalid totalAmount");
         _name = name_;
         _symbol = symbol_;
-        if (maxId_ > minId_) {
+        if (capOfToken_ != 0) {
             require(minId_ != 0, "minId can not be 0");
         }
         
         _issuer = issuer_;
         _uri = uri_;
         _totalSupply = totalAmount_;
-        for (uint256 i = minId_; i < maxId_; i++) {
-            _mint(issuer_, i);
+        for (uint256 i = 0; i < capOfToken_; i++) {
+            _mint(issuer_, i + minId_);
         }
     }
 

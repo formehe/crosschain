@@ -192,6 +192,8 @@ describe('Governance', () => {
             await expect(edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, AddressZero)).
             to.be.revertedWith("invalid acceptor")
             await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
+            await expect(edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)).
+            to.be.revertedWith('Initializable: contract is already initialized')
         })
 
         it('CoreGovernance', async () => {
@@ -202,6 +204,8 @@ describe('Governance', () => {
             await expect(coreGovernance.initialize(1, admin.address, deployer.address, AddressZero, 0)).
             to.be.revertedWith('invalid acceptor')
             await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
+            await expect(coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)).
+            to.be.revertedWith('Initializable: contract is already initialized')
         })
     })
 

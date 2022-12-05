@@ -84,8 +84,7 @@ describe('GeneralContractor', () => {
 
         issueCoderCon = await ethers.getContractFactory("testIssueCoder");
         issueCoder = await issueCoderCon.deploy();
-        await issueCoder.deployed();
-    
+        await issueCoder.deployed();   
         console.log("testIssueCoder "  + issueCoder.address)
     
         limitCon = await ethers.getContractFactory("Limit");
@@ -95,38 +94,32 @@ describe('GeneralContractor', () => {
     
         multiLimitCon = await ethers.getContractFactory("MultiLimit");
         multiLimit = await multiLimitCon.deploy(admin.address);
-        await multiLimit.deployed();
-    
+        await multiLimit.deployed();   
         console.log("multiLimit "  + multiLimit.address)
     
         coreProxyCon = await ethers.getContractFactory("CoreProxy");
         coreProxy = await coreProxyCon.deploy();
-        await coreProxy.deployed();
-    
+        await coreProxy.deployed();   
         console.log("coreProxy "  + coreProxy.address)
     
         generalContractorCon = await ethers.getContractFactory("GeneralContractor");
         generalContractor = await generalContractorCon.deploy();
-        await generalContractor.deployed();
-    
+        await generalContractor.deployed();    
         console.log("generalContractor "  + generalContractor.address)
     
         erc20TokenSampleCon = await ethers.getContractFactory("ERCTemplate");
         erc20TokenSample = await erc20TokenSampleCon.deploy();
-        await erc20TokenSample.deployed();
-    
+        await erc20TokenSample.deployed();  
         console.log("erc20TokenSample "  + erc20TokenSample.address)
     
         nfrFactoryCon = await ethers.getContractFactory("NFRFactory");
         nfrFactory = await nfrFactoryCon.deploy(erc20TokenSample.address, generalContractor.address);
-        await nfrFactory.deployed();
-    
+        await nfrFactory.deployed();   
         console.log("nfrFactory "  + nfrFactory.address)
 
         proxyRegistryCon = await ethers.getContractFactory("ProxyRegistry");
         proxyRegistry = await proxyRegistryCon.deploy(coreProxy.address, admin.address);
-        await proxyRegistry.deployed();
-    
+        await proxyRegistry.deployed();   
         console.log("proxyRegistry "  + proxyRegistry.address)	        
         
         await coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)
@@ -139,42 +132,36 @@ describe('GeneralContractor', () => {
         await expect(generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address, user.address)).
         to.be.revertedWith('invalid token factory address')
         await generalContractor.initialize(coreProxy.address, 1, admin.address, 4, 4, proxyRegistry.address, nfrFactory.address)
+        await expect(generalContractor.initialize(coreProxy.address, 1, admin.address, 4, 4, proxyRegistry.address, nfrFactory.address)).
+        to.be.revertedWith('Initializable: contract is already initialized')
     
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
         headerSyncMock = await headerSyncMockCon.deploy();
-        await headerSyncMock.deployed();
-    
+        await headerSyncMock.deployed();   
         console.log("headerSyncMock "  + headerSyncMock.address)
     
         ethLikeProverCon = await ethers.getContractFactory("TestEthLikeProver");
         ethLikeProver = await ethLikeProverCon.deploy(headerSyncMock.address);
-        await ethLikeProver.deployed();
-    
+        await ethLikeProver.deployed();    
         console.log("ethLikeProver "  + ethLikeProver.address)
     
         subContractorCon = await ethers.getContractFactory("SubContractor");
         subContractor = await subContractorCon.deploy();
-        await subContractor.deployed();
-    
+        await subContractor.deployed();    
         console.log("subContractor "  + subContractor.address)
     
         edgeProxyCon = await ethers.getContractFactory("EdgeProxy");
         edgeProxy = await edgeProxyCon.deploy();
-        await edgeProxy.deployed();
-    
+        await edgeProxy.deployed();    
         console.log("edgeProxy "  + edgeProxy.address)
     
-        nfrFactoryCon1 = await ethers.getContractFactory("NFRFactory");
         nfrFactory1 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractor.address);
         await nfrFactory1.deployed();
-    
         console.log("nfrFactory "  + nfrFactory1.address)
     
-        proxyRegistryCon1 = await ethers.getContractFactory("ProxyRegistry");
-        proxyRegistry1 = await proxyRegistryCon1.deploy(edgeProxy.address, admin.address);
+        proxyRegistry1 = await proxyRegistryCon.deploy(edgeProxy.address, admin.address);
         await proxyRegistry1.deployed();
-    
         console.log("proxyRegistry "  + proxyRegistry1.address)
 
         await expect(subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, AddressZero, 0, proxyRegistry1.address, nfrFactory1.address)).
@@ -190,47 +177,46 @@ describe('GeneralContractor', () => {
         await expect(subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, user.address)).
         to.be.revertedWith('invalid token factory address')
         await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 3, proxyRegistry1.address, nfrFactory1.address)
+        await expect(subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 3, proxyRegistry1.address, nfrFactory1.address)).
+        to.be.revertedWith('Initializable: contract is already initialized')
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
 
         // sub general
-        headerSyncMockCon1 = await ethers.getContractFactory("HeaderSyncMock");
-        headerSyncMock1 = await headerSyncMockCon1.deploy();
+        headerSyncMock1 = await headerSyncMockCon.deploy();
         await headerSyncMock1.deployed();
-    
         console.log("headerSyncMock "  + headerSyncMock1.address)
     
-        ethLikeProverCon1 = await ethers.getContractFactory("TestEthLikeProver");
-        ethLikeProver1 = await ethLikeProverCon1.deploy(headerSyncMock1.address);
+        ethLikeProver1 = await ethLikeProverCon.deploy(headerSyncMock1.address);
         await ethLikeProver1.deployed();
-    
         console.log("ethLikeProver "  + ethLikeProver1.address)
     
-        subContractorCon1 = await ethers.getContractFactory("SubContractor");
-        subContractor1 = await subContractorCon1.deploy();
+        subContractor1 = await subContractorCon.deploy();
         await subContractor1.deployed();
-    
         console.log("subContractor "  + subContractor1.address)
     
-        edgeProxyCon1 = await ethers.getContractFactory("EdgeProxy");
-        edgeProxy1 = await edgeProxyCon1.deploy();
+        edgeProxy1 = await edgeProxyCon.deploy();
         await edgeProxy1.deployed();
-    
         console.log("edgeProxy "  + edgeProxy1.address)
     
-        nfrFactoryCon2 = await ethers.getContractFactory("NFRFactory");
-        nfrFactory2 = await nfrFactoryCon2.deploy(erc20TokenSample.address, subContractor1.address);
+        nfrFactory2 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractor1.address);
         await nfrFactory2.deployed();
-    
         console.log("nfrFactory "  + nfrFactory2.address)
     
-        proxyRegistryCon2 = await ethers.getContractFactory("ProxyRegistry");
-        proxyRegistry2 = await proxyRegistryCon2.deploy(edgeProxy1.address, admin.address);
+        proxyRegistry2 = await proxyRegistryCon.deploy(edgeProxy1.address, admin.address);
         await proxyRegistry2.deployed();
-    
         console.log("proxyRegistry "  + proxyRegistry2.address)
 
         await subContractor1.initialize(generalContractor.address, 3, edgeProxy1.address, ethLikeProver1.address, admin.address, 3, proxyRegistry2.address, nfrFactory2.address)
         await edgeProxy1.initialize(ethLikeProver1.address, generalContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
+
+        generalContractor1 = await generalContractorCon.deploy();
+        await generalContractor1.deployed();
+
+        nfrFactory3 = await nfrFactoryCon.deploy(erc20TokenSample.address, generalContractor1.address);
+        await nfrFactory3.deployed();
+        console.log("nfrFactory "  + nfrFactory2.address)
+
+        await generalContractor1.initialize(generalContractor1.address, 1, admin.address, 4, 4, proxyRegistry.address, nfrFactory3.address)
 
         issueInfo = {
             name: "nfr",
@@ -336,6 +322,8 @@ describe('GeneralContractor', () => {
             let tx = await generalContractor.bindHistoryContractGroup(1, 1, [1,2], [ethLikeProver.address, user.address])
             await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [ethLikeProver.address, subContractor.address])).
             to.be.revertedWith('asset generate info has been bound')
+            await expect(generalContractor1.bindHistoryContractGroup(1, 1, [1], [ethLikeProver.address])).
+            to.be.revertedWith('fail to bind contract group')
 
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "HistoryContractorGroupBound")
@@ -450,6 +438,7 @@ describe('GeneralContractor', () => {
             //repeat bindContractGroup
             tx = await generalContractor.bindHistoryContractGroup(4, 4, [1,2], [ethLikeProver.address, subContractor.address])
             rc = await tx.wait()
+            proof = await getProof.receiptProof(tx.hash)
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
             re = Receipt.fromRpc(targetReceipt)
@@ -466,6 +455,7 @@ describe('GeneralContractor', () => {
 
             tx = await generalContractor.bindHistoryContractGroup(3, 3, [1,2,3], [ethLikeProver.address, subContractor.address, subContractor.address])
             rc = await tx.wait()
+            proof = await getProof.receiptProof(tx.hash)
             event = rc.events.find(event=>event.event === "HistoryContractorGroupBound")
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
@@ -480,6 +470,42 @@ describe('GeneralContractor', () => {
             await expect(subContractor1.bindHistoryContractGroup(buffer)).to.be.revertedWith('fail to bind contract group')
             await expect(subContractor.bindHistoryContractGroup(buffer)).
             to.be.revertedWith('proof is reused')
+
+            tx = await generalContractor.bindHistoryContractGroup(2, 2, [1,2,3], [ethLikeProver.address, subContractor.address, subContractor.address])
+            rc = await tx.wait()
+            proof = await getProof.receiptProof(tx.hash)
+            event = rc.events.find(event=>event.event === "HistoryContractorGroupBound")
+            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+
+            groupId = targetReceipt.logs[event.logIndex].topics[1]
+            targetReceipt.logs[event.logIndex].topics[1] = 3
+            rc.logs[event.logIndex].topics[1] = 3
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].topics[1] = groupId
+            rc.logs[event.logIndex].topics[1] = groupId
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('asset has been bound')
+
+            let data = targetReceipt.logs[event.logIndex].data
+            forkData = (targetReceipt.logs[event.logIndex].data).substr(0,449) + '4'+ (targetReceipt.logs[event.logIndex].data).substr(450) +'0000000000000000000000006eeb3589aae74539da975b0017fc7afab643618b'
+            targetReceipt.logs[event.logIndex].data = forkData
+            rc.logs[event.logIndex].data = forkData
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value);
+            targetReceipt.logs[event.logIndex].data = data
+            rc.logs[event.logIndex].data = data
+            await expect(subContractor.bindHistoryContractGroup(buffer)).to.be.revertedWith('invalid chains info')
         })
     })
 
@@ -488,6 +514,8 @@ describe('GeneralContractor', () => {
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
             bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
             await generalContractor.issue(bytesOfIssue)
+            await generalContractor1.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            await expect(generalContractor1.issue(bytesOfIssue)).to.be.revertedWith('fail to bind contract group')
         })
 
         it('not issue on main chain', async () => {
@@ -1674,6 +1702,16 @@ describe('SubContractor', () => {
             await expect(subContractor.subIssue(buffer)).to.be.revertedWith('proof is invalid')
             await ethLikeProver.set(true)
             await subContractor.subIssue(buffer)
+            await expect(subContractor.subIssue(buffer)).to.be.revertedWith('proof is reused')
+
+            subContractorTest = await subContractorCon.deploy();
+            await subContractorTest.deployed();
+            
+            nfrFactoryTest1 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractorTest.address);
+            await nfrFactoryTest1.deployed();
+            
+            await subContractorTest.initialize(generalContractor.address, 2, subContractorTest.address, ethLikeProver.address, admin.address, 3, proxyRegistry1.address, nfrFactoryTest1.address)
+            await expect(subContractorTest.subIssue(buffer)).to.be.revertedWith('fail to bind contract group')
         })
     })
 })
