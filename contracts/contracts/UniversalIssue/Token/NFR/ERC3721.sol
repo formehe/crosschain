@@ -132,7 +132,7 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
 
     function tokenRights(
         uint256 tokenId
-    ) external virtual returns(uint256[] memory rightKinds_, uint256[] memory rightQuantities_) {
+    ) external view virtual returns(uint256[] memory rightKinds_, uint256[] memory rightQuantities_) {
         rightKinds_ = rightKinds();
         uint256 len = rightKinds_.length;
         rightQuantities_ = new uint256[](len);
