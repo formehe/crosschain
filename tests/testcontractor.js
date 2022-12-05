@@ -218,6 +218,7 @@ describe('GeneralContractor', () => {
 
         await generalContractor1.initialize(generalContractor1.address, 1, admin.address, 4, 4, proxyRegistry.address, nfrFactory3.address)
 
+        const {issueInfos,bindSubcontractorOfGeneralContractors,bindHistoryContractGroupOfGeneralContractors} = require('./helpers/testcontractorconfig')
         issueInfo = {
             name: "nfr",
             symbol: "nfr",
@@ -282,13 +283,20 @@ describe('GeneralContractor', () => {
 
     describe('bindSubContractor', () => {
         it('bind subcontractor', async () => {
-            await expect(generalContractor.bindSubContractor(1, subContractor.address, AddressZero)).
-            to.be.revertedWith('can not bind on main chain')
-            await expect(generalContractor.bindSubContractor(2, subContractor.address, AddressZero)).
-            to.be.revertedWith('invalid prover address')
-            await expect(generalContractor.bindSubContractor(2, AddressZero, ethLikeProver.address)).
-            to.be.revertedWith('invalid subcontractor address')
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
+            for (i in bindSubcontractorOfGeneralContractors) {
+                if (bindSubcontractorOfGeneralContractors[i].expect .length != 0) {
+                    await expect(generalContractor.connect(bindSubcontractorOfGeneralContractors[i].caller).
+                                    bindSubContractor(bindSubcontractorOfGeneralContractors[i].chainId, 
+                                    bindSubcontractorOfGeneralContractors[i].contractor, 
+                                    bindSubcontractorOfGeneralContractors[i].prover)).
+                          to.be.revertedWith(bindSubcontractorOfGeneralContractors[i].expect)
+                } else {
+                    await generalContractor.connect(bindSubcontractorOfGeneralContractors[i].caller).
+                            bindSubContractor(bindSubcontractorOfGeneralContractors[i].chainId, 
+                                bindSubcontractorOfGeneralContractors[i].contractor, 
+                                bindSubcontractorOfGeneralContractors[i].prover)
+                }
+            }
         })
 
         it('repeat bind subcontractor', async () => {
@@ -299,29 +307,32 @@ describe('GeneralContractor', () => {
     })
 
     describe('bindHistoryContractGroup', () => {
-        it('bindHistoryContractGroup', async () => {
-            await expect(generalContractor.bindHistoryContractGroup(0, 1, [1,2], [user.address, admin.address])).
-            to.be.revertedWith('contract group id can not be 0')
-            await expect(generalContractor.bindHistoryContractGroup(5, 1, [1,2], [user.address, admin.address])).
-            to.be.revertedWith('contract group id is overflow')
-            await expect(generalContractor.bindHistoryContractGroup(1, 0, [1,2], [user.address, admin.address])).
-            to.be.revertedWith('salt id can not be 0')
-            await expect(generalContractor.bindHistoryContractGroup(1, 5, [1,2], [user.address, admin.address])).
-            to.be.revertedWith('salt id is overflow')
-            await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [user.address])).
-            to.be.revertedWith('invalid chains info')
-            await expect(generalContractor.bindHistoryContractGroup(1, 1, [2], [AddressZero])).
-            to.be.revertedWith('chain is not bound')
+        it('bindHistoryContractGroup', async () => { 
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            await expect(generalContractor.bindHistoryContractGroup(1, 1, [2], [AddressZero])).
-            to.be.revertedWith('must issue on main chain')
-            await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [AddressZero, admin.address])).
-            to.be.revertedWith('invalid asset address')
-            await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [user.address, admin.address])).
-            to.be.revertedWith('local asset is not exist')
-            let tx = await generalContractor.bindHistoryContractGroup(1, 1, [1,2], [ethLikeProver.address, user.address])
-            await expect(generalContractor.bindHistoryContractGroup(1, 1, [1,2], [ethLikeProver.address, subContractor.address])).
-            to.be.revertedWith('asset generate info has been bound')
+            let tx
+            for (i in bindHistoryContractGroupOfGeneralContractors) {
+                if (bindHistoryContractGroupOfGeneralContractors[i].expect.length != 0) {
+                    await expect(generalContractor.connect(bindHistoryContractGroupOfGeneralContractors[i].caller).
+                                bindHistoryContractGroup(bindHistoryContractGroupOfGeneralContractors[i].groupId,
+                                    bindHistoryContractGroupOfGeneralContractors[i].saltId,
+                                    bindHistoryContractGroupOfGeneralContractors[i].chains, 
+                                    bindHistoryContractGroupOfGeneralContractors[i].assets)).
+                          to.be.revertedWith(bindHistoryContractGroupOfGeneralContractors[i].expect)
+                } else {
+                    tx = await generalContractor.connect(bindHistoryContractGroupOfGeneralContractors[i].caller).
+                            bindHistoryContractGroup(bindHistoryContractGroupOfGeneralContractors[i].groupId, 
+                                bindHistoryContractGroupOfGeneralContractors[i].saltId, 
+                                bindHistoryContractGroupOfGeneralContractors[i].chains,
+                                bindHistoryContractGroupOfGeneralContractors[i].assets)
+                    await expect(generalContractor.connect(bindHistoryContractGroupOfGeneralContractors[i].caller).
+                            bindHistoryContractGroup(bindHistoryContractGroupOfGeneralContractors[i].groupId, 
+                                bindHistoryContractGroupOfGeneralContractors[i].saltId, 
+                                bindHistoryContractGroupOfGeneralContractors[i].chains,
+                                bindHistoryContractGroupOfGeneralContractors[i].assets)).
+                          to.be.revertedWith('asset generate info has been bound')
+                }
+            }
+
             await expect(generalContractor1.bindHistoryContractGroup(1, 1, [1], [ethLikeProver.address])).
             to.be.revertedWith('fail to bind contract group')
 
@@ -518,525 +529,16 @@ describe('GeneralContractor', () => {
             await expect(generalContractor1.issue(bytesOfIssue)).to.be.revertedWith('fail to bind contract group')
         })
 
-        it('not issue on main chain', async () => {
-            issueInfo1 = {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "test user",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                    {
-                        id:0, 
-                        right: {
-                            name: "right1",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        }
-                    },
-                    {
-                        id:1, 
-                        right: {
-                            name: "right2",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        },
-                    }
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    }
-                ]
-            }
-
+        it('issue nfr success', async () => {
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await expect(generalContractor.issue(bytesOfIssue)).
-            to.be.revertedWith('must issue on main chain')
-        })
-
-        it('issue on not bind chain', async () => {
-            issueInfo1 = {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "test user",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                    {
-                        id:0, 
-                        right: {
-                            name: "right1",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        }
-                    },
-                    {
-                        id:1, 
-                        right: {
-                            name: "right2",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        },
-                    }
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 1,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 3,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    }
-                ]
+            for (i in issueInfos) {
+                bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfos[i].content)
+                if (issueInfos[i].expect.length != 0) {
+                    await expect(generalContractor.issue(bytesOfIssue)).to.be.revertedWith(issueInfos[i].expect)
+                } else {
+                    tx = await generalContractor.callStatic.issue(bytesOfIssue)
+                }
             }
-
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await expect(generalContractor.issue(bytesOfIssue)).
-            to.be.revertedWith('chain is not bound')
-        })
-
-        it('issue nfr,number of rights is not equal', async () => {
-            issueInfo1 = {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "test user",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                    {
-                        id:0, 
-                        right: {
-                            name: "right1",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        }
-                    },
-                    {
-                        id:1, 
-                        right: {
-                            name: "right2",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        },
-                    }
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 1,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            }
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    }
-                ]
-            }
-
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await expect(generalContractor.issue(bytesOfIssue)).
-            to.be.revertedWith('number of rights is not equal')
-        })
-
-        it('issue nfr,right kind is not exist', async () => {
-            issueInfo1 = {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "test user",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                    {
-                        id:0, 
-                        right: {
-                            name: "right1",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        }
-                    },
-                    {
-                        id:1, 
-                        right: {
-                            name: "right2",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        },
-                    }
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 1,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:2,
-                                amount:50
-                            }
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    }
-                ]
-            }
-
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await expect(generalContractor.issue(bytesOfIssue)).
-            to.be.revertedWith('right kind is not exist')
-        })
-
-        it('issue nfr,right kind is not consistent', async () => {
-            issueInfo1 = {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "test user",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                    {
-                        id:0, 
-                        right: {
-                            name: "right1",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        }
-                    },
-                    {
-                        id:1, 
-                        right: {
-                            name: "right2",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        },
-                    }
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 1,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:0,
-                                amount:50
-                            }
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    }
-                ]
-            }
-
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await expect(generalContractor.issue(bytesOfIssue)).
-            to.be.revertedWith('right kind is not exist')
-        })
-
-        it('issue nfr,rights id is repeat', async () => {
-            issueInfo1 = {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "test user",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                    {
-                        id:0, 
-                        right: {
-                            name: "right1",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        }
-                    },
-                    {
-                        id:0, 
-                        right: {
-                            name: "right2",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        },
-                    }
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 1,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:0,
-                                amount:50
-                            }
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    }
-                ]
-            }
-
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await expect(generalContractor.issue(bytesOfIssue)).
-            to.be.revertedWith('rights id is repeat')
-        })
-
-        it('issue nfr,chain is repeat', async () => {
-            issueInfo1 = {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "test user",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                    {
-                        id:0, 
-                        right: {
-                            name: "right1",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        }
-                    },
-                    {
-                        id:1, 
-                        right: {
-                            name: "right2",
-                            uri: "right uri",
-                            agreement: "right agreement"
-                        },
-                    }
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 1,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                            {
-                                id:0,
-                                amount:50
-                            },
-                            {
-                                id:1,
-                                amount:50
-                            }
-                        ]
-                    }
-                ]
-            }
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await expect(generalContractor.issue(bytesOfIssue)).
-            to.be.revertedWith('chains id is repeated')
-        })
-
-        it('issue nft success', async () => {
-            issueInfo1 = {
-                name: "nfr",
-                symbol: "nfr",
-                issuer: {
-                    name: "test user",
-                    certification: "test certification",
-                    agreement: "test agreement",
-                    uri:"test uri"
-                },
-                rights: [
-                ],
-                issueOfChains:[
-                    {
-                        issuer: miner.address,
-                        chainId: 1,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                        ]
-                    },
-                    {
-                        issuer: miner.address,
-                        chainId: 2,
-                        amountOfToken: 50,
-                        circulationOfRights: [
-                        ]
-                    }
-                ]
-            }
-
-            await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
-            let bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo1)
-            await generalContractor.issue(bytesOfIssue)
         })
     })
 
@@ -1594,9 +1096,6 @@ describe('SubContractor', () => {
             let tx = await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "SubContractorBound")
-            console.log(rc)
-            console.log("==================")
-            console.log(event)
             // construct receipt proof
             getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
