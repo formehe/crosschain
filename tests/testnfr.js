@@ -183,10 +183,10 @@ describe('ERC3721', () => {
         it('mint ', async () => {
             for (i in testNfrMintCases) {
                 if (testNfrMintCases[i].expect.length != 0) {
-                    await expect(nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner.address))
+                    await expect(nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner))
                     .to.be.revertedWith(testNfrMintCases[i].expect)   
                 } else {
-                    await nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner.address)
+                    await nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner)
                 }
             }
         })

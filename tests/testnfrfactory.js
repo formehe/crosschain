@@ -51,15 +51,13 @@ describe('NFRFactory', () => {
     
         console.log("erc20TokenSample "  + erc20TokenSample1.address)
     
-        nfrFactoryCon1 = await ethers.getContractFactory("NFRFactory");
-        nfrFactory1 = await nfrFactoryCon1.deploy(erc20TokenSample1.address, testNFRFactory.address);
+        nfrFactory1 = await nfrFactoryCon.deploy(erc20TokenSample1.address, testNFRFactory.address);
         await nfrFactory1.deployed();
-        
-        nfrFactoryCon2 = await ethers.getContractFactory("NFRFactory");
-        nfrFactory2 = await nfrFactoryCon2.deploy(erc20TokenSample.address, testNFRFactory.address);
+        console.log("nfrFactory1"  + nfrFactory1.address)
+
+        nfrFactory2 = await nfrFactoryCon.deploy(erc20TokenSample.address, testNFRFactory.address);
         await nfrFactory2.deployed();
-    
-        console.log("nfrFactory "  + nfrFactory1.address)
+        console.log("nfrFactory2"  + nfrFactory2.address)
     })
 
     describe('issue', () => {

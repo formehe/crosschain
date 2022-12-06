@@ -127,7 +127,7 @@ describe('proxy', () => {
         proxyRegistry = await proxyRegistryCon.deploy(coreProxy.address, admin.address);
         await proxyRegistry.deployed();
     
-        console.log("proxyRegistry "  + proxyRegistry.address)	
+        console.log("proxyRegistry "  + proxyRegistry.address)
 
         await expect(coreProxy.initialize(generalContractor.address, 1, AddressZero, multiLimit.address)).
         to.be.revertedWith('invalid owner')
@@ -139,7 +139,7 @@ describe('proxy', () => {
         await coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)
         await expect(coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)).
         to.be.revertedWith('Initializable: contract is already initialized')
-        
+
         // sub general
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
         headerSyncMock = await headerSyncMockCon.deploy();
@@ -165,17 +165,15 @@ describe('proxy', () => {
     
         console.log("edgeProxy "  + edgeProxy.address)
     
-        nfrFactoryCon1 = await ethers.getContractFactory("NFRFactory");
         nfrFactory1 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractor.address);
         await nfrFactory1.deployed();
     
         console.log("nfrFactory "  + nfrFactory1.address)
 
-        proxyRegistryCon1 = await ethers.getContractFactory("ProxyRegistry");
-        proxyRegistry1 = await proxyRegistryCon1.deploy(edgeProxy.address, admin.address);
+        proxyRegistry1 = await proxyRegistryCon.deploy(edgeProxy.address, admin.address);
         await proxyRegistry1.deployed();
     
-        console.log("proxyRegistry "  + proxyRegistry1.address)	
+        console.log("proxyRegistry "  + proxyRegistry1.address)
     
         await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, admin.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await expect(edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, AddressZero, limit.address)).
@@ -263,7 +261,6 @@ describe('proxy', () => {
 
       let event1 = rc.events.find(event=>event.topics[0] === "0xc1889a90696bd45dab537e0a41003065c4a8ab9a81b243f49ba039064e149dad")
       templateAddr1 = "0x"+ (event1.topics[3]).substring(26)
-      console.log(templateAddr1)
 
       // construct receipt proof
       getProof = new GetProof("http://127.0.0.1:8545")
@@ -283,8 +280,6 @@ describe('proxy', () => {
     
       //========================================================================
       event = rc.events.find(event=>event.event === "SubContractorIssue")
-      console.log(event.topics[3])
-      console.log((event.topics[3]))
       templateAddr = "0x"+ (event.topics[3]).substring(26)
       contractGroupId = event.topics[2]
       // construct receipt proof
@@ -315,31 +310,61 @@ describe('proxy', () => {
       
       await erc20SampleInstance.connect(miner).attachRight(50,1)
       await erc20SampleInstance.connect(miner).approve(coreProxy.address, 50)
+      
+      coreProxy1 = await coreProxyCon.deploy();
+      await coreProxy1.deployed();
 
+      testProxyCon = await ethers.getContractFactory("TestProxy");
+      testProxy1 = await testProxyCon.deploy(coreProxy1.address);
+      await testProxy1.deployed();
+  
+      await coreProxy1.initialize(testProxy1.address, 1, admin.address, multiLimit.address)
+
+      edgeProxy1 = await edgeProxyCon.deploy();
+      await edgeProxy1.deployed();
+
+      testProxy2 = await testProxyCon.deploy(edgeProxy1.address);
+      await testProxy2.deployed();
     })
 
     describe('burn and mint', () => {
         it('bind peer chain', async () => {
-            await expect(coreProxy.bindPeerChain(2,ethLikeProver.address, edgeProxy.address)).
-            to.be.revertedWith('prover is bound')
-            await expect(coreProxy.bindPeerChain(23, user.address, edgeProxy.address)).
-            to.be.revertedWith('invalid prover')
-            await expect(coreProxy.bindPeerChain(23,ethLikeProver.address, AddressZero)).
-            to.be.revertedWith('invalid proxy')
+            const {bindPeersOfCore} = require('./helpers/testProxyConfig')
+            for (i in bindPeersOfCore) {
+                if (bindPeersOfCore[i].expect.length != 0) {
+                    await expect(coreProxy.connect(bindPeersOfCore[i].caller).bindPeerChain(
+                            bindPeersOfCore[i].chainId, 
+                            bindPeersOfCore[i].prover, 
+                            bindPeersOfCore[i].proxy)).
+                            to.be.revertedWith(bindPeersOfCore[i].expect)
+                } else {
+                    await coreProxy.connect(bindPeersOfCore[i].caller).bindPeerChain(
+                            bindPeersOfCore[i].chainId, 
+                            bindPeersOfCore[i].prover, 
+                            bindPeersOfCore[i].proxy)
+                }
+            }
         })
 
         it('edge burn, core mint', async () => {
-            await expect(edgeProxy.connect(miner).burnTo(2, contractGroupId, AddressZero, 51)).
-            to.be.revertedWith('invalid receiver')
-            await expect(edgeProxy.connect(miner).burnTo(2, 0, user1.address, 51)).
-            to.be.revertedWith('invalid contract group id')
-            await expect(edgeProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 51)).
-            to.be.revertedWith('only support cross chain tx')
-            await expect(edgeProxy.connect(miner).burnTo(1, 100, user1.address, 51)).
-            to.be.revertedWith('asset is not bound')
-            await expect(edgeProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 48)).
-            to.be.revertedWith('fail to burn')
-
+            const {burnOfEdge} = require('./helpers/testProxyConfig')
+            for (i in burnOfEdge) {
+                if (burnOfEdge[i].expect.length != 0) {
+                    await expect(edgeProxy.connect(burnOfEdge[i].caller).burnTo(
+                            burnOfEdge[i].chainId, 
+                            burnOfEdge[i].groupId, 
+                            burnOfEdge[i].receiver,
+                            burnOfEdge[i].tokenId)).
+                            to.be.revertedWith(burnOfEdge[i].expect)
+                } else {
+                    await edgeProxy.connect(burnOfEdge[i].caller).burnTo(
+                        burnOfEdge[i].chainId, 
+                        burnOfEdge[i].groupId, 
+                        burnOfEdge[i].receiver,
+                        burnOfEdge[i].tokenId)
+                }
+            }
+            
             let tx = await edgeProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 51)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "CrossTokenBurned")
@@ -491,7 +516,6 @@ describe('proxy', () => {
             await proxyRegistry.set(coreProxy.address)
 
             re = Receipt.fromRpc(targetReceipt)
-            console.log(rc)
             rlpLog = new LOGRLP(rc.logs[2])
             rlplog = Log.fromRpc(rlpLog)
             value = new TxProof(2, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
@@ -516,64 +540,69 @@ describe('proxy', () => {
         })
 
         it('core proxy bind asset group', async () => {
-            coreProxyCon1 = await ethers.getContractFactory("CoreProxy");
-            coreProxy1 = await coreProxyCon1.deploy();
-            await coreProxy1.deployed();
-
-            testProxyCon1 = await ethers.getContractFactory("TestProxy");
-            testProxy1 = await testProxyCon1.deploy(coreProxy1.address);
-            await testProxy1.deployed();
-            
-            await coreProxy1.initialize(testProxy1.address, 1, admin.address, multiLimit.address)
+            const {bindAssetOfCore} = require('./helpers/testProxyConfig')
             await expect(coreProxy1.connect(user).bindAssetProxyGroup(coreProxy1.address, 1, 1, coreProxy1.address)).
             to.be.revertedWith('only for general contractor')
-            await expect(testProxy1.connect(admin).bindAssetProxyGroup(AddressZero, 1, 1, coreProxy1.address)).
-            to.be.revertedWith('from proxy address are not to be contract address')
-            await expect(testProxy1.connect(admin).bindAssetProxyGroup(coreProxy1.address, 1, 0, coreProxy1.address)).
-            to.be.revertedWith('contract group id can not be 0')
-            await testProxy1.connect(admin).bindAssetProxyGroup(coreProxy1.address, 1, 1, coreProxy1.address)
-            await expect(testProxy1.connect(admin).bindAssetProxyGroup(coreProxy1.address, 1, 1, coreProxy1.address)).
-            to.be.revertedWith('asset has been bound')
-            await expect(testProxy1.connect(admin).bindAssetProxyGroup(coreProxy1.address, 1, 100, user.address)).
-            to.be.revertedWith('invalid template code')
+            for (i in bindAssetOfCore) {
+                if (bindAssetOfCore[i].expect.length != 0) {
+                    await expect(testProxy1.connect(bindAssetOfCore[i].caller).bindAssetProxyGroup(
+                            bindAssetOfCore[i].asset, 
+                            bindAssetOfCore[i].chainId, 
+                            bindAssetOfCore[i].groupId,
+                            bindAssetOfCore[i].template)).
+                            to.be.revertedWith(bindAssetOfCore[i].expect)
+                } else {
+                    await testProxy1.connect(bindAssetOfCore[i].caller).bindAssetProxyGroup(
+                        bindAssetOfCore[i].asset, 
+                        bindAssetOfCore[i].chainId, 
+                        bindAssetOfCore[i].groupId,
+                        bindAssetOfCore[i].template)
+                }
+            }
         })
 
         it('edge proxy bind asset group', async () => {
-            edgeProxyCon1 = await ethers.getContractFactory("EdgeProxy");
-            edgeProxy1 = await edgeProxyCon1.deploy();
-            await edgeProxy1.deployed();
-
-            testProxyCon1 = await ethers.getContractFactory("TestProxy");
-            testProxy1 = await testProxyCon1.deploy(edgeProxy1.address);
-            await testProxy1.deployed();
-            
+            const {bindAssetOfEdge} = require('./helpers/testProxyConfig')            
             await edgeProxy1.initialize(ethLikeProver.address, testProxy1.address, coreProxy.address, 1, 2, admin.address, limit.address)
             await expect(edgeProxy1.connect(user).bindAssetGroup(edgeProxy1.address, 1, edgeProxy1.address)).
             to.be.revertedWith('just subcontractor can bind')
-            await expect(testProxy1.connect(admin).bindAssetGroup(user.address, 1, edgeProxy1.address)).
-            to.be.revertedWith('from proxy address are not to be contract address')
-            await expect(testProxy1.connect(admin).bindAssetGroup(edgeProxy1.address, 0, edgeProxy1.address)).
-            to.be.revertedWith('contract group id can not be 0')
-            await testProxy1.connect(admin).bindAssetGroup(edgeProxy1.address, 1, edgeProxy1.address)
-            await expect(testProxy1.connect(admin).bindAssetGroup(edgeProxy1.address, 1, edgeProxy1.address)).
-            to.be.revertedWith('can not modify the bind asset')
+
+            for (i in bindAssetOfEdge) {
+                if (bindAssetOfEdge[i].expect.length != 0) {
+                    await expect(testProxy2.connect(bindAssetOfEdge[i].caller).bindAssetGroup(
+                            bindAssetOfEdge[i].asset, 
+                            bindAssetOfEdge[i].groupId,
+                            bindAssetOfEdge[i].template)).
+                            to.be.revertedWith(bindAssetOfEdge[i].expect)
+                } else {
+                    await testProxy2.connect(bindAssetOfEdge[i].caller).bindAssetGroup(
+                        bindAssetOfEdge[i].asset, 
+                        bindAssetOfEdge[i].groupId,
+                        bindAssetOfEdge[i].template)
+                }
+            }
         })
 
         it('core burn, edge mint', async () => {
             tx1 = await generalContractor.bindContractGroup(buffer1)
             rc1 = await tx1.wait()
-            await expect(coreProxy.connect(miner).burnTo(1, contractGroupId, user1.address, 1)).
-            to.be.revertedWith('only support cross chain tx')
-            await expect(coreProxy.connect(miner).burnTo(2, contractGroupId, AddressZero, 1)).
-            to.be.revertedWith('invalid receiver')
-            await expect(coreProxy.connect(miner).burnTo(2, 0, user1.address, 1)).
-            to.be.revertedWith('invalid contract group id')
-            await expect(coreProxy.connect(miner).burnTo(2, 100, user1.address, 1)).
-            to.be.revertedWith('from asset can not be 0')
-            await expect(coreProxy.connect(miner).burnTo(3, contractGroupId, user1.address, 1)).
-            to.be.revertedWith('to asset can not be 0')
-            await expect(coreProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 101)).
-            to.be.revertedWith('fail to burn')
+            const {burnOfCore} = require('./helpers/testProxyConfig')
+            for (i in burnOfCore) {
+                if (burnOfCore[i].expect.length != 0) {
+                    await expect(edgeProxy.connect(burnOfCore[i].caller).burnTo(
+                            burnOfCore[i].chainId, 
+                            burnOfCore[i].groupId, 
+                            burnOfCore[i].receiver,
+                            burnOfCore[i].tokenId)).
+                            to.be.revertedWith(burnOfCore[i].expect)
+                } else {
+                    await edgeProxy.connect(burnOfCore[i].caller).burnTo(
+                        burnOfCore[i].chainId, 
+                        burnOfCore[i].groupId, 
+                        burnOfCore[i].receiver,
+                        burnOfCore[i].tokenId)
+                }
+            }
 
             let tx = await coreProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 50)
             let rc = await tx.wait()
@@ -714,7 +743,6 @@ describe('proxy', () => {
             rc.logs[event.logIndex].topics[0]  = signature
 
             re = Receipt.fromRpc(targetReceipt)
-            console.log(rc)
             rlpLog = new LOGRLP(rc.logs[2])
             rlplog = Log.fromRpc(rlpLog)
             value = new TxProof(2, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)

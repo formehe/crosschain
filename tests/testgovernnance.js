@@ -161,7 +161,6 @@ describe('Governance', () => {
     
         console.log("edgeProxy "  + edgeProxy.address)
     
-        nfrFactoryCon1 = await ethers.getContractFactory("NFRFactory");
         nfrFactory1 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractor.address);
         await nfrFactory1.deployed();
 
@@ -171,8 +170,7 @@ describe('Governance', () => {
     
         console.log("TestGoverned "  + nfrFactory1.address)
     
-        proxyRegistryCon1 = await ethers.getContractFactory("ProxyRegistry");
-        proxyRegistry1 = await proxyRegistryCon1.deploy(edgeProxy.address, admin.address);
+        proxyRegistry1 = await proxyRegistryCon.deploy(edgeProxy.address, admin.address);
         await proxyRegistry1.deployed();
     
         console.log("proxyRegistry "  + proxyRegistry1.address)	
@@ -211,35 +209,54 @@ describe('Governance', () => {
 
     describe('bindGovernedContract', () => {
         it('EdgeGovernance', async () => {
+            const {bindEdgeGovernances,bindGovernedContractsOfEdge,bindGovernedContractsOfCore} = require('./helpers/testGovernanceConfig')
             await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
-            await edgeGovernance.bindGovernedContract(subContractor.address)
-            await expect(edgeGovernance.bindGovernedContract(edgeGovernance.address)).to.be.revertedWith('not myself')
-            await expect(edgeGovernance.bindGovernedContract(AddressZero)).to.be.revertedWith('invalid governed contract')
-            await expect(edgeGovernance.bindGovernedContract(subContractor.address)).to.be.revertedWith('contract is existed')
+            for (i in bindGovernedContractsOfEdge) {
+                if (bindGovernedContractsOfEdge[i].expect .length != 0) {
+                    await expect(edgeGovernance.connect(bindGovernedContractsOfEdge[i].caller).
+                            bindGovernedContract(bindGovernedContractsOfEdge[i].governed)).
+                          to.be.revertedWith(bindGovernedContractsOfEdge[i].expect)
+                } else {
+                    await edgeGovernance.connect(bindGovernedContractsOfEdge[i].caller).
+                            bindGovernedContract(bindGovernedContractsOfEdge[i].governed)
+                }
+            }
         })
 
         it('CoreGovernance', async () => {
+            const {bindEdgeGovernances,bindGovernedContractsOfEdge,bindGovernedContractsOfCore} = require('./helpers/testGovernanceConfig')
             await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
             await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
-            await coreGovernance.bindGovernedContract(generalContractor.address)
-            await expect(coreGovernance.bindGovernedContract(coreGovernance.address)).to.be.revertedWith('not myself')
-            await expect(coreGovernance.bindGovernedContract(AddressZero)).to.be.revertedWith('invalid governed contract')
-            await expect(coreGovernance.bindGovernedContract(generalContractor.address)).to.be.revertedWith('contract is existed')
+            for (i in bindGovernedContractsOfCore) {
+                if (bindGovernedContractsOfCore[i].expect.length != 0) {
+                    await expect(coreGovernance.connect(bindGovernedContractsOfCore[i].caller).
+                            bindGovernedContract(bindGovernedContractsOfCore[i].governed)).
+                          to.be.revertedWith(bindGovernedContractsOfCore[i].expect)
+                } else {
+                    await coreGovernance.connect(bindGovernedContractsOfCore[i].caller).
+                            bindGovernedContract(bindGovernedContractsOfCore[i].governed)
+                }
+            }
         })
     })
 
     describe('bindEdgeGovernance', () => {
         it('CoreGovernance', async () => {
+            const {bindEdgeGovernances,bindGovernedContractsOfEdge,bindGovernedContractsOfCore} = require('./helpers/testGovernanceConfig')
             await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
-            await expect(coreGovernance.bindEdgeGovernance(1, edgeGovernance.address, ethLikeProver.address)).
-            to.be.revertedWith('not support bind myself')
-            await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
-            await expect(coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)).
-            to.be.revertedWith('chain has been bound')
-            await expect(coreGovernance.bindEdgeGovernance(3, AddressZero, ethLikeProver.address)).
-            to.be.revertedWith('invalid edge governance')
-            await expect(coreGovernance.bindEdgeGovernance(3, edgeGovernance.address, AddressZero)).
-            to.be.revertedWith('invalid prover')
+            for (i in bindEdgeGovernances) {
+                if (bindEdgeGovernances[i].expect .length != 0) {
+                    await expect(coreGovernance.connect(bindEdgeGovernances[i].caller).
+                            bindEdgeGovernance(bindEdgeGovernances[i].chainId,
+                                bindEdgeGovernances[i].contractor,
+                                bindEdgeGovernances[i].prover)).
+                          to.be.revertedWith(bindEdgeGovernances[i].expect)
+                } else {
+                    await coreGovernance.connect(bindEdgeGovernances[i].caller).bindEdgeGovernance(bindEdgeGovernances[i].chainId,
+                        bindEdgeGovernances[i].contractor,
+                        bindEdgeGovernances[i].prover)
+                }
+            }
         })
     })
 
@@ -282,8 +299,6 @@ describe('Governance', () => {
             let tx = await coreGovernance.propose(abiCall)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GovernanceProposed")
-            console.log(event)
-            console.log(event.topics[1])
             await coreGovernance.accept(event.topics[1])
             expect (await generalContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
             await expect(coreGovernance.accept(1000)).to.be.revertedWith('proposal is not exist')
@@ -341,10 +356,8 @@ describe('Governance', () => {
             // wrong method
             let data = targetReceipt.logs[event.logIndex].data
             let newData = (targetReceipt.logs[event.logIndex].data).substr(0,135) + '3'+ (targetReceipt.logs[event.logIndex].data).substr(136)
-            console.log(targetReceipt)
             targetReceipt.logs[event.logIndex].data = newData
             rc.logs[event.logIndex].data = newData
-            console.log(targetReceipt)
             re = Receipt.fromRpc(targetReceipt)
             rlpLog = new LOGRLP(rc.logs[event.logIndex])
             rlplog = Log.fromRpc(rlpLog)
@@ -463,8 +476,8 @@ describe('Governance', () => {
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GovernanceProposed")
             tx = await coreGovernance.accept(event.topics[1])
+            await expect(coreGovernance.connect(user).accept(event.topics[1])).to.be.revertedWith('is missing role')
             rc = await tx.wait()
-            console.log(rc);
             //construct receipt proof
             getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
@@ -527,6 +540,7 @@ describe('Governance', () => {
             await edgeGovernance.accept(event.topics[1])
             expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
             await expect(edgeGovernance.accept(1000)).to.be.revertedWith('proposal is not exist')
+            await expect(edgeGovernance.connect(user).accept(1000)).to.be.revertedWith('is missing role')
 
             abiCall = Web3EthAbi.encodeFunctionCall({
                 name: 'revokeRole',
