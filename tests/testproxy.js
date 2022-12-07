@@ -137,6 +137,8 @@ describe('proxy', () => {
         to.be.revertedWith('invalid limit contractor')
         await generalContractor.initialize(coreProxy.address, 1, admin.address, 0, 0, proxyRegistry.address, nfrFactory.address)
         await coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)
+        expect(await coreProxy.generalContractor()).to.equal(generalContractor.address)
+        expect(await coreProxy.chainId()).to.equal(1)
         await expect(coreProxy.initialize(generalContractor.address, 1, admin.address, multiLimit.address)).
         to.be.revertedWith('Initializable: contract is already initialized')
 
@@ -187,6 +189,8 @@ describe('proxy', () => {
         await expect(edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, user.address)).
         to.be.revertedWith('invalid limit contract')
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)
+        expect(await edgeProxy.subContractor()).to.equal(subContractor.address)
+        expect(await edgeProxy.chainId()).to.equal(2)
         await expect(edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, admin.address, limit.address)).
         to.be.revertedWith('Initializable: contract is already initialized')
 

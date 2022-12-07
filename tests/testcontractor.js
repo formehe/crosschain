@@ -753,6 +753,7 @@ describe('GeneralContractor', () => {
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
 
+            await expect(generalContractor.expand(100, 2, AddressZero)).to.be.revertedWith('invalid issuer')
             await expect(generalContractor.expand(100, 2, admin.address)).to.be.revertedWith('group id has not issued')
             await expect(generalContractor.expand(event.topics[2], 100, admin.address)).to.be.revertedWith('chain is not bound')
 

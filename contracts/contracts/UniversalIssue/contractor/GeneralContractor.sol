@@ -206,6 +206,7 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         uint256 peerChainId,
         address issuer
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_EXPAND){
+        require(issuer != address(0), "invalid issuer");
         AssetInfo memory assetInfo = localContractGroupAsset[groupId];
         require(assetInfo.asset != address(0), "group id has not issued");
         require(subContractors[peerChainId].subContractor != address(0), "chain is not bound");
