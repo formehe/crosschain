@@ -24,7 +24,6 @@ contract TopLikeProver is IProver{
         Deserialize.LightClientBlock memory header = Deserialize.decodeMiniLightClientBlock(proof.headerData);
         
         require((keccak256(proof.logEntryData) == keccak256(receipt.log)), "Log is not found");
-        console.logBytes32(header.inner_lite.receipts_root_hash);
         _verify(proof.reciptIndex, proof.reciptData, proof.reciptProof, header.inner_lite.receipts_root_hash);
         _verify(proof.blockIndex, abi.encodePacked(header.block_hash), proof.blockProof,  _getBlockMerkleRoot(proof.polyBlockHeight));
         time = _getAddLightClientTime(proof.polyBlockHeight);

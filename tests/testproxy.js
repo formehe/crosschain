@@ -303,6 +303,7 @@ describe('proxy', () => {
 
       await erc20SampleInstance.connect(miner).attachRight(52,1)
       await erc20SampleInstance.connect(miner).approve(edgeProxy.address, 52)
+      await erc20SampleInstance.connect(miner).approve(edgeProxy.address, 55)
 
       erc20SampleInstance = await erc20TokenSampleCon.attach(templateAddr1)
       await erc20SampleInstance.connect(miner).attachRight(1,1)
@@ -310,6 +311,9 @@ describe('proxy', () => {
       
       await erc20SampleInstance.connect(miner).attachRight(50,1)
       await erc20SampleInstance.connect(miner).approve(coreProxy.address, 50)
+
+      await erc20SampleInstance.connect(miner).attachRight(1,1)
+      await erc20SampleInstance.connect(miner).approve(coreProxy.address, 1)
       
       coreProxy1 = await coreProxyCon.deploy();
       await coreProxy1.deployed();
@@ -537,6 +541,28 @@ describe('proxy', () => {
             await ethLikeProver.set(true)
             tx = await coreProxy.mint(buffer)
             tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('The burn event proof cannot be reused')
+
+            tx =await edgeProxy.connect(miner).burnTo(1, contractGroupId, user1.address, 55)
+            rc = await tx.wait()
+            event = rc.events.find(event=>event.event === "CrossTokenBurned")
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+
+            receiptIndex = Web3EthAbi.encodeParameters(['bytes32','uint256'], [rc.blockHash, event.transactionIndex])
+            await multiLimit.connect(admin).grantRole('0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d', deployer.address)
+            await multiLimit.forbiden(2, keccak256(receiptIndex))
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value)
+            await expect(coreProxy.mint(buffer)).to.be.revertedWith('receipt id has already been forbidden')
         })
 
         it('core proxy bind asset group', async () => {
@@ -769,7 +795,32 @@ describe('proxy', () => {
             await ethLikeProver.set(true)
             tx = await edgeProxy.mint(buffer)
             tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('The burn event proof cannot be reused')
+
+            tx =await coreProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 1)
+            rc = await tx.wait()
+            event = rc.events.find(event=>event.event === "CrossTokenBurned")
+            // construct receipt proof
+            getProof = new GetProof("http://127.0.0.1:8545")
+            proof = await getProof.receiptProof(tx.hash)
+            rpcInstance = new rpc("http://127.0.0.1:8545")
+            block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
+            targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+
+            re = Receipt.fromRpc(targetReceipt)
+            rlpLog = new LOGRLP(rc.logs[event.logIndex])
+            rlplog = Log.fromRpc(rlpLog)
+            value = new TxProof(event.logIndex, rlplog.buffer, event.transactionIndex, re.buffer, proof.header.buffer, proof.receiptProof)
+            blockHash = keccak256(proof.header.buffer)
+            schema = new Map([[TxProof, {kind: 'struct', fields: [['logIndex', 'u64'], ['logEntryData', ['u8']], ['reciptIndex', 'u64'], ['reciptData', ['u8']], ['headerData', ['u8']], ['proof', [['u8']]]]}]])
+            buffer = borsh.serialize(schema, value)
+
+            await limit.bindFrozen(nfrFactory1.address, 1)
+            await expect(edgeProxy.mint(buffer)).to.be.revertedWith('tx is frozen')
+
+            await limit.grantRole('0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d', deployer.address)
+            receiptIndex = Web3EthAbi.encodeParameters(['bytes32','uint256'], [rc.blockHash, event.transactionIndex])
+            await limit.forbiden(keccak256(receiptIndex))            
+            await expect(edgeProxy.mint(buffer)).to.be.revertedWith('receipt id has already been forbidden')
         })
     })
 })
-

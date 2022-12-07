@@ -21,7 +21,7 @@ const toWei = ethers.utils.parseEther
 describe('ERC3721', () => {
     beforeEach(async () => {
         [deployer, admin, miner, user, user1, redeemaccount] = await hardhat.ethers.getSigners()
-        const {testNfrMintCases, testNfrBurnCases} = require('./helpers/testnfrconfig')
+        const {testNfrMintCases, testNfrBurnCases,attachAdditional,approve,attachRights} = require('./helpers/testnfrconfig')
         provider = hardhat.ethers.provider
         console.log("wallet "+ deployer.address)
         console.log("wallet2 "+ admin.address)
@@ -96,7 +96,7 @@ describe('ERC3721', () => {
         expect(await nfrContract.ownerOf(1)).to.equal(admin.address)
         expect(await nfrContract.ownerOf(50)).to.equal(admin.address)
         await expect(nfrContract.ownerOf(51)).
-        to.be.revertedWith('ERC721: owner query for nonexistent token on this chain')
+        to.be.revertedWith('missing revert data')//'ERC721: owner query for nonexistent token on this chain')
         expect(await nfrContract.issuerName()).to.equal("test user")
         expect(await nfrContract.issuerCertification()).to.equal("test certification")
         expect(await nfrContract.issuerAgreement()).to.equal("test agreement")
@@ -201,10 +201,10 @@ describe('ERC3721', () => {
         it('mint ', async () => {
             for (i in testNfrMintCases) {
                 if (testNfrMintCases[i].expect.length != 0) {
-                    await expect(nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner.address))
+                    await expect(nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner))
                     .to.be.revertedWith(testNfrMintCases[i].expect)   
                 } else {
-                    await nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner.address)
+                    await nfrContract.connect(testNfrMintCases[i].caller).mint(testNfrMintCases[i].tokenId, testNfrMintCases[i].rightKinds, testNfrMintCases[i].rightAmounts, '0x1111', testNfrMintCases[i].owner)
                 }
             }
         })
@@ -246,17 +246,17 @@ describe('ERC3721', () => {
         it('approve and burn token success', async () => {
             await nfrContract.connect(admin).approve(user1.address, 1)
             await nfrContract.connect(user1).burn(1)
-            await expect(nfrContract.ownerOf(1)).to.be.revertedWith('ERC721: owner query for nonexistent token on this chain')
+            await expect(nfrContract.ownerOf(1)).to.be.revertedWith('missing revert data')//'ERC721: owner query for nonexistent token on this chain')
 
             await nfrContract.connect(admin).attachAdditional(2, "0x1111")
             await nfrContract.connect(admin).approve(user1.address, 2)
             await nfrContract.connect(user1).burn(2)
-            await expect(nfrContract.ownerOf(2)).to.be.revertedWith('ERC721: owner query for nonexistent token on this chain')
+            await expect(nfrContract.ownerOf(2)).to.be.revertedWith('missing revert data')//'ERC721: owner query for nonexistent token on this chain')
 
             await nfrContract.mint(51, [0,1], [1,1], '0x1111', admin.address)
             await nfrContract.connect(admin).approve(user1.address, 51)
             await nfrContract.connect(user1).burn(51)
-            await expect(nfrContract.ownerOf(51)).to.be.revertedWith('ERC721: owner query for nonexistent token on this chain')
+            await expect(nfrContract.ownerOf(51)).to.be.revertedWith('missing revert data')//'ERC721: owner query for nonexistent token on this chain')
         })
 
         it('repeat burn', async () => {
@@ -268,15 +268,25 @@ describe('ERC3721', () => {
     })
 
     describe('attach token additional', () => {
+        it('attach token additional', async () => {
+            for (i in attachAdditional) {
+                if (attachAdditional[i].expect.length != 0) {
+                    await expect(nfrContract.connect(attachAdditional[i].caller).attachAdditional(
+                            attachAdditional[i].tokenId,
+                            attachAdditional[i].additional))
+                    .to.be.revertedWith(attachAdditional[i].expect)   
+                } else {
+                    await nfrContract.connect(attachAdditional[i].caller).attachAdditional(
+                        attachAdditional[i].tokenId,
+                        attachAdditional[i].additional)
+                }
+            }
+        })
+
         it('repeat attach', async () => {
             await nfrContract.connect(admin).attachAdditional(1, "0x1111")
             await expect(nfrContract.connect(admin).attachAdditional(1, "0x1111")).
             to.be.revertedWith('additional of token has been bound')
-        })
-
-        it('not approver', async () => {
-            await expect(nfrContract.connect(user).attachAdditional(1, "0x1111")).
-            to.be.revertedWith('not owner or approver')
         })
 
         it('not issuer', async () => {
@@ -285,24 +295,10 @@ describe('ERC3721', () => {
             to.be.revertedWith('only issuer can add additional of token')
         })
 
-        it('token id is not exist', async () => {
-            await expect(nfrContract.connect(user).attachAdditional(51, "0x1111")).
-            to.be.revertedWith('ERC721: owner query for nonexistent token on this chain')
-            await expect(nfrContract.connect(user).attachAdditional(0, "0x1111")).
-            to.be.revertedWith('invalid token id')
-        })
-
-        it('invalid parameter', async () => {
-            await expect(nfrContract.connect(admin).attachAdditional(1, "0x")).to.be.revertedWith('invalid parameter')
-        })
-
         it('approver', async () => {
             await nfrContract.connect(admin).approve(user.address, 1)
             await nfrContract.connect(user).attachAdditional(1, "0x1111")
-        })
-
-        it('attach success', async () => {
-            await nfrContract.connect(admin).attachAdditional(1, "0x1111")
+            expect(await nfrContract.tokenAdditional(1)).to.equal("0x1111")
         })
     })
 
@@ -478,14 +474,19 @@ describe('ERC3721', () => {
     })
 
     describe('approve', () => {
-        it('approval to current owner', async () => {
-            await expect(nfrContract.approve(admin.address, 1)).
-            to.be.revertedWith('ERC721: approval to current owner')
-        })
-
-        it('approve caller is not owner', async () => {
-            await expect(nfrContract.approve(user1.address, 1)).
-            to.be.revertedWith('ERC721: approve caller is not owner nor approved for all')
+        it('approve', async () => {
+            for (i in approve) {
+                if (approve[i].expect.length != 0) {
+                    await expect(nfrContract.connect(approve[i].caller).approve(
+                            approve[i].approver,
+                            approve[i].tokenId))
+                    .to.be.revertedWith(approve[i].expect)   
+                } else {
+                    await nfrContract.connect(approve[i].caller).approve(
+                        approve[i].approver,
+                        approve[i].tokenId)
+                }
+            }
         })
 
         it('approved success', async () => {
@@ -495,6 +496,21 @@ describe('ERC3721', () => {
     })
 
     describe('attach token right', () => {
+        it('attach token right', async () => {
+            for (i in attachRights) {
+                if (attachRights[i].expect.length != 0) {
+                    await expect(nfrContract.connect(attachRights[i].caller).attachRight(
+                            attachRights[i].tokenId,
+                            attachRights[i].rightKind))
+                    .to.be.revertedWith(attachRights[i].expect)   
+                } else {
+                    await nfrContract.connect(attachRights[i].caller).attachRight(
+                        attachRights[i].tokenId,
+                        attachRights[i].rightKind)
+                }
+            }
+        })
+
         it('token is not approved', async () => {
             await nfrContract.connect(admin).transferFrom(admin.address, user.address, 1)
             await expect(nfrContract.connect(user).attachRight(1,0)).
@@ -508,11 +524,6 @@ describe('ERC3721', () => {
             
         })
 
-        it('not token owner attach token id and right', async () => {
-            await expect(nfrContract.connect(user).attachRight(1, 0)).
-            to.be.revertedWith('not owner or approver')
-        })
-
         it('not token issuer attach token id and right', async () => {
             await nfrContract.mint(100, [0,1], [1,1], '0x1111', user.address)
             await expect(nfrContract.attachRight(100, 0)).
@@ -522,11 +533,6 @@ describe('ERC3721', () => {
         it('token owner attach token id and right', async () => {
             await nfrContract.connect(admin).attachRight(1, 0)
             await nfrContract.connect(admin).attachRight(1, 1)
-        })
-
-        it('right is not exist', async () => {
-            await expect(nfrContract.connect(admin).attachRight(1, 2)).
-            to.be.revertedWith('right kind is not exist')
         })
 
         it('right id is overflow', async () => {
@@ -561,7 +567,6 @@ describe('ERC3721', () => {
             await nfrContract.connect(admin).attachRight(2, 1)
 
         })
-
     })
 
     describe('burn right', () => {

@@ -145,12 +145,6 @@ approve = [
 
 attachRights = [
     {
-        caller: admin,
-        tokenId: 1,
-        rightKind: admin.address,
-        expect: "ERC721: approval to current owner"
-    },
-    {
         caller: user,
         tokenId: 1,
         rightKind: 0,

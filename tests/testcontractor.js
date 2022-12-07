@@ -570,8 +570,6 @@ describe('GeneralContractor', () => {
             rc = await tx.wait()
             //========================================================================
             event = rc.events.find(event=>event.event === "SubContractorIssue")
-            console.log(event.topics[3])
-            console.log((event.topics[3]))
             templateAddr = "0x"+ (event.topics[3]).substring(26)
             // construct receipt proof
             getProof = new GetProof("http://127.0.0.1:8545")
@@ -750,7 +748,6 @@ describe('GeneralContractor', () => {
             let tx = await generalContractor.issue(bytesOfIssue)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GeneralContractorIssue")
-            console.log(event)
 
             await expect(generalContractor.expand(100, 2, admin.address)).to.be.revertedWith('group id has not issued')
             await expect(generalContractor.expand(event.topics[2], 100, admin.address)).to.be.revertedWith('chain is not bound')
@@ -777,7 +774,6 @@ describe('GeneralContractor', () => {
             rc = await tx.wait()
             //========================================================================
             event = rc.events.find(event=>event.event === "SubContractorIssue")
-            console.log(event.topics[3])
             templateAddr = "0x"+ (event.topics[3]).substring(26)
             // construct receipt proof
             getProof = new GetProof("http://127.0.0.1:8545")

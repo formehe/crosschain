@@ -20,7 +20,7 @@ contract TestEthLikeProver is IProver{
 
         Deserialize.BlockHeader memory header = Deserialize.toBlockHeader(proof.headerData);
         
-        return (success, header.hash, proof.reciptIndex, 0);
+        return (success, header.hash, proof.reciptIndex, block.timestamp);
     }
 
     function set(
