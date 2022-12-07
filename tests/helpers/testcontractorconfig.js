@@ -103,6 +103,14 @@ bindHistoryContractGroupOfGeneralContractors = [
         expect: "local asset is not exist"
     },
     {
+        caller: deployer,
+        groupId: 1,
+        saltId: 1,
+        chains: [],
+        assets: [],
+        expect: "must issue on main chain"
+    },
+    {
         caller: admin,
         groupId: 1,
         saltId: 1,

@@ -177,6 +177,7 @@ describe('Governance', () => {
 
         await subContractor.initialize(generalContractor.address, 2, edgeProxy.address, ethLikeProver.address, edgeGovernance.address, 0, proxyRegistry1.address, nfrFactory1.address)
         await edgeProxy.initialize(ethLikeProver.address, subContractor.address, coreProxy.address, 1, 2, edgeGovernance.address, limit.address)
+        const {bindEdgeGovernances,bindGovernedContractsOfEdge,bindGovernedContractsOfCore} = require('./helpers/testGovernanceConfig')
    })
 
     describe('initialize', () => {
@@ -209,10 +210,9 @@ describe('Governance', () => {
 
     describe('bindGovernedContract', () => {
         it('EdgeGovernance', async () => {
-            const {bindEdgeGovernances,bindGovernedContractsOfEdge,bindGovernedContractsOfCore} = require('./helpers/testGovernanceConfig')
             await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
             for (i in bindGovernedContractsOfEdge) {
-                if (bindGovernedContractsOfEdge[i].expect .length != 0) {
+                if (bindGovernedContractsOfEdge[i].expect.length != 0) {
                     await expect(edgeGovernance.connect(bindGovernedContractsOfEdge[i].caller).
                             bindGovernedContract(bindGovernedContractsOfEdge[i].governed)).
                           to.be.revertedWith(bindGovernedContractsOfEdge[i].expect)
@@ -221,10 +221,11 @@ describe('Governance', () => {
                             bindGovernedContract(bindGovernedContractsOfEdge[i].governed)
                 }
             }
+
+            await expect(edgeGovernance.bindGovernedContract(edgeGovernance.address)).to.be.revertedWith('not myself')
         })
 
         it('CoreGovernance', async () => {
-            const {bindEdgeGovernances,bindGovernedContractsOfEdge,bindGovernedContractsOfCore} = require('./helpers/testGovernanceConfig')
             await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
             await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
             for (i in bindGovernedContractsOfCore) {
@@ -237,12 +238,13 @@ describe('Governance', () => {
                             bindGovernedContract(bindGovernedContractsOfCore[i].governed)
                 }
             }
+
+            await expect(coreGovernance.bindGovernedContract(coreGovernance.address)).to.be.revertedWith('not myself')
         })
     })
 
     describe('bindEdgeGovernance', () => {
         it('CoreGovernance', async () => {
-            const {bindEdgeGovernances,bindGovernedContractsOfEdge,bindGovernedContractsOfCore} = require('./helpers/testGovernanceConfig')
             await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
             for (i in bindEdgeGovernances) {
                 if (bindEdgeGovernances[i].expect .length != 0) {

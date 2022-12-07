@@ -45,11 +45,6 @@ bindGovernedContractsOfEdge = [
     },
     {
         caller: deployer,
-        governed: edgeGovernance.address,
-        expect: "not myself"
-    },
-    {
-        caller: deployer,
         governed: AddressZero,
         expect: "invalid governed contract"
     },
@@ -70,11 +65,6 @@ bindGovernedContractsOfCore = [
         caller: deployer,
         governed: generalContractor.address,
         expect: ""
-    },
-    {
-        caller: deployer,
-        governed: coreGovernance.address,
-        expect: "not myself"
     },
     {
         caller: deployer,

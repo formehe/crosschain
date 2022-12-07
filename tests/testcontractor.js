@@ -524,6 +524,8 @@ describe('GeneralContractor', () => {
         it('issue nfr success', async () => {
             await generalContractor.bindSubContractor(2, subContractor.address, ethLikeProver.address)
             bytesOfIssue = await issueCoder.callStatic.encodeIssueInfo(issueInfo)
+            await generalContractor.connect(admin).grantRole("0xfb47a4753d25ec0f8c1b28af2736043b542a783458d15c76337d12de4bc914b3", redeemaccount.address)
+            await expect(generalContractor.connect(redeemaccount).issue(bytesOfIssue)).to.be.revertedWith('no permit')
             await generalContractor.issue(bytesOfIssue)
             await generalContractor1.bindSubContractor(2, subContractor.address, ethLikeProver.address)
             await expect(generalContractor1.issue(bytesOfIssue)).to.be.revertedWith('fail to bind contract group')
@@ -687,6 +689,8 @@ describe('GeneralContractor', () => {
             await ethLikeProver.set(false)
             await expect(generalContractor.bindContractGroup(buffer)).to.be.revertedWith('proof is invalid')
             await ethLikeProver.set(true)
+            await generalContractor.connect(admin).grantRole("0xfb47a4753d25ec0f8c1b28af2736043b542a783458d15c76337d12de4bc914b3", redeemaccount.address)
+            await expect(generalContractor.connect(redeemaccount).bindContractGroup(buffer)).to.be.revertedWith('no permit')
             await generalContractor.bindContractGroup(buffer)
             //repeat bindContractGroup
             await expect(generalContractor.bindContractGroup(buffer)).
@@ -752,6 +756,8 @@ describe('GeneralContractor', () => {
             await expect(generalContractor.expand(100, 2, admin.address)).to.be.revertedWith('group id has not issued')
             await expect(generalContractor.expand(event.topics[2], 100, admin.address)).to.be.revertedWith('chain is not bound')
 
+            await generalContractor.connect(admin).grantRole("0xfb47a4753d25ec0f8c1b28af2736043b542a783458d15c76337d12de4bc914b3", redeemaccount.address)
+            await expect(generalContractor.connect(redeemaccount).expand(event.topics[2], 2, admin.address)).to.be.revertedWith('no permit')
             tx = await generalContractor.expand(event.topics[2], 2, admin.address)
             rc = await tx.wait()
             event = rc.events.find(event=>event.event === "GeneralContractorIssue")
@@ -1196,6 +1202,8 @@ describe('SubContractor', () => {
             await ethLikeProver.set(false)
             await expect(subContractor.subIssue(buffer)).to.be.revertedWith('proof is invalid')
             await ethLikeProver.set(true)
+            await subContractor.connect(admin).grantRole("0xfb47a4753d25ec0f8c1b28af2736043b542a783458d15c76337d12de4bc914b3", redeemaccount.address)
+            await expect(subContractor.connect(redeemaccount).subIssue(buffer)).to.be.revertedWith('no permit')
             await subContractor.subIssue(buffer)
             await expect(subContractor.subIssue(buffer)).to.be.revertedWith('proof is reused')
 

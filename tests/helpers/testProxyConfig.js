@@ -1,38 +1,45 @@
 const { AddressZero } = require("ethers").constants
 bindPeersOfCore = [
     {
-        caller: deployer.address,
+        caller: deployer,
         chainId: 2,
         prover: ethLikeProver.address,
         proxy: edgeProxy.address,
         expect: "prover is bound"
     },
     {
-        caller: admin.address,
+        caller: admin,
         chainId: 2,
         prover: ethLikeProver.address,
         proxy: edgeProxy.address,
-        expect: "prover is bound"
+        expect: "is missing role "
     },
     {
-        caller: deployer.address,
+        caller: user,
+        chainId: 2,
+        prover: ethLikeProver.address,
+        proxy: edgeProxy.address,
+        expect: "is missing role "
+    },
+    {
+        caller: deployer,
         chainId: 23,
         prover: user.address,
         proxy: edgeProxy.address,
         expect: "invalid prover"
     },
     {
-        caller: deployer.address,
+        caller: deployer,
         chainId: 23,
         prover: ethLikeProver.address,
         proxy: AddressZero,
-        expect: "invalid prover"
+        expect: "invalid proxy"
     }
 ]
 
 burnOfEdge = [
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 2,
         groupId: contractGroupId,
         receiver: AddressZero,
@@ -40,7 +47,7 @@ burnOfEdge = [
         expect: "invalid receiver"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 2,
         groupId: 0,
         receiver: user1.address,
@@ -48,7 +55,7 @@ burnOfEdge = [
         expect: "invalid contract group id"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 2,
         groupId: contractGroupId,
         receiver: user1.address,
@@ -56,7 +63,7 @@ burnOfEdge = [
         expect: "only support cross chain tx"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 1,
         groupId: 100,
         receiver: user1.address,
@@ -64,7 +71,7 @@ burnOfEdge = [
         expect: "asset is not bound"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 3,
         groupId: contractGroupId,
         receiver: user1.address,
@@ -149,7 +156,7 @@ bindAssetOfEdge = [
 
 burnOfCore = [
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 1,
         groupId: contractGroupId,
         receiver: user1.address,
@@ -157,7 +164,7 @@ burnOfCore = [
         expect: "only support cross chain tx"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 2,
         groupId: contractGroupId,
         receiver: AddressZero,
@@ -165,7 +172,7 @@ burnOfCore = [
         expect: "invalid receiver"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 2,
         groupId: 0,
         receiver: user1.address,
@@ -173,7 +180,7 @@ burnOfCore = [
         expect: "invalid contract group id"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 2,
         groupId: 100,
         receiver: user1.address,
@@ -181,7 +188,7 @@ burnOfCore = [
         expect: "from asset can not be 0"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 3,
         groupId: contractGroupId,
         receiver: user1.address,
@@ -189,7 +196,7 @@ burnOfCore = [
         expect: "to asset can not be 0"
     },
     {
-        caller: miner.address,
+        caller: miner,
         chainId: 2,
         groupId: contractGroupId,
         receiver: user1.address,

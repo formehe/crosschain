@@ -329,11 +329,12 @@ describe('proxy', () => {
 
       testProxy2 = await testProxyCon.deploy(edgeProxy1.address);
       await testProxy2.deployed();
+
+      const {bindPeersOfCore,burnOfEdge,bindAssetOfCore,bindAssetOfEdge,burnOfCore} = require('./helpers/testProxyConfig')
     })
 
     describe('burn and mint', () => {
         it('bind peer chain', async () => {
-            const {bindPeersOfCore} = require('./helpers/testProxyConfig')
             for (i in bindPeersOfCore) {
                 if (bindPeersOfCore[i].expect.length != 0) {
                     await expect(coreProxy.connect(bindPeersOfCore[i].caller).bindPeerChain(
@@ -351,7 +352,6 @@ describe('proxy', () => {
         })
 
         it('edge burn, core mint', async () => {
-            const {burnOfEdge} = require('./helpers/testProxyConfig')
             for (i in burnOfEdge) {
                 if (burnOfEdge[i].expect.length != 0) {
                     await expect(edgeProxy.connect(burnOfEdge[i].caller).burnTo(
@@ -390,6 +390,8 @@ describe('proxy', () => {
             rc1 = await tx1.wait()
             await expect(coreProxy.mint(buffer)).to.be.revertedWith('to chain is not permit')
 
+            await edgeProxy.connect(admin).grantRole("0xfb47a4753d25ec0f8c1b28af2736043b542a783458d15c76337d12de4bc914b3", redeemaccount.address)
+            await expect(edgeProxy.connect(redeemaccount).burnTo(1, contractGroupId, user1.address, 52)).to.be.revertedWith('no permit')
             tx = await edgeProxy.connect(miner).burnTo(1, contractGroupId, user1.address, 52)
             rc = await tx.wait()
             event = rc.events.find(event=>event.event === "CrossTokenBurned")
@@ -539,6 +541,8 @@ describe('proxy', () => {
             await ethLikeProver.set(false)
             await expect(coreProxy.mint(buffer)).to.be.revertedWith('proof is invalid')
             await ethLikeProver.set(true)
+            await coreProxy.connect(admin).grantRole("0xfb47a4753d25ec0f8c1b28af2736043b542a783458d15c76337d12de4bc914b3", redeemaccount.address)
+            await expect(coreProxy.connect(redeemaccount).mint(buffer)).to.be.revertedWith('no permit')
             tx = await coreProxy.mint(buffer)
             tx = await expect(coreProxy.mint(buffer)).to.be.revertedWith('The burn event proof cannot be reused')
 
@@ -566,7 +570,6 @@ describe('proxy', () => {
         })
 
         it('core proxy bind asset group', async () => {
-            const {bindAssetOfCore} = require('./helpers/testProxyConfig')
             await expect(coreProxy1.connect(user).bindAssetProxyGroup(coreProxy1.address, 1, 1, coreProxy1.address)).
             to.be.revertedWith('only for general contractor')
             for (i in bindAssetOfCore) {
@@ -587,9 +590,8 @@ describe('proxy', () => {
             }
         })
 
-        it('edge proxy bind asset group', async () => {
-            const {bindAssetOfEdge} = require('./helpers/testProxyConfig')            
-            await edgeProxy1.initialize(ethLikeProver.address, testProxy1.address, coreProxy.address, 1, 2, admin.address, limit.address)
+        it('edge proxy bind asset group', async () => {          
+            await edgeProxy1.initialize(ethLikeProver.address, testProxy2.address, coreProxy.address, 1, 2, admin.address, limit.address)
             await expect(edgeProxy1.connect(user).bindAssetGroup(edgeProxy1.address, 1, edgeProxy1.address)).
             to.be.revertedWith('just subcontractor can bind')
 
@@ -610,19 +612,17 @@ describe('proxy', () => {
         })
 
         it('core burn, edge mint', async () => {
-            tx1 = await generalContractor.bindContractGroup(buffer1)
-            rc1 = await tx1.wait()
-            const {burnOfCore} = require('./helpers/testProxyConfig')
+            await generalContractor.bindContractGroup(buffer1)
             for (i in burnOfCore) {
                 if (burnOfCore[i].expect.length != 0) {
-                    await expect(edgeProxy.connect(burnOfCore[i].caller).burnTo(
+                    await expect(coreProxy.connect(burnOfCore[i].caller).burnTo(
                             burnOfCore[i].chainId, 
                             burnOfCore[i].groupId, 
                             burnOfCore[i].receiver,
                             burnOfCore[i].tokenId)).
                             to.be.revertedWith(burnOfCore[i].expect)
                 } else {
-                    await edgeProxy.connect(burnOfCore[i].caller).burnTo(
+                    await coreProxy.connect(burnOfCore[i].caller).burnTo(
                         burnOfCore[i].chainId, 
                         burnOfCore[i].groupId, 
                         burnOfCore[i].receiver,
@@ -630,6 +630,8 @@ describe('proxy', () => {
                 }
             }
 
+            await coreProxy.connect(admin).grantRole("0xfb47a4753d25ec0f8c1b28af2736043b542a783458d15c76337d12de4bc914b3", redeemaccount.address)
+            await expect(coreProxy.connect(redeemaccount).burnTo(2, contractGroupId, user1.address, 50)).to.be.revertedWith('no permit')
             let tx = await coreProxy.connect(miner).burnTo(2, contractGroupId, user1.address, 50)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "CrossTokenBurned")
@@ -793,6 +795,9 @@ describe('proxy', () => {
             await ethLikeProver.set(false)
             await expect(edgeProxy.mint(buffer)).to.be.revertedWith('proof is invalid')
             await ethLikeProver.set(true)
+            await edgeProxy.connect(admin).grantRole("0xfb47a4753d25ec0f8c1b28af2736043b542a783458d15c76337d12de4bc914b3", redeemaccount.address)
+            await expect(edgeProxy.connect(redeemaccount).mint(buffer)).to.be.revertedWith('no permit')
+
             tx = await edgeProxy.mint(buffer)
             tx = await expect(edgeProxy.mint(buffer)).to.be.revertedWith('The burn event proof cannot be reused')
 
