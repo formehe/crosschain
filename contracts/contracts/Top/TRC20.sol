@@ -12,7 +12,8 @@ contract TRC20 is ERC20, VerifierUpgradeable {
         address indexed toToken,
         address indexed sender,
         uint256 amount,
-        address receiver
+        address receiver,
+        uint8   decimals
     );
 
     event Minted (
@@ -78,6 +79,6 @@ contract TRC20 is ERC20, VerifierUpgradeable {
         require(amount != 0, "amount can not be 0");
         require(limiter.checkTransferedQuota(address(this),amount),"not in the amount range");
         _burn(msg.sender, amount);
-        emit Burned(address(this), assetHash, msg.sender, amount, receiver);
+        emit Burned(address(this), assetHash, msg.sender, amount, receiver, decimals());
     }
 }

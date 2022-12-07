@@ -30,7 +30,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         address indexed toToken,
         address indexed sender,
         uint256 amount,
-        address receiver
+        address receiver,
+        uint8 decimals
     );
 
     event Unlocked (
@@ -56,6 +57,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         address sender;
         uint256 amount;
         address receiver;
+        uint8   decimals;
     }
 
     struct VerifiedReceipt {
@@ -109,6 +111,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
 
     function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external onlyRole(ADMIN_ROLE) {
         require(_withdrawQuota != 0, "withdraw quota can not be 0");
+        uint256 quota = withdrawQuotas[_asset];
+        require((quota == 0) || (_withdrawQuota < quota), "withdraw quota must be smaller");
         withdrawQuotas[_asset] = _withdrawQuota;
     }
 
@@ -188,8 +192,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         bytes32 topics0 = logInfo.topics[0];
         
         //burn
-        require(topics0 == 0x4f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842, "invalid signature");
-        (_receipt.amount, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
+        require(topics0 == 0xfbaa2af2805102bd1c30d2403521626bd712d23ea3cef9452ef78ef826ba2282, "invalid signature");
+        (_receipt.amount, _receipt.receiver, _receipt.decimals) = abi.decode(logInfo.data, (uint256, address, uint8));
         _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
@@ -202,7 +206,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     }
 
     modifier unLock_pauseable(){
-        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0 || hasRole(CONTROLLED_ROLE,_msgSender())),"no permit");
+        require(!hasRole(BLACK_UN_LOCK_ROLE,_msgSender())&& ((paused & PAUSED_UNLOCK) == 0),"no permit");
         _;
     }
 }

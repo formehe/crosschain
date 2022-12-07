@@ -27,10 +27,6 @@ contract Limit is AccessControl{
         bytes32 _forbiddenId
     );
 
-    event TxRecovered (
-        bytes32 forbiddenId
-    );
-
     event FrozenBound (
         address indexed asset, 
         uint  frozenDuration
@@ -57,7 +53,9 @@ contract Limit is AccessControl{
     ) external onlyRole(ADMIN_ROLE) {
         require(_maxTransferedToken > _minTransferedToken, "max quantity of permitted token is less than the min");
         require(_maxTransferedToken < (1 << 128), "transfered token is overflow");
-        require(tokenQuotas[_asset].maxTransferedToken == 0, "can not rebind transfer quota");
+        uint256 maxQuota = tokenQuotas[_asset].maxTransferedToken;
+        uint256 minQuota = tokenQuotas[_asset].minTransferedToken;
+        require((maxQuota == 0) || ((minQuota <= _minTransferedToken) && (maxQuota >= _maxTransferedToken)), "range of transfer quota must be smaller");
         tokenQuotas[_asset].maxTransferedToken = _maxTransferedToken;
         tokenQuotas[_asset].minTransferedToken = _minTransferedToken;
         emit TransferedQuotaBound(_asset, _minTransferedToken, _maxTransferedToken);
@@ -87,20 +85,12 @@ contract Limit is AccessControl{
         emit TxForbidden(_forbiddenId);
     }
 
-    function recover(
-        bytes32 _forbiddenId
-    ) external onlyRole(FORBIDEN_ROLE) {
-        require(forbiddens[_forbiddenId], "id has not been forbidden");
-        forbiddens[_forbiddenId] = false;
-        emit TxRecovered(_forbiddenId);
-    }
-
     function bindFrozen(
         address _asset, 
         uint _frozenDuration
     ) external onlyRole(ADMIN_ROLE){
         require(_frozenDuration <= MAX_FROZEN_TIME, "freezon duration can not over 180 days");
-        require(tokenFrozens[_asset] == 0, "can not rebind frozen");
+        require(_frozenDuration > tokenFrozens[_asset], "frozen time must bigger");
         tokenFrozens[_asset] = _frozenDuration;
         emit FrozenBound(_asset, _frozenDuration);
     }
@@ -110,5 +100,9 @@ contract Limit is AccessControl{
         uint _timestamp
     ) external view returns(bool) {
         return block.timestamp >= _timestamp + tokenFrozens[_asset];
+    }
+
+    function renounceRole(bytes32 /*role*/, address /*account*/) public pure override {
+        require(false, "not support");
     }
 }

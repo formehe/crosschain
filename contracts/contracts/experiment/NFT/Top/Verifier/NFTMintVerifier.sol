@@ -1,27 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../../common/AdminControlledUpgradeable.sol";
-import "../prover/IEthProver.sol";
-import "../../common/ILimit.sol";
-import "../../common/IERC20Decimals.sol";
-// import "hardhat/console.sol";
-abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeable {
+import "../../../../common/AdminControlledUpgradeable.sol";
+import "../../../../Top/prover/IEthProver.sol";
+import "../../../../common/ILimit.sol";
+
+abstract contract NFTMintVerifier is Initializable, AdminControlledUpgradeable {
     using Borsh for Borsh.Data;
     using EthProofDecoder for Borsh.Data;
 
-    struct VerifiedEvent {
+    struct PeerLockEvent {
         address fromToken;
         address toToken;
         address sender;
-        uint256 amount;
+        uint256 tokenId;
         address receiver;
-        uint8   decimals;
     }
 
     struct VerifiedReceipt {
         bytes32 proofIndex;
-        VerifiedEvent data;
+        PeerLockEvent data;
     }
 
     uint constant UNPAUSED_ALL = 0;
@@ -30,19 +28,17 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
 
     IEthProver public prover;
     ILimit public limiter;
+
     address public lockProxyHash;
-    uint64 private minBlockAcceptanceHeight;
     mapping(bytes32 => bool) public usedProofs;
 
-    function _VerifierUpgradeable_init(
+    function _NFTMintVerifier_init(
         IEthProver _prover,
-        address _peerLockProxyHash,
-        uint64 _minBlockAcceptanceHeight,
-        ILimit _limiter
+        address   _peerLockProxyHash,
+        ILimit    _limiter
     ) internal onlyInitializing {
         prover = _prover;
         lockProxyHash = _peerLockProxyHash;
-        minBlockAcceptanceHeight = _minBlockAcceptanceHeight;
         limiter = _limiter;
     }
 
@@ -83,13 +79,14 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
 
     function _parseLog(
         bytes memory log
-    ) internal virtual view returns (VerifiedEvent memory _receipt, address _contractAddress) {
+    ) internal virtual view returns (PeerLockEvent memory _receipt, address _contractAddress) {
         Deserialize.Log memory logInfo = Deserialize.toReceiptLog(log);
         require(logInfo.topics.length == 4, "invalid the number of topics");
         bytes32 topics0 = logInfo.topics[0];
+        
         //Lock
-        require(topics0 == 0xb75dda4df2729ec4d84d98e6f6263bb92944b5e0c16c8072544355e5d07449e3, "invalid the function of topics");
-        (_receipt.amount, _receipt.receiver, _receipt.decimals) = abi.decode(logInfo.data, (uint256, address, uint8));
+        require(topics0 == 0x56b161a6e4643e17140e8adce689a2b4dd38a651272b26645c7320a9284d7ab3, "invalid the function of topics");
+        (_receipt.tokenId, _receipt.receiver) = abi.decode(logInfo.data, (uint256, address));
         _receipt.fromToken = abi.decode(abi.encodePacked(logInfo.topics[1]), (address));
         _receipt.toToken = abi.decode(abi.encodePacked(logInfo.topics[2]), (address));
         _receipt.sender = abi.decode(abi.encodePacked(logInfo.topics[3]), (address));
@@ -97,12 +94,12 @@ abstract contract VerifierUpgradeable is Initializable, AdminControlledUpgradeab
     }
 
     modifier mint_pauseable(){
-        require(!hasRole(BLACK_MINT_ROLE, _msgSender())&& ((paused & PAUSED_MINT) == 0),"no permit");
+         require(!hasRole(BLACK_MINT_ROLE, _msgSender())&& ((paused & PAUSED_MINT) == 0 || hasRole(CONTROLLED_ROLE, _msgSender())), "no permit");
         _;
     }
 
     modifier burn_pauseable(){
-        require(!hasRole(BLACK_BURN_ROLE, _msgSender()) && ((paused & PAUSED_BURN) == 0),"no permit");
+        require(!hasRole(BLACK_BURN_ROLE, _msgSender()) && ((paused & PAUSED_BURN) == 0), "no permit");
         _;
     }
 }
