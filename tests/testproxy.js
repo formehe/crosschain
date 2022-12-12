@@ -287,9 +287,7 @@ describe('proxy', () => {
       templateAddr = "0x"+ (event.topics[3]).substring(26)
       contractGroupId = event.topics[2]
       // construct receipt proof
-      getProof = new GetProof("http://127.0.0.1:8545")
       proof = await getProof.receiptProof(tx.hash)
-      rpcInstance = new rpc("http://127.0.0.1:8545")
       block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
       targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
       re = Receipt.fromRpc(targetReceipt)
@@ -399,10 +397,9 @@ describe('proxy', () => {
             tx = await edgeProxy.connect(miner).burnTo(1, contractGroupId, user1.address, 52)
             rc = await tx.wait()
             event = rc.events.find(event=>event.event === "CrossTokenBurned")
+            
             // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
             
@@ -554,9 +551,7 @@ describe('proxy', () => {
             rc = await tx.wait()
             event = rc.events.find(event=>event.event === "CrossTokenBurned")
             // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
 
@@ -809,9 +804,7 @@ describe('proxy', () => {
             rc = await tx.wait()
             event = rc.events.find(event=>event.event === "CrossTokenBurned")
             // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
 

@@ -40,7 +40,7 @@ abstract contract ITokenFactory is Initializable {
                 continue;
             }
 
-            asset = Clones.cloneDeterministic(templateCode, bytes32(saltId));
+            asset = Clones.cloneDeterministic(templateCode, salt);
             initialize(chainId, asset, rangeOfIssue, minter);
             emit ContractCreated(chainId, saltId, asset, templateCode, minter);
             return asset;

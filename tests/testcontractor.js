@@ -574,9 +574,7 @@ describe('GeneralContractor', () => {
             event = rc.events.find(event=>event.event === "SubContractorIssue")
             templateAddr = "0x"+ (event.topics[3]).substring(26)
             // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
 
@@ -783,9 +781,7 @@ describe('GeneralContractor', () => {
             event = rc.events.find(event=>event.event === "SubContractorIssue")
             templateAddr = "0x"+ (event.topics[3]).substring(26)
             // construct receipt proof
-            getProof = new GetProof("http://127.0.0.1:8545")
             proof = await getProof.receiptProof(tx.hash)
-            rpcInstance = new rpc("http://127.0.0.1:8545")
             block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
             targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
             re = Receipt.fromRpc(targetReceipt)
@@ -888,14 +884,12 @@ describe('SubContractor', () => {
     
         console.log("edgeProxy "  + edgeProxy.address)
     
-        nfrFactoryCon1 = await ethers.getContractFactory("NFRFactory");
         nfrFactory1 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractor.address);
         await nfrFactory1.deployed();
     
         console.log("nfrFactory "  + nfrFactory1.address)
 
-        proxyRegistryCon1 = await ethers.getContractFactory("ProxyRegistry");
-        proxyRegistry1 = await proxyRegistryCon1.deploy(edgeProxy.address, admin.address);
+        proxyRegistry1 = await proxyRegistryCon.deploy(edgeProxy.address, admin.address);
         await proxyRegistry1.deployed();
     
         console.log("proxyRegistry "  + proxyRegistry1.address)	

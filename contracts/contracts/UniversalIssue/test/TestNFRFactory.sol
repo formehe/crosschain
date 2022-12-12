@@ -26,7 +26,7 @@ contract TestNFRFactory {
         bytes calldata rangeOfIssue,
         uint256 saltId,
         address minter
-    ) external {
+    ) external returns(address asset) {
         bytes memory payload = abi.encodeWithSignature("clone(uint256,bytes,uint256,address)", chainId,rangeOfIssue,saltId,minter);
         (bool success, bytes memory returnData) = proxy.call(payload);
         if (!success) {
@@ -34,5 +34,23 @@ contract TestNFRFactory {
                 revert(add(32, returnData), mload(returnData))
             }
         }
+
+        (asset) = abi.decode(returnData,(address));
+    }
+
+    function expand(
+        address contractCode,
+        uint256 peerChainId,
+        address issuer
+    ) external returns(bytes memory expandInfo) {
+        bytes memory payload = abi.encodeWithSignature("expand(address,uint256,address)", contractCode, peerChainId, issuer);
+        (bool success, bytes memory returnData) = proxy.call(payload);
+        if (!success) {
+            assembly {
+                revert(add(32, returnData), mload(returnData))
+            }
+        }
+
+        (expandInfo) = abi.decode(returnData,(bytes));
     }
 }

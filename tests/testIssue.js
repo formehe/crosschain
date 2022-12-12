@@ -63,8 +63,6 @@ class TxProof {
        this.headerData = headerData
        
        this.proof = []
-       // console.log(proof.buffer)
-       // console.log("______________________________")
        for (const node of proof) {
            var tmp = new Uint8Array(1 + node[1].length);
            tmp[0] = 2;
@@ -74,8 +72,6 @@ class TxProof {
            }
            this.proof.push(rlp.encode([node[0], tmp]))
        }
-       // console.log("______________________________")
-       // console.log(keccak256(this.proof[0]))
    }
 }
 
@@ -171,14 +167,12 @@ describe('IssueCoder', () => {
 
     console.log("edgeProxy "  + edgeProxy.address)
 
-    nfrFactoryCon1 = await ethers.getContractFactory("NFRFactory");
     nfrFactory1 = await nfrFactoryCon.deploy(erc20TokenSample.address, subContractor.address);
     await nfrFactory1.deployed();
 
     console.log("nfrFactory "  + nfrFactory1.address)
 
-    proxyRegistryCon1 = await ethers.getContractFactory("ProxyRegistry");
-    proxyRegistry1 = await proxyRegistryCon1.deploy(edgeProxy.address, wallet.address);
+    proxyRegistry1 = await proxyRegistryCon.deploy(edgeProxy.address, wallet.address);
     await proxyRegistry1.deployed();
 
     console.log("proxyRegistry "  + proxyRegistry1.address)
@@ -292,7 +286,6 @@ describe('IssueCoder', () => {
       console.log((event.topics[3]))
       templateAddr = "0x"+ (event.topics[3]).substring(26)
       // construct receipt proof
-      getProof = new GetProof("http://127.0.0.1:8545")
       proof = await getProof.receiptProof(tx.hash)
       rpcInstance = new rpc("http://127.0.0.1:8545")
       block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
