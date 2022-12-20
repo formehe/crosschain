@@ -75,6 +75,7 @@ describe('NFRFactory', () => {
                     await expect(testNFRFactory.issue(bytesOfIssue)).to.be.revertedWith(issueInfos[i].expect)
                 } else {
                     tx = await testNFRFactory.callStatic.issue(bytesOfIssue)
+                    //await testNFRFactory.clone(1, tx.issueInfo, 0, user.address)
                 }
             }
 
@@ -122,6 +123,7 @@ describe('NFRFactory', () => {
             await expect(testNFRFactory.expand(user.address, 1, admin.address)).
             to.be.revertedWith('Transaction reverted without a reason string')
 
+            await testNFRFactory.expand(templateAddr, 0, admin.address)
             await testNFRFactory.expand(templateAddr, 1, admin.address)
             await testNFRFactory.expand(templateAddr, 1, AddressZero)
             await testNFRFactory.expand(templateAddr, 1, testNFRFactory.address)

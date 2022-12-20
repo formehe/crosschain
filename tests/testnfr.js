@@ -274,7 +274,7 @@ describe('ERC3721', () => {
                     await expect(nfrContract.connect(attachAdditional[i].caller).attachAdditional(
                             attachAdditional[i].tokenId,
                             attachAdditional[i].additional))
-                    .to.be.revertedWith(attachAdditional[i].expect)   
+                    .to.be.revertedWith(attachAdditional[i].expect)
                 } else {
                     await nfrContract.connect(attachAdditional[i].caller).attachAdditional(
                         attachAdditional[i].tokenId,
@@ -292,7 +292,7 @@ describe('ERC3721', () => {
         it('not issuer', async () => {
             await nfrContract.mint(100, [0,1], [1,1], '0x1111', user.address)
             await expect(nfrContract.connect(user).attachAdditional(100, "0x1111")).
-            to.be.revertedWith('only issuer can add additional of token')
+            to.be.revertedWith('only the owner of token is issuer can attach additional of token')
         })
 
         it('approver', async () => {
@@ -370,7 +370,7 @@ describe('ERC3721', () => {
             expect(await nfrContract.balanceOf(user1.address)).to.equal(1)
             const result = await nfrContract
             .tokenRights(1)
-            expect(result.rightQuantities_[0]).to.equal(0)   
+            expect(result.rightQuantities_[0]).to.equal(0)
         })
 
         it('transfer token have right', async () => {
@@ -406,9 +406,9 @@ describe('ERC3721', () => {
             await expect(nfrContract.connect(admin)["safeTransferFrom(address,address,uint256)"](admin.address, nfrContract.address, 1)).
             to.be.revertedWith('ERC721: transfer to non ERC721Receiver implementer')
 
-            callbackFunCon = await ethers.getContractFactory("TestCallBackUser");
-            callbackFun = await callbackFunCon.deploy(nfrContract.address);
-            await callbackFun.deployed();
+            callbackFunCon = await ethers.getContractFactory("TestCallBackUser")
+            callbackFun = await callbackFunCon.deploy(nfrContract.address)
+            await callbackFun.deployed()
     
             await expect(nfrContract.connect(admin)["safeTransferFrom(address,address,uint256)"](admin.address, callbackFun.address, 1)).
             to.be.revertedWith('ERC721: transfer to non ERC721Receiver implementer')
@@ -480,7 +480,7 @@ describe('ERC3721', () => {
                     await expect(nfrContract.connect(approve[i].caller).approve(
                             approve[i].approver,
                             approve[i].tokenId))
-                    .to.be.revertedWith(approve[i].expect)   
+                    .to.be.revertedWith(approve[i].expect)
                 } else {
                     await nfrContract.connect(approve[i].caller).approve(
                         approve[i].approver,
@@ -514,10 +514,10 @@ describe('ERC3721', () => {
         it('token is not approved', async () => {
             await nfrContract.connect(admin).transferFrom(admin.address, user.address, 1)
             await expect(nfrContract.connect(user).attachRight(1,0)).
-            to.be.revertedWith('only issuer can attach right of token')
+            to.be.revertedWith('only the owner of token is issuer can attach right of toke')
 
             await expect(nfrContract.connect(admin).attachRight(1,0)).
-            to.be.revertedWith('only issuer can attach right of token')
+            to.be.revertedWith('only the owner of token is issuer can attach right of toke')
             
             await expect(nfrContract.attachRight(2, 0)).
             to.be.revertedWith('not owner or approver')
@@ -527,7 +527,7 @@ describe('ERC3721', () => {
         it('not token issuer attach token id and right', async () => {
             await nfrContract.mint(100, [0,1], [1,1], '0x1111', user.address)
             await expect(nfrContract.attachRight(100, 0)).
-            to.be.revertedWith('only issuer can attach right of token')
+            to.be.revertedWith('only the owner of token is issuer can attach right of toke')
         })
 
         it('token owner attach token id and right', async () => {

@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "../../common/IssueCoder.sol";
 import "../ITokenFactory.sol";
-
 contract NFRFactory is ITokenFactory{
     constructor(address code_, address contractor_) ITokenFactory(code_, contractor_) {  
     }
@@ -24,6 +23,7 @@ contract NFRFactory is ITokenFactory{
 
             circulationPerChain = generalIssue.issueRangeOfChains[i];
             exist = true;
+            break;
         }
 
         require(exist, "not issue on this chain");
@@ -85,7 +85,7 @@ contract NFRFactory is ITokenFactory{
         (bool success, bytes memory returnData) = contractCode.staticcall(payload);
         require(success, "rights interface is not exist");
         (issueWithRange.rights) = abi.decode(returnData, (IssueCoder.IssueRight[]));
-
+        
         payload = abi.encodeWithSignature("issuer()");
         (success, returnData) = contractCode.staticcall(payload);
         require(success, "issuer interface is not exist");

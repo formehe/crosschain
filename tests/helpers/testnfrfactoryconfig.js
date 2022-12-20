@@ -841,6 +841,70 @@ issueInfos = [
                     circulationOfRights: [
                         {
                             id:0,
+                            amount:upperLimitOfToken.sub(1)
+                        },
+                        {
+                            id:1,
+                            amount:upperLimitOfToken.sub(1)
+                        }
+                    ]
+                },
+                {
+                    issuer: miner.address,
+                    chainId: 2,
+                    amountOfToken: 50,
+                    circulationOfRights: [
+                        {
+                            id:0,
+                            amount:upperLimitOfToken.sub(1)
+                        },
+                        {
+                            id:0,
+                            amount:upperLimitOfToken.sub(1)
+                        }
+                    ]
+                }
+            ]
+        },
+        expect: "right kind is not exist"
+    },
+
+    {
+        content: {
+            name: "nfr",
+            symbol: "nfr",
+            issuer: {
+                name: "test user",
+                certification: "test certification",
+                agreement: "test agreement",
+                uri:"test uri"
+            },
+            rights: [
+                {
+                    id:0, 
+                    right: {
+                        name: "right1",
+                        uri: "right uri",
+                        agreement: "right agreement"
+                    }
+                },
+                {
+                    id:1, 
+                    right: {
+                        name: "right2",
+                        uri: "right uri",
+                        agreement: "right agreement"
+                    },
+                }
+            ],
+            issueOfChains:[
+                {
+                    issuer: miner.address,
+                    chainId: 1,
+                    amountOfToken: 50,
+                    circulationOfRights: [
+                        {
+                            id:0,
                             amount:upperLimitOfToken.add(1)
                         },
                         {

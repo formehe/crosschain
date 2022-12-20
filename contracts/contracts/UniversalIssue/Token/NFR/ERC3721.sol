@@ -98,7 +98,7 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     ) external virtual {
         require(additional.length != 0, "invalid parameter");
         address owner = ownerOf(tokenId);
-        require(owner == issuer(tokenId), "only issuer can add additional of token");
+        require(owner == issuer(tokenId), "only the owner of token is issuer can attach additional of token");
         require(_isApprovedOrOwner(_msgSender(), tokenId), "not owner or approver");
         require(_tokenExtension[tokenId].length == 0, "additional of token has been bound");
         _tokenExtension[tokenId] = additional;
@@ -122,7 +122,7 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
         uint256 rightKind
     ) external virtual{
         address owner = ownerOf(tokenId);
-        require(owner == issuer(tokenId), "only issuer can attach right of token");
+        require(owner == issuer(tokenId), "only the owner of token is issuer can attach right of token");
         require(_isApprovedOrOwner(_msgSender(), tokenId), "not owner or approver");
         _attachRight(rightKind);
         _addRightOfToken(tokenId, rightKind, 1);
