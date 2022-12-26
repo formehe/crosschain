@@ -34,7 +34,14 @@ bindEdgeGovernances = [
         contractor: edgeGovernance.address,
         prover: AddressZero,
         expect: "invalid prover"
-    }    
+    },
+    {
+        caller: deployer,
+        chainId: 3,
+        contractor: AddressZero,
+        prover: ethLikeProver.address,
+        expect: "invalid edge governance"
+    }
 ]
 
 bindGovernedContractsOfEdge = [
