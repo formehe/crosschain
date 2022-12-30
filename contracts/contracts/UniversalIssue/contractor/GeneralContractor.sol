@@ -60,6 +60,9 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     uint constant PAUSED_EXPAND = 1 << 1;
     uint constant PAUSED_BOUND = 1 << 2;
 
+    //keccak256("WHITE.ISSUE.ROLE");
+    bytes32 constant WHITE_ISSUE_ROLE = 0x1b2c9ddc60d90419cda4ff7b98e6c4cd1b2b2c4d31371074d4d9abc8077358ca;
+
     // chainId --- chainInfo
     mapping(uint256 => SubContractorInfo) public subContractors;
     // groupid --- templateId
@@ -116,14 +119,13 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         
         _AdminControlledUpgradeable_init(_msgSender(), 0);
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
-        
-        // _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
-        // _setRoleAdmin(BLACK_ISSUE_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(WHITE_ISSUE_ROLE, ADMIN_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
         _setRoleAdmin(BLACK_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
+        _grantRole(WHITE_ISSUE_ROLE, _msgSender());
     }
 
     function bindSubContractor(
@@ -188,6 +190,7 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     function issue(
         bytes calldata issueInfo
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_ISSUE){
+        require(hasRole(WHITE_ISSUE_ROLE,_msgSender()), "only for white issuer");
         (bytes memory generalIssueInfo, uint256[] memory chainIds) = tokenFactory.issue(issueInfo);
         uint256 saltId_ = applySaltId();
         uint256 contractGroupId_ = applyGroupId();
@@ -206,6 +209,7 @@ contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
         uint256 peerChainId,
         address issuer
     ) external accessable_and_unpauseable(BLACK_ROLE, PAUSED_EXPAND){
+        require(hasRole(WHITE_ISSUE_ROLE, _msgSender()), "only for white issuer");
         require(issuer != address(0), "invalid issuer");
         AssetInfo memory assetInfo = localContractGroupAsset[groupId];
         require(assetInfo.asset != address(0), "group id has not issued");
