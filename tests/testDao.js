@@ -114,6 +114,17 @@ describe("TDao", function () {
         }
     })
 
+    it('immutable vote', async () => {
+        await expect(votesCon.deploy([user.address, user1.address])).to.be.revertedWith("number of voters must more than 3")
+        await expect(votesCon.deploy([user.address, user1.address, user.address])).to.be.revertedWith("voter can not be repeated")
+        await expect(votesCon.deploy([user.address, user1.address, AddressZero])).to.be.revertedWith("invalid voter")
+        await expect(votes.getPastTotalSupply(BigNumber.from(1).shl(129))).to.be.revertedWith("block not yet mined")
+        await expect(votes.getPastVotes(user.address, BigNumber.from(1).shl(129))).to.be.revertedWith("block not yet mined")
+        await expect(votes.delegates(user.address)).to.be.revertedWith("not support")
+        await expect(votes.delegate(user.address)).to.be.revertedWith("not support")
+        await expect(votes.delegateBySig(user.address)).to.be.revertedWith("not support")
+    })
+
     it('Proposal', async () => {
         try {
             const transferCalldata = erc20Sample.interface.encodeFunctionData('transfer', [user.address, 128])
@@ -210,7 +221,7 @@ describe("TDao", function () {
             await tdao.connect(user1).castVote(tx.toBigInt(), 1)
             await tdao.connect(user2).castVote(tx.toBigInt(), 1)
             await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 1000))
             await tdao.connect(user)["execute(uint256)"](tx.toBigInt())
             await expect(tdao.connect(user).cancel(tx.toBigInt())).to.be.revertedWith("Governor: proposal not active")
         } catch (e) {

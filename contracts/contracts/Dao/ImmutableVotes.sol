@@ -18,6 +18,7 @@ contract ImmutableVotes is IVotes {
     constructor(address[] memory voters) {
         require(voters.length >= 3, "number of voters must more than 3");
         for (uint256 i = 0; i < voters.length; i++) {
+            require(voters[i] != address(0), "invalid voter");
             require(_checkpoints[voters[i]] == 0, "voter can not be repeated");
             _checkpoints[voters[i]] = 1;
         }
