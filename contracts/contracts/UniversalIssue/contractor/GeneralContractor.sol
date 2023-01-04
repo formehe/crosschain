@@ -7,7 +7,7 @@ import "../factory/ITokenFactory.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/Deserialize.sol";
 import "../../common/AdminControlledUpgradeable.sol";
-import "../governance/IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 
 contract GeneralContractor is AdminControlledUpgradeable, IGovernanceCapability{
     using Borsh for Borsh.Data;

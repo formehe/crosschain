@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "../governance/IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 import "../../common/Utils.sol";
 
 contract LimitEx is AccessControl, IGovernanceCapability {
@@ -45,7 +45,7 @@ contract LimitEx is AccessControl, IGovernanceCapability {
     constructor(address owner){
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         
-        _setRoleAdmin(FORBIDEN_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(FORBIDEN_ROLE, OWNER_ROLE);
 
         _grantRole(OWNER_ROLE, owner);
         _grantRole(ADMIN_ROLE,_msgSender());

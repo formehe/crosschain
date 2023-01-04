@@ -7,7 +7,7 @@ import "../prover/IProver.sol";
 import "../../common/AdminControlledUpgradeable.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/Deserialize.sol";
-import "./IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 import "hardhat/console.sol";
 
 contract EdgeGovernance is AdminControlledUpgradeable{

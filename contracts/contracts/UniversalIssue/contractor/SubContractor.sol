@@ -8,7 +8,7 @@ import "../prover/IProver.sol";
 import "../factory/ITokenFactory.sol";
 import "../../common/codec/LogExtractor.sol";
 import "../../common/AdminControlledUpgradeable.sol";
-import "../governance/IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 
 contract SubContractor is AdminControlledUpgradeable, IGovernanceCapability{
     using Borsh for Borsh.Data;

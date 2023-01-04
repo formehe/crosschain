@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../prover/IProver.sol";
 import "../../common/AdminControlledUpgradeable.sol";
-import "./IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 import "hardhat/console.sol";
 
 contract CoreGovernance is AdminControlledUpgradeable{

@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./IProxy.sol";
 import "../common/IMultiLimit.sol";
 import "../factory/ITokenFactory.sol";
-import "../governance/IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 
 contract CoreProxy is IProxy, IGovernanceCapability{
     event ContractGroupProxyBound(

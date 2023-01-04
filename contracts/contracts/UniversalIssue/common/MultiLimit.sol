@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "../governance/IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 import "../../common/Utils.sol";
 
 contract MultiLimit is AccessControl, IGovernanceCapability{

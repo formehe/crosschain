@@ -8,7 +8,7 @@ import "../../../lib/external_lib/RLPDecode.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../../common/Deserialize.sol";
-import "../governance/IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 
 contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCapability {
     using RLPDecode for bytes;
@@ -31,7 +31,7 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
     // Assumed to be even and to not exceed 256.
     uint constant private MAX_BLOCK_PRODUCERS = 100;
     uint constant private UNPAUSE_ALL = 0;
-    uint constant private PAUSED_ADD_BLOCK = 1;
+    uint constant private PAUSED_ADD_BLOCK = 4;
 
     // Whether the contract was initialized.
     bool public initialized;

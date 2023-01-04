@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../common/ILimit.sol";
 import "./IProxy.sol";
 import "../factory/ITokenFactory.sol";
-import "../governance/IGovernanceCapability.sol";
+import "../../common/IGovernanceCapability.sol";
 
 contract EdgeProxy is IProxy, IGovernanceCapability{
     struct ProxiedAsset{
