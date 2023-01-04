@@ -127,7 +127,7 @@ contract TopBridgeEx is  ITopBridgeEx, AdminControlledUpgradeable, IGovernanceCa
 
     function addLightClientBlock(bytes memory data) internal {
         Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
-        require(uint(topBlock.inner_lite.receipts_root_hash) != 0, "invalid receipt root hash");
+        require(uint(topBlock.inner_lite.receipts_root_hash) == 0, "invalid receipt root hash");
         require(topBlock.inner_lite.height > minHeight, "invalid block height");
         require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
 
