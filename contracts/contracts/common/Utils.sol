@@ -111,4 +111,10 @@ library Utils {
             addr := mload(add(bys,20))
         } 
     }
+
+    function bytesToBytes32(bytes memory bys) internal pure returns (bytes32 out) {
+        assembly {
+            out := mload(add(bys, 32))
+        }
+    }
 }

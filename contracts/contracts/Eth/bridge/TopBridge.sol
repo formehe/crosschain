@@ -4,30 +4,40 @@ pragma solidity ^0.8.0;
 
 import "../../common/AdminControlledUpgradeable.sol";
 import "./ITopBridge.sol";
-// import "hardhat/console.sol";
 import "../../../lib/external_lib/RLPDecode.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../../common/Deserialize.sol";
+import "../../common/IGovernanceCapability.sol";
 
-contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
+contract TopBridge is  ITopBridge, AdminControlledUpgradeable, IGovernanceCapability {
     using RLPDecode for bytes;
     using RLPDecode for uint;
     using RLPDecode for RLPDecode.RLPItem;
     using RLPDecode for RLPDecode.Iterator;
 
+    event BlockBridgeInitial(
+        uint256 indexed height,
+        bytes32 indexed blockHash,
+        address  indexed submitter
+    );
+
+    event BlockAdded(
+        uint256  indexed height,
+        bytes32  indexed blockHash,
+        address  indexed submitter
+    );
+
     // Assumed to be even and to not exceed 256.
     uint constant private MAX_BLOCK_PRODUCERS = 100;
     uint constant private UNPAUSE_ALL = 0;
-    uint constant private PAUSED_DEPOSIT = 1;
-    uint constant private PAUSED_WITHDRAW = 2;
     uint constant private PAUSED_ADD_BLOCK = 4;
 
     // Whether the contract was initialized.
     bool public initialized;
     uint64 public maxMainHeight;
     address public lastSubmitter;
-    uint256 public lockEthAmount;
+    uint256 public minHeight;
 
     Epoch[2] internal epochs;
     uint private currentEpochIdex;
@@ -35,7 +45,6 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     mapping(bytes32 => bool) public blockHashes;
     mapping(uint64 => bytes32) public blockMerkleRoots;
     mapping(uint64 => uint256) public blockHeights;
-    mapping(address => uint256) public balanceOf;
 
     struct Epoch {
         uint64 epochId;
@@ -49,17 +58,17 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     bytes32 constant private ADDBLOCK_ROLE = 0xf36087c19d4404e16d698f98ed7d63f18bd7e07261603a15ab119b9c73979a86;
     
     function initialize(
-        uint256 _lockEthAmount,
+        uint256 _minHeight,
         address _owner
     ) external initializer {
+        minHeight = _minHeight;
         require(_owner != address(0));
-        lockEthAmount = _lockEthAmount;
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSE_ALL ^ 0xff);
 
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         _setRoleAdmin(ADDBLOCK_ROLE, ADMIN_ROLE);
         _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
-        _grantRole(OWNER_ROLE,_owner);
+        _grantRole(OWNER_ROLE, _owner);
         _grantRole(ADMIN_ROLE, msg.sender);
     }
 
@@ -75,6 +84,7 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.inner_lite.height] = block.timestamp;
         maxMainHeight = topBlock.inner_lite.height;
+        emit BlockBridgeInitial(topBlock.inner_lite.height, topBlock.block_hash, msg.sender);
     }
 
     struct BridgeState {
@@ -99,8 +109,8 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         uint8  _v = signature.v + (signature.v < 27 ? 27 : 0);
         bytes memory signatureBytes = abi.encodePacked(signature.r,signature.s,_v);
         (address _address,) = ECDSA.tryRecover(block_hash,signatureBytes);
+        require(_address != address(0), "invalid signatrue");
         return _address == publicKey.signer;
-
     }
 
     /// @dev Batch synchronous  
@@ -114,18 +124,17 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     }
 
     function addLightClientBlock(bytes memory data) internal {
-        //require(balanceOf[msg.sender] >= lockEthAmount, "Balance is not enough");
         Deserialize.LightClientBlock memory topBlock = Deserialize.decodeLightClientBlock(data);
         if(uint(topBlock.inner_lite.receipts_root_hash) != 0){
             return;
         }
-        //require(topBlock.inner_lite.height == (maxMainHeight + 1), "height must higher than epoch block height");
+        require(topBlock.inner_lite.height > minHeight, "invalid block height");
         require(topBlock.inner_lite.height > (epochs[currentEpochIdex].ownerHeight), "height must higher than epoch block height");
 
         require(blockHeights[topBlock.inner_lite.height] == 0, "block is exsisted");
 
         Epoch memory thisEpoch = getValidationEpoch(topBlock.approvals.epochId);
-        // console.log("need epoch_id, epoch id:", topBlock.inner_lite.epoch_id, thisEpoch.epochId);
+
         uint votedFor = 0;
         for (uint i = 0; i < thisEpoch.numBPs; i++) {
             Deserialize.OptionalSignature memory approval = topBlock.approvals.approvals_after_next[i];
@@ -134,12 +143,10 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
             }
 
             bool success = _checkValidatorSignature(topBlock.signature_hash, approval.signature, thisEpoch.keys[i]);
-            if(success){
-                votedFor++;
-            }
+            require(success, "invalid signature");
+            votedFor++;
         }
 
-        // console.log("vote, num bps:", votedFor, thisEpoch.stakeThreshold);
         require(votedFor >= thisEpoch.stakeThreshold, "Too few approvals");
 
         if (topBlock.inner_lite.next_bps.some) {
@@ -148,14 +155,15 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         }
 
         blockHashes[topBlock.block_hash] = true;
-        blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root; //
+        blockMerkleRoots[topBlock.inner_lite.height] = topBlock.inner_lite.block_merkle_root;
         blockHeights[topBlock.inner_lite.height] = block.timestamp;
 
         lastSubmitter = msg.sender;
         maxMainHeight = topBlock.inner_lite.height;
+        emit BlockAdded(topBlock.inner_lite.height, topBlock.block_hash, msg.sender);
     }
 
-    function setBlockProducers(Deserialize.BlockProducer[] memory src,uint64 epochId, uint64 blockHeight) internal {
+    function setBlockProducers(Deserialize.BlockProducer[] memory src, uint64 epochId, uint64 blockHeight) internal {
         uint cnt = src.length;        
         require(cnt <= MAX_BLOCK_PRODUCERS, "It is not expected having that many block producers for the provided block");
         if (currentEpochIdex == (epochs.length - 1)) {
@@ -173,7 +181,6 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
         epochs[currentEpochIdex].stakeThreshold = (cnt << 1) / 3 + 1;
         epochs[currentEpochIdex].ownerHeight = blockHeight;
 
-        // console.log("ownerHeight:", epochs[currentEpochIdex].ownerHeight);
         epochs[currentEpochIdex].epochId = epochId;
         epochs[currentEpochIdex].numBPs = cnt;
     }
@@ -181,16 +188,10 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     /// @dev Gets the validated election block
     function getValidationEpoch(uint64 epochId) private view returns(Epoch memory epoch){
         uint cnt = epochs.length;
-        for ((uint i, uint num) = (currentEpochIdex, 0); num < cnt; num++) {
+        for (uint i = 0; i < cnt; i++) {
             if(epochs[i].epochId == epochId){
                 epoch = epochs[i];
                 break;
-            }
-
-            if (i == (cnt - 1)) {
-                i = 0;
-            } else {
-                i++;
             }
         }
 
@@ -201,5 +202,22 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable {
     modifier addLightClientBlock_able(){
         require(( isPause(PAUSED_ADD_BLOCK) && hasRole(ADDBLOCK_ROLE,_msgSender())),"without permission");
         _;
+    }
+
+    function isSupportCapability(
+        bytes memory action
+    ) external pure override returns (bool) {
+        bytes4 actionId = bytes4(Utils.bytesToBytes32(action));
+        (, bytes32 role,) = abi.decode(abi.encodePacked(bytes28(0), action),(bytes32,bytes32,address));
+
+        if (!((role == CONTROLLED_ROLE) || (role == ADDBLOCK_ROLE))) {
+            return false;
+        }
+
+        if (!((actionId == IAccessControl.grantRole.selector) || (actionId == IAccessControl.revokeRole.selector))) {
+            return false;
+        }
+
+        return true;
     }
 }
