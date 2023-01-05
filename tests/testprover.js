@@ -87,7 +87,7 @@ describe('TopLikeProver', () => {
 
     console.log("wallet>>>> "  + wallet.address)
 
-    const TopBridge = await hre.artifacts.readArtifact("TopBridgeEx")
+    const TopBridge = await hre.artifacts.readArtifact("TopBridge")
     topBridge = await deployMockContract(wallet, TopBridge.abi, overrides)
     
     const TopProver =  await hre.ethers.getContractFactory("TestTopLikeProver", {
