@@ -140,8 +140,13 @@ describe('Governance', () => {
         headerSyncMockCon = await ethers.getContractFactory("HeaderSyncMock");
         headerSyncMock = await headerSyncMockCon.deploy();
         await headerSyncMock.deployed();
-    
         console.log("headerSyncMock "  + headerSyncMock.address)
+
+        topBridgeCon = await ethers.getContractFactory("TopBridge");
+        topBridge = await topBridgeCon.deploy();
+        await topBridge.deployed();
+        console.log("topBridge "  + topBridge.address)
+        await topBridge.initialize(0, admin.address)
     
         ethLikeProverCon = await ethers.getContractFactory("TestEthLikeProver");
         ethLikeProver = await ethLikeProverCon.deploy(headerSyncMock.address);
@@ -264,11 +269,13 @@ describe('Governance', () => {
 
     describe('grantRole', () => {
         it('adminRole', async () => {
+            await topBridge.connect(admin).grantRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', edgeGovernance.address)
             await coreGovernance.initialize(1, admin.address, deployer.address, deployer.address, 0)
             await edgeGovernance.initialize(coreGovernance.address, 2, ethLikeProver.address, admin.address, deployer.address)
             await coreGovernance.bindEdgeGovernance(2, edgeGovernance.address, ethLikeProver.address)
             await coreGovernance.bindGovernedContract(generalContractor.address)
             await edgeGovernance.bindGovernedContract(subContractor.address)
+            await edgeGovernance.bindGovernedContract(topBridge.address)
 
             let abiCall = Web3EthAbi.encodeFunctionCall({
                 name: 'renounceRole',
@@ -280,10 +287,10 @@ describe('Governance', () => {
                     type: 'address',
                     name: 'account'
                 }]
-            }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
+            }, ['0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de', user1.address]);
 
             await expect(coreGovernance.propose(abiCall)).to.be.revertedWith('invalid method')
-            expect (await generalContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(false)
+            expect (await generalContractor.hasRole('0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de', user1.address)).to.equal(false)
 
             abiCall = Web3EthAbi.encodeFunctionCall({
                 name: 'grantRole',
@@ -295,14 +302,14 @@ describe('Governance', () => {
                     type: 'address',
                     name: 'account'
                 }]
-            }, ['0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address]);
+            }, ['0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de', user1.address]);
 
             //========================================================================
             let tx = await coreGovernance.propose(abiCall)
             let rc = await tx.wait()
             let event = rc.events.find(event=>event.event === "GovernanceProposed")
             await coreGovernance.accept(event.topics[1])
-            expect (await generalContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
+            expect (await generalContractor.hasRole('0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de', user1.address)).to.equal(true)
             await expect(coreGovernance.accept(1000)).to.be.revertedWith('proposal is not exist')
             // construct receipt proof
             getProof = new GetProof("http://127.0.0.1:8545")
@@ -385,7 +392,8 @@ describe('Governance', () => {
             await expect(edgeGovernance.propose(buffer)).to.be.revertedWith('proof is reused')
             rc = await tx.wait()
             await edgeGovernance.accept(event.topics[1])
-            expect (await subContractor.hasRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user1.address)).to.equal(true)
+            expect (await subContractor.hasRole('0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de', user1.address)).to.equal(true)
+            expect (await topBridge.hasRole('0x8f2157482fb2324126e5fbc513e0fe919cfa878b0f89204823a63a35805d67de', user1.address)).to.equal(true)
         })
 
         it('core fail to apply governance', async () => {
