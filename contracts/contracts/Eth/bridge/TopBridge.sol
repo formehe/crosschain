@@ -186,12 +186,18 @@ contract TopBridge is  ITopBridge, AdminControlledUpgradeable, IGovernanceCapabi
     }
  
     /// @dev Gets the validated election block
-    function getValidationEpoch(uint64 epochId) private view returns(Epoch memory epoch){
+	function getValidationEpoch(uint64 epochId) private view returns(Epoch memory epoch){
         uint cnt = epochs.length;
-        for (uint i = 0; i < cnt; i++) {
+        for ((uint i, uint num) = (currentEpochIdex, 0); num < cnt; num++) {
             if(epochs[i].epochId == epochId){
                 epoch = epochs[i];
                 break;
+            }
+
+            if (i == (cnt - 1)) {
+                i = 0;
+            } else {
+                i++;
             }
         }
 
