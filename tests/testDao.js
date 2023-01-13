@@ -47,9 +47,11 @@ describe("TDao", function () {
 
         //deploy TDao
         tdaoCon = await ethers.getContractFactory("TDao", deployer)
+        await expect(tdaoCon.deploy(votes.address, 0, 3, 70, timelockcontroller.address, admin.address)).to.be.revertedWith("vote delay")
+        await expect(tdaoCon.deploy(votes.address, 1, 0, 70, timelockcontroller.address, admin.address)).to.be.revertedWith("voting period ")
+        await expect(tdaoCon.deploy(votes.address, 1, 3, 120, timelockcontroller.address, admin.address)).to.be.revertedWith("quorumNumerator over quorumDenominator")
         tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, admin.address)
         await tdao.deployed()
-        await tdao.initialize()
         console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
 
         await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
@@ -108,6 +110,112 @@ describe("TDao", function () {
             await new Promise(r => setTimeout(r, 1000));
             await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
 
+            transferCalldata = tdao.interface.encodeFunctionData('setProposalThreshold', [0])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await erc20Sample.connect(user).transfer(user1.address, 10)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+            await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
+
+            transferCalldata = tdao.interface.encodeFunctionData('updateQuorumNumerator', [80])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await erc20Sample.connect(user).transfer(user1.address, 10)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+
+            transferCalldata = tdao.interface.encodeFunctionData('updateQuorumNumerator', [120])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await erc20Sample.connect(user).transfer(user1.address, 10)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+            await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
+
+            transferCalldata = tdao.interface.encodeFunctionData('updateQuorumNumerator', [0])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await erc20Sample.connect(user).transfer(user1.address, 10)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+            await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
+
+            transferCalldata = tdao.interface.encodeFunctionData('setVotingDelay', [0])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await erc20Sample.connect(user).transfer(user1.address, 10)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+            await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
+
+            transferCalldata = tdao.interface.encodeFunctionData('setVotingDelay', [1])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await erc20Sample.connect(user).transfer(user1.address, 10)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+            await tdao.connect(user)["execute(uint256)"](tx.toBigInt())
+
+            transferCalldata = tdao.interface.encodeFunctionData('setVotingDelay', [2])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+            await tdao.connect(user)["execute(uint256)"](tx.toBigInt())
+
+            transferCalldata = tdao.interface.encodeFunctionData('setVotingPeriod', [0])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await erc20Sample.connect(user).transfer(user1.address, 10)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+            await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
+
+            transferCalldata = tdao.interface.encodeFunctionData('setVotingPeriod', [3])
+            tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([tdao.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+            await erc20Sample.connect(user).transfer(timelockcontroller.address, 10000000)
+            await erc20Sample.connect(user).transfer(user1.address, 10)
+            await tdao.connect(user).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user2).castVote(tx.toBigInt(), 1)
+            await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+            await new Promise(r => setTimeout(r, 1000));
+            await tdao.connect(user)["execute(uint256)"](tx.toBigInt())
+
             transferCalldata = erc20Sample.interface.encodeFunctionData('transfer', [user.address, 128])
             await expect(tdao.connect(admin)["propose(address[],uint256[],bytes[],string)"]([erc20Sample.address], [0], [transferCalldata], "Proposal #1: Give grant to team")).
             to.be.revertedWith("GovernorCompatibilityBravo: proposer votes below proposal threshold")
@@ -147,8 +255,20 @@ describe("TDao", function () {
         await timelockcontroller.scheduleBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 2)
         await expect(timelockcontroller.executeBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("TimelockController: operation is not ready")
+        await expect(timelockcontroller.executeBatch([timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address], [0,0,0,0,0,0,0,0,0,0,0], [transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        to.be.revertedWith("actions")
+        await expect(timelockcontroller.executeBatch([timelockcontroller.address, AddressZero], [0, 0], [transferCalldata, transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        to.be.revertedWith("invalid contract")
+        await expect(timelockcontroller.executeBatch([timelockcontroller.address, user.address], [0, 0], [transferCalldata, transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        to.be.revertedWith("invalid contract")
         await expect(timelockcontroller.scheduleBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
         to.be.revertedWith("TimelockController: operation already scheduled")
+        await expect(timelockcontroller.scheduleBatch([timelockcontroller.address,  AddressZero], [0,0], [transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
+        to.be.revertedWith("invalid contract")
+        await expect(timelockcontroller.scheduleBatch([timelockcontroller.address,  user.address], [0,0], [transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
+        to.be.revertedWith("invalid contract")
+        await expect(timelockcontroller.scheduleBatch([timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address], [0,0,0,0,0,0,0,0,0,0,0], [transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
+        to.be.revertedWith("actions")
         await new Promise(r => setTimeout(r, 1000))
         await timelockcontroller.executeBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")
         const tx = await timelockcontroller.hashOperationBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")
@@ -174,6 +294,11 @@ describe("TDao", function () {
             to.be.revertedWith("Governor: invalid proposal length")
             await expect(tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([], [], [], "Proposal #1: Give grant to team")).
             to.be.revertedWith("Governor: empty proposal")
+            await expect(tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([erc20Sample.address, AddressZero], [0,0], [transferCalldata, transferCalldata], "Proposal #1: Give grant to team")).
+            to.be.revertedWith("invalid contract")
+            await expect(tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([erc20Sample.address, erc20Sample.address, erc20Sample.address, erc20Sample.address, erc20Sample.address, erc20Sample.address, erc20Sample.address, erc20Sample.address, erc20Sample.address, erc20Sample.address, erc20Sample.address], [0,0,0,0,0,0,0,0,0,0,0], 
+                [transferCalldata, transferCalldata, transferCalldata, transferCalldata, transferCalldata, transferCalldata, transferCalldata, transferCalldata, transferCalldata, transferCalldata, transferCalldata], "Proposal #1: Give grant to team")).
+            to.be.revertedWith("too many actions")
         } catch (e) {
             console.log(e)
         }

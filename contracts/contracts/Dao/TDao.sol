@@ -18,16 +18,21 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
     uint256 constant PAUSED_CANCEL = 1 << 3;
     uint256 constant PAUSED_VOTE = 1 << 4;
 
-    constructor(IVotes token_, uint256 voteDelay_, uint256 votePeriod_, uint256 quorumNumerator_, TimelockController timelock_, address owner_)
+    uint256 constant public proposalMaxOperations = 10; // 10 actions
+    uint public constant MIN_VOTING_DELAY = 1;
+    uint public constant MIN_VOTING_PERIOD = 1;
+
+    constructor(IVotes vote_, uint256 voteDelay_, uint256 votePeriod_, uint256 quorumNumerator_, TimelockController timelock_, address owner_)
         Governor("TDao")
-        GovernorVotes(token_)
-        GovernorSettings(voteDelay_, votePeriod_, 0)
+        GovernorVotes(vote_)
+        GovernorSettings(voteDelay_, votePeriod_, 1)
         GovernorVotesQuorumFraction(quorumNumerator_)
         GovernorTimelockControl(timelock_)
+        initializer
     {
-        require(Address.isContract(address(token_)), "voter token must be existed");
-        require(voteDelay_ != 0, " vote delay can not be 0");
-        require(votePeriod_ != 0, " vote period can not be 0");
+        require(Address.isContract(address(vote_)), "voter token must be existed");
+        require(voteDelay_ >= MIN_VOTING_DELAY, "vote delay can not less than MIN_VOTING_DELAY");
+        // require(votePeriod_ >= MIN_VOTING_PERIOD, "vote period can not not less than MIN_VOTING_PERIOD");
         require(quorumNumerator_ != 0, " quorum numerator can not be 0");
         require(Address.isContract(address(timelock_)), "time clock controller must be existed");
         
@@ -36,11 +41,7 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
 
         _grantRole(OWNER_ROLE, owner_);
         _grantRole(ADMIN_ROLE, _msgSender());
-    }
 
-    function initialize() 
-        external initializer 
-    {
         _AdminControlledUpgradeable_init(_msgSender(), 0);
     }
 
@@ -57,12 +58,42 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
         public 
         override onlyGovernance 
     {
+        require(newProposalThreshold >= 1, "proposalThreshold can not less than 1");
         bytes memory  payload = abi.encodeWithSignature("getMaxPersonalVotes()");
         (bool success, bytes memory result) = address(token).staticcall(payload);
         require(success, "fail to call getMaxPersonalVotes");
         uint256 threshold = abi.decode(result,(uint256));
         require(newProposalThreshold <= threshold, "threshold is overflow");
         GovernorSettings.setProposalThreshold(newProposalThreshold);
+    }
+
+    function setVotingDelay(uint256 newVotingDelay) 
+        public 
+        override onlyGovernance 
+    {
+        require(newVotingDelay >= MIN_VOTING_DELAY, " vote delay can not less than MIN_VOTING_DELAY");
+        _setVotingDelay(newVotingDelay);
+    }
+
+    /**
+     * @dev Update the voting period. This operation can only be performed through a governance proposal.
+     *
+     * Emits a {VotingPeriodSet} event.
+     */
+    function setVotingPeriod(uint256 newVotingPeriod) 
+        public 
+        override onlyGovernance 
+    {
+        // require(newVotingPeriod >= MIN_VOTING_PERIOD, " vote period can not not less than MIN_VOTING_PERIOD");
+        _setVotingPeriod(newVotingPeriod);
+    }
+
+    function updateQuorumNumerator(uint256 newQuorumNumerator) 
+        external
+        override onlyGovernance 
+    {
+        require(newQuorumNumerator != 0, "quorumNumerator can not be 0");
+        _updateQuorumNumerator(newQuorumNumerator);
     }
 
     function quorum(uint256 blockNumber)
@@ -97,6 +128,10 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
         override(Governor, GovernorCompatibilityBravo, IGovernor) accessable_and_unpauseable(BLACK_ROLE, PAUSED_PROPOSE)
         returns (uint256)
     {
+        require(targets.length <=  proposalMaxOperations, "too many actions");
+        for (uint256 i = 0; i < targets.length; i++) {
+            require(Address.isContract(targets[i]), "invalid contract");
+        }
         return GovernorCompatibilityBravo.propose(targets, values, calldatas, description);
     }
 
@@ -105,6 +140,10 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
         override accessable_and_unpauseable(BLACK_ROLE, PAUSED_PROPOSE)
         returns (uint256)
     {
+        require(targets.length <=  proposalMaxOperations, "too many actions");
+        for (uint256 i = 0; i < targets.length; i++) {
+            require(Address.isContract(targets[i]), "invalid contract");
+        }
         return GovernorCompatibilityBravo.propose(targets, values, signatures, calldatas, description);
     }
 
