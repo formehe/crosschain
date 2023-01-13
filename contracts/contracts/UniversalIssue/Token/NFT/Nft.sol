@@ -10,7 +10,7 @@ import "../ProxyRegistry.sol";
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
  */
-contract NFT is ERC721Chunk, Issuer {
+contract NFT is ERC721Chunk, ERC3721IssuerMetadata {
     address minter;
 
     function initialize(
@@ -24,7 +24,7 @@ contract NFT is ERC721Chunk, Issuer {
         require(minter_ != address(0), "minter can not be 0");
         minter = minter_;
         ERC721Chunk.initialize(name_, symbol_, issuer_.uri, circulation_.baseIndexOfToken, circulation_.baseIndexOfToken + circulation_.capOfToken, circulation_.issuer, totalAmount);
-        Issuer.initialize(issuer_.name, issuer_.certification, issuer_.agreement, issuer_.uri);
+        ERC3721IssuerMetadata.initialize(issuer_.name, issuer_.certification, issuer_.agreement, issuer_.uri);
     }
 
     function mint(

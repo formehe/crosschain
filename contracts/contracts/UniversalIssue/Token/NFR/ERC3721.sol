@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./IERC3721.sol";
 import "./Issuer.sol";
 import "./Right.sol";
 import "./ERC721Chunk.sol";
@@ -11,13 +12,13 @@ import "../ProxyRegistry.sol";
 /**
 * @dev Required interface of an ERC3721 compliant contract.
 */
-contract ERC3721 is ERC721Chunk, Right, Issuer {
+contract ERC3721 is ERC721Chunk, IERC3721, ERC3721RightMetadata, ERC3721IssuerMetadata {
     event IncreaseTokenRights(uint256 indexed tokenId, uint256 indexed rightKind, uint256 amount);
     event DecreaseTokenRights(uint256 indexed tokenId, uint256 indexed rightKind, uint256 amount);
-    event TransferTokenRights(uint256 indexed fromTokenId, uint256 toTokenId, uint256 indexed rightKind, uint256 amount);
+    // event TransferTokenRights(uint256 indexed fromTokenId, uint256 toTokenId, uint256 indexed rightKind);
     event AttachTokenAdditional(uint256 indexed tokenId, bytes additional);
-    event BurnTokenRights(uint256 indexed tokenId, uint256 indexed rightKind, uint256 amount);
-    event AttachTokenRight(uint256 indexed tokenId, uint256 indexed rightKind, uint256 amount);
+    // event BurnTokenRights(uint256 indexed tokenId, uint256 indexed rightKind);
+    // event AttachTokenRights(uint256 indexed tokenId, uint256 indexed rightKind);
     event BurnToken(uint256 indexed tokenId);
     event MintToken(uint256 indexed tokenId);
     
@@ -37,8 +38,8 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
         require(minter_ != address(0), "minter can not be 0");
         minter = minter_;
         ERC721Chunk.initialize(name_, symbol_, issuer_.uri, circulation_.baseIndexOfToken, circulation_.capOfToken, circulation_.issuer, totalAmount);
-        Issuer.initialize(issuer_.name, issuer_.certification, issuer_.agreement, issuer_.uri);
-        Right.initialize(rights_, circulation_.rangeOfRights);
+        ERC3721IssuerMetadata.initialize(issuer_.name, issuer_.certification, issuer_.agreement, issuer_.uri);
+        ERC3721RightMetadata.initialize(rights_, circulation_.rangeOfRights);
     }
 
     function burn(
@@ -66,11 +67,11 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     function burnRights(
         uint256 tokenId,
         uint256 rightKind
-    ) external virtual {
+    ) external virtual override {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
         _delRightOfToken(tokenId, rightKind, 1);
         _approve(address(0), tokenId);
-        emit BurnTokenRights(tokenId, rightKind, 1);
+        emit BurnTokenRights(tokenId, rightKind);
     }
     
     /**
@@ -82,14 +83,14 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
         uint256 fromTokenId,
         uint256 toTokenId,
         uint256 rightKind
-    ) external virtual{      
+    ) external virtual override{      
         require(fromTokenId != toTokenId, "from token and to token can not equal");
         require(_exists(toTokenId), "to token is not exist");
         require(_isApprovedOrOwner(_msgSender(), fromTokenId), "caller is not owner nor approved");
         _delRightOfToken(fromTokenId, rightKind, 1);
         _addRightOfToken(toTokenId, rightKind, 1);
         _approve(address(0), fromTokenId);
-        emit TransferTokenRights(fromTokenId, toTokenId, rightKind, 1);
+        emit TransferTokenRights(fromTokenId, toTokenId, rightKind);
     }
 
     function attachAdditional(
@@ -120,19 +121,19 @@ contract ERC3721 is ERC721Chunk, Right, Issuer {
     function attachRight(
         uint256 tokenId,
         uint256 rightKind
-    ) external virtual{
+    ) external virtual override{
         address owner = ownerOf(tokenId);
         require(owner == issuer(tokenId), "only the owner of token is issuer can attach right of token");
         require(_isApprovedOrOwner(_msgSender(), tokenId), "not owner or approver");
         _attachRight(rightKind);
         _addRightOfToken(tokenId, rightKind, 1);
         _approve(address(0), tokenId);
-        emit AttachTokenRight(tokenId, rightKind, 1);
+        emit AttachTokenRights(tokenId, rightKind);
     }
 
     function tokenRights(
         uint256 tokenId
-    ) external view virtual returns(uint256[] memory rightKinds_, uint256[] memory rightQuantities_) {
+    ) external view virtual override returns(uint256[] memory rightKinds_, uint256[] memory rightQuantities_) {
         rightKinds_ = rightKinds();
         uint256 len = rightKinds_.length;
         rightQuantities_ = new uint256[](len);

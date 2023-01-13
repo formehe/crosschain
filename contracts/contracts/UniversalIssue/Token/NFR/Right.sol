@@ -8,7 +8,7 @@ import "../../common/IssueCoder.sol";
 /**
 * @dev Required interface of an ERC3721 compliant contract.
 */
-abstract contract Right is Initializable, IRightMetadata {
+abstract contract ERC3721RightMetadata is IERC3721RightMetadata, Initializable{
     event RightAttached(uint256 indexed rightKind, uint256 amount);
     
     struct RightInfo {
