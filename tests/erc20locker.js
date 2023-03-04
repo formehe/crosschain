@@ -66,51 +66,103 @@ describe('ERC20Locker', () => {
     console.log("bridge>>>> "  + bridge.address)
     console.log("Limit>>>> "  + limit.address)
 
-    await erc20Locker._ERC20Locker_initialize(prover.address,0,wallet.address,limit.address)
+    //deploy time lock controller
+    timelockcontrollerCon = await ethers.getContractFactory("TimeController", wallet)
+    timelockcontroller = await timelockcontrollerCon.deploy(1,[],[])
+    await timelockcontroller.deployed()
+    console.log("+++++++++++++timelockcontroller+++++++++++++++ ", timelockcontroller.address)
 
+    //deploy TVotes
+    votesCon = await ethers.getContractFactory("ImmutableVotes", wallet)
+    votes = await votesCon.deploy([wallet.address, wallet2.address, wallet3.address])
+    await votes.deployed()
+    console.log("+++++++++++++ImmutableVotes+++++++++++++++ ", votes.address)
+
+    //deploy TDao
+    tdaoCon = await ethers.getContractFactory("TDao", wallet)
+    tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, wallet2.address)
+    await tdao.deployed()
+    console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
+
+    await erc20Locker._ERC20Locker_initialize(prover.address, 0, wallet.address, limit.address, erc20Token2.address, [erc20Token.address, "0xb997a782f36256355206d928aAA217058d07A7a2"], [erc20Token2.address, "0x5A29872525901E632CBfd0c4671263AF2ca52b25"])
+
+    await timelockcontroller.connect(wallet).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
+    await timelockcontroller.connect(wallet).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address)
+    await timelockcontroller.connect(wallet).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", wallet.address)
+    await timelockcontroller.connect(wallet).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", wallet.address)
+
+    await erc20Locker.connect(wallet).grantRole("0xba89994fffa21b6259d0e98b52260f21bc06a07249825a4125b51c20e48d06ff", timelockcontroller.address)
     await erc20Locker.adminPause(0)
   })
 
   //bindAssetHash
   describe('bindAssetHash', () => {
     it('It has permissions', async () => {
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address, erc20Token2.address);
+      let transferCalldata = erc20Locker.interface.encodeFunctionData('bindAssetHash', [timelockcontroller.address, limit.address])
+      let tx = await tdao.connect(wallet).callStatic["propose(address[],uint256[],bytes[],string)"]([erc20Locker.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+      await tdao.connect(wallet)["propose(address[],uint256[],bytes[],string)"]([erc20Locker.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+      await expect(tdao.connect(wallet3).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await expect(tdao.connect(wallet2).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await tdao.connect(wallet2).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet3).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet2)["queue(uint256)"](tx.toBigInt())
+      await expect(tdao.connect(wallet3).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await new Promise(r => setTimeout(r, 1000));
+      await tdao.connect(wallet)["execute(uint256)"](tx.toBigInt())
+
+      transferCalldata = erc20Locker.interface.encodeFunctionData('bindAssetHash', [timelockcontroller.address, limit.address])
+      tx = await tdao.connect(wallet).callStatic["propose(address[],uint256[],bytes[],string)"]([erc20Locker.address], [0], [transferCalldata], "Proposal #2: Give grant to team")
+      await tdao.connect(wallet)["propose(address[],uint256[],bytes[],string)"]([erc20Locker.address], [0], [transferCalldata], "Proposal #2: Give grant to team")
+      await expect(tdao.connect(wallet3).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await expect(tdao.connect(wallet2).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await tdao.connect(wallet2).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet3).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet2)["queue(uint256)"](tx.toBigInt())
+      await expect(tdao.connect(wallet3).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await new Promise(r => setTimeout(r, 1000));
+      await expect(tdao.connect(wallet)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
+      // // await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address);
     })
 
     it('It has no permissions', async () => {
-      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c'
-      await expect(erc20Locker.connect(wallet2).bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address)
+      let msg = 'AccessControl: account ' + wallet2.address.toLowerCase() + ' is missing role 0xba89994fffa21b6259d0e98b52260f21bc06a07249825a4125b51c20e48d06ff'
+      await expect(erc20Locker.connect(wallet2).bindAssetHash(erc20Token.address, erc20Token2.address)
       ).to.be.revertedWith(msg)
     })
 
     it('It is bind empty address', async () => {
-      await expect(erc20Locker.bindAssetHash(AddressZero, erc20Token2.address,erc20Token2.address)).to.be.revertedWith('both asset addresses are not to be 0')
-
-    })
-
-    it('rebind asset hash', async () => {
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address, erc20Token2.address)
-      await expect(erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address)).to.be.revertedWith('Can not modify the bind asset')
+      let transferCalldata = erc20Locker.interface.encodeFunctionData('bindAssetHash', [AddressZero, limit.address])
+      let tx = await tdao.connect(wallet).callStatic["propose(address[],uint256[],bytes[],string)"]([erc20Locker.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+      await tdao.connect(wallet)["propose(address[],uint256[],bytes[],string)"]([erc20Locker.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+      await expect(tdao.connect(wallet3).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await expect(tdao.connect(wallet2).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await tdao.connect(wallet2).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet3).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet2)["queue(uint256)"](tx.toBigInt())
+      await expect(tdao.connect(wallet3).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await new Promise(r => setTimeout(r, 1000));
+      await expect(tdao.connect(wallet)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
     })
   })
 
   //lockToken
   describe('lockToken', () => {
     it('no have bind token', async () => {
-      await limit.bindTransferedQuota(erc20Token.address,toWei('10'),toWei('400'))
+      await limit.bindTransferedQuota(erc20Token2.address, toWei('10'), toWei('400'))
       await erc20Locker.adminPause(0)
-      await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('empty illegal toAssetHash')
+      await expect(erc20Locker.lockToken(erc20Token2.address, toWei('100'), wallet3.address)).to.be.revertedWith('empty illegal toAssetHash')
     })
 
     it('have bind token but without balance', async () => {
       await erc20Token.mint(wallet3.address,toWei('200'))
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await limit.bindTransferedQuota(erc20Token.address,toWei('10'),toWei('400'))
       await erc20Locker.adminPause(0)
-      await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('ERC20: insufficient allowance')
-
+      await expect(erc20Locker.lockToken(erc20Token.address, toWei('100'), wallet3.address)).to.be.revertedWith('ERC20: insufficient allowance')
     })
 
     it('without approve', async () => {
@@ -119,7 +171,6 @@ describe('ERC20Locker', () => {
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
 
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await limit.bindTransferedQuota(erc20Token.address,toWei('10'),toWei('400'))
       
       await expect(erc20Locker.lockToken(erc20Token.address,toWei('100'),wallet3.address)).to.be.revertedWith('ERC20: insufficient allowance')
@@ -131,7 +182,6 @@ describe('ERC20Locker', () => {
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
 
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
 
       await erc20Locker.adminPause(255)
@@ -150,7 +200,6 @@ describe('ERC20Locker', () => {
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
 
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
 
       await limit.bindTransferedQuota(erc20Token.address,toWei('10'),toWei('400'))
@@ -163,7 +212,6 @@ describe('ERC20Locker', () => {
       await erc20Token.mint(wallet3.address,toWei('200'))
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
       await erc20Locker.grantRole('0x7f600e041e02f586a91b6a70ebf1c78c82bed96b64d484175528f005650b51c4',wallet.address)
         
@@ -188,7 +236,6 @@ describe('ERC20Locker', () => {
       await erc20Token.mint(wallet3.address,toWei('200'))
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
 
       await erc20Locker.adminPause(0)
 
@@ -210,7 +257,6 @@ describe('ERC20Locker', () => {
       await erc20Token.mint(wallet3.address,toWei('200'))
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
 
       await erc20Token.approve(erc20Locker.address,toWei('200'))
 
@@ -289,7 +335,6 @@ describe('ERC20Locker', () => {
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
 
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
       await limit.bindTransferedQuota(erc20Token.address,toWei('100'),toWei('400'))
 
@@ -309,7 +354,6 @@ describe('ERC20Locker', () => {
 
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
 
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
 
       await limit.bindTransferedQuota(erc20Token.address,toWei('10'),toWei('400'))
@@ -326,7 +370,6 @@ describe('ERC20Locker', () => {
       await erc20Token.mint(wallet.address,toWei('200'))
       await erc20Token.mint(wallet3.address,toWei('200'))
       expect(await erc20Token.balanceOf(wallet3.address)).to.equal(toWei('200'));
-      await erc20Locker.bindAssetHash(erc20Token.address, erc20Token2.address,erc20Token2.address);
       await erc20Token.approve(erc20Locker.address,toWei('200'))
 
       await limit.bindTransferedQuota(erc20Token.address,toWei('0'),toWei('400'))
@@ -373,7 +416,7 @@ describe('ERC20Locker', () => {
     // })
 
     it('withdraw quota is not bind', async () => {
-      await erc20Locker.bindAssetHash('0xb997a782f36256355206d928aAA217058d07A7a2','0x5A29872525901E632CBfd0c4671263AF2ca52b25','0xE29C68247a43B402e3d2b95F122c9a1f2E1e86A4');
+      // await erc20Locker.bindAssetHash('0xb997a782f36256355206d928aAA217058d07A7a2','0x5A29872525901E632CBfd0c4671263AF2ca52b25','0xE29C68247a43B402e3d2b95F122c9a1f2E1e86A4');
       await erc20Token.approve(erc20Locker.address,toWei('200'))
       await erc20Locker.adminPause(0)
       //blockHashes(bytes32)
@@ -385,8 +428,10 @@ describe('ERC20Locker', () => {
     })
 
     it('withdraw quota is not enough', async () => {
-      await erc20Locker.bindAssetHash('0xb997a782f36256355206d928aAA217058d07A7a2','0x5A29872525901E632CBfd0c4671263AF2ca52b25','0xE29C68247a43B402e3d2b95F122c9a1f2E1e86A4');
+      // await erc20Locker.bindAssetHash('0xb997a782f36256355206d928aAA217058d07A7a2','0x5A29872525901E632CBfd0c4671263AF2ca52b25','0xE29C68247a43B402e3d2b95F122c9a1f2E1e86A4');
       await erc20Locker.bindWithdrawQuota('0xb997a782f36256355206d928aAA217058d07A7a2', 1)
+      await expect(erc20Locker.bindWithdrawQuota('0xb997a782f36256355206d928aAA217058d07A7a2', 1)).to.be.revertedWith("not modify the quota of withdraw")
+      await expect(erc20Locker.bindWithdrawQuota('0xb997a782f36256355206d928aAA217058d07A7a2', 2)).to.be.revertedWith("Only dao admin can expand the quota of withdraw")
       await erc20Token.approve(erc20Locker.address,toWei('200'))
       await erc20Locker.adminPause(0)
       //blockHashes(bytes32)
@@ -395,11 +440,26 @@ describe('ERC20Locker', () => {
       //todo
       //await expect(erc20Locker.unlockTokenRuleOutSafeTransfer('0x0100000000000000df000000f8dd94e29c68247a43b402e3d2b95f122c9a1f2e1e86a4f884a04f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842a00000000000000000000000005a29872525901e632cbfd0c4671263af2ca52b25a0000000000000000000000000b997a782f36256355206d928aaa217058d07a7a2a00000000000000000000000006980001470ed6af6fd40f69d9e90036bb4be8e2bb840000000000000000000000000000000000000000000000000000000001dcd65000000000000000000000000006980001470ed6af6fd40f69d9e90036bb4be8e2b00000000000000008b02000002f9028701830a2fd3b9010000000000100000000000000000000000000000000000000000000100000000000000000080101000010000000000000000000000000000000000000000000002000000000000000000000008000000000100040000008000000000000000000000000000020000000000000000020800000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000002000000000000000900002000000000000000000000000000008000000000000000000000020800000000000000000000000000000000000000010000000000000000000000000f9017cf89b945a29872525901e632cbfd0c4671263af2ca52b25f863a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efa00000000000000000000000006980001470ed6af6fd40f69d9e90036bb4be8e2ba00000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000001dcd6500f8dd94e29c68247a43b402e3d2b95f122c9a1f2e1e86a4f884a04f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842a00000000000000000000000005a29872525901e632cbfd0c4671263af2ca52b25a0000000000000000000000000b997a782f36256355206d928aaa217058d07a7a2a00000000000000000000000006980001470ed6af6fd40f69d9e90036bb4be8e2bb840000000000000000000000000000000000000000000000000000000001dcd65000000000000000000000000006980001470ed6af6fd40f69d9e90036bb4be8e2b6f02000000f9026bf88d82010c8405117b46a0b50a733bd3034050edcb90f412491e03ed4fff55e466f8c033be87e17f15a9baa0910121805eb975ab80c3cf962bf08f420b48bb932fa917c794dc72422c2b9f44a00000000000000000000000000000000000000000000000000000000000000000a02d5d402d56135f57ff0b815aed1bcabf0967754e9e13f618044554ff08b73e96c0f901b854f901b4f84601f843a066944a8287932aba27bc41675cb8d6fe1cf9ee7a01b017541c8d7468fbe448e8a06f72a01394b29d1066856d98c43e573ac7597ed07a70ba039e3055edcaa65f5f80c180f84601f843a0e74b113be48dd64a1175acc079e02c233db3ada6420b4500e8aee14351a5983ca04c5a4eb9ad6a2aeb0a37a3173aa0b30dee103558fc7b29bf6e14015c5256645101f84601f843a0d9c183b1f39ea771504dfc9b408a6d5dd05734c6cb462ad7d92c7058120dd004a0762d103af537f1ebe71d20d5461c42485ba4d9d4e22dbf69ddfe44cf50ff7faa80f84601f843a030fbec9f6cbad09621947bc462c7c5dc188cdf2f7f1a50411bd63cf7e2c93616a0262221bf3fdc163a34a449989efffe2425ae3502797294142caee4d9e68c799b01c180f84601f843a0d51747d4829561b034ef816a11cd2ee77d037a8e71d3e47041b8296a5cc25fe2a0471239e3c249f4b1c7c91b61686e371e78d8f61f1e89afd8919cb5637ce5f51e01f84601f843a0272c2f7649a37e86e7fa3b96001729b5f7d244119f5bf813133d97ab5716f7c6a062cd2872fcb73c9a173d6da6eba31b9ad2f34b1776e2c98115697dbce6d6aff280a0b1675be58f5e5b8b3fc4e2bca4408708f57d85d603be338b2c7b942566f0ab850200000053000000f851a079ba7c809291ca4b9827fe24e598511f2d372ed47981a5d30fa460aba7e3f5cd80808080808080a07b8b5d7508b1d679bf9922830be88c3ef0ed7edcd929e568e41fc5b1a47080b7808080808080808092020000f9028f30b9028b02f9028701830a2fd3b9010000000000100000000000000000000000000000000000000000000100000000000000000080101000010000000000000000000000000000000000000000000002000000000000000000000008000000000100040000008000000000000000000000000000020000000000000000020800000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000002000000000000000900002000000000000000000000000000008000000000000000000000020800000000000000000000000000000000000000010000000000000000000000000f9017cf89b945a29872525901e632cbfd0c4671263af2ca52b25f863a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efa00000000000000000000000006980001470ed6af6fd40f69d9e90036bb4be8e2ba00000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000001dcd6500f8dd94e29c68247a43b402e3d2b95f122c9a1f2e1e86a4f884a04f89ece0f576ba3986204ba19a44d94601604b97cf3baa922b010a758d303842a00000000000000000000000005a29872525901e632cbfd0c4671263af2ca52b25a0000000000000000000000000b997a782f36256355206d928aaa217058d07a7a2a00000000000000000000000006980001470ed6af6fd40f69d9e90036bb4be8e2bb840000000000000000000000000000000000000000000000000000000001dcd65000000000000000000000000006980001470ed6af6fd40f69d9e90036bb4be8e2b020000000000000013010000000000000300000053000000f851a036989e98420cef671fff62f33c318204921195de24b5f5e2dec12704b110bc3080808080808080a0119de8ef07cff9c08afa68e37301d0f43fdf2c1659da22764c84ad739c3638d0808080808080808014010000f9011180a04437668d7160e9ad9abb6b9dcf76470a1ba2ab9cf7a12d70537fffeb9015fac0a0d016f6205d5a5a5337e6ba4ba8a851bf3b8da67892b9267835e801bdc4922161a04cb9ed5ac882498c32ad18dd95da4bb5eca2aa7563d6e79d07960e9f21f2d287a0f7ac24b16c03bf465d1ebb6de65392eb56b0709c154a5e14b26453d77dbfdc57a071fd8f4c9b2fb492407fc182bdf60ef692d66b34ffe500e390f7c5e52602596ea0e2989709a786465753519d72fae034fac43e05232da41afb308d131a3fd2f79ba09c0fc6a1aa9a54aeba54e684d4ea048bc4e30f19ea90b9d23ace7a00115dd366a0d46e6b17ade6df8b1afc39f2fece35ca6306fb7564066b2435c772b59dd4ee11808080808080808023000000e220a0cd344b865b43e73007a7443d882b0eeab1fe1b5527bedff0e8221d9a98697aed',0))
       //.to.be.revertedWith("withdraw quota is not enough")
+
+      let transferCalldata = erc20Locker.interface.encodeFunctionData('bindWithdrawQuota', ['0xb997a782f36256355206d928aAA217058d07A7a2', 2])
+      let tx = await tdao.connect(wallet).callStatic["propose(address[],uint256[],bytes[],string)"]([erc20Locker.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+      await tdao.connect(wallet)["propose(address[],uint256[],bytes[],string)"]([erc20Locker.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+      await expect(tdao.connect(wallet3).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await expect(tdao.connect(wallet2).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await tdao.connect(wallet2).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet3).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet).castVote(tx.toBigInt(), 1)
+      await tdao.connect(wallet2)["queue(uint256)"](tx.toBigInt())
+      await expect(tdao.connect(wallet3).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+      await new Promise(r => setTimeout(r, 1000));
+      await tdao.connect(wallet)["execute(uint256)"](tx.toBigInt())
+      await erc20Locker.bindWithdrawQuota('0xb997a782f36256355206d928aAA217058d07A7a2', 1)
     })
 
     it('unlockToken success', async () => {
-      await erc20Locker.bindAssetHash('0xb997a782f36256355206d928aAA217058d07A7a2','0x5A29872525901E632CBfd0c4671263AF2ca52b25','0xE29C68247a43B402e3d2b95F122c9a1f2E1e86A4');
-      await erc20Locker.bindWithdrawQuota('0xb997a782f36256355206d928aAA217058d07A7a2', 500000000)
+      // await erc20Locker.bindAssetHash('0xb997a782f36256355206d928aAA217058d07A7a2','0x5A29872525901E632CBfd0c4671263AF2ca52b25','0xE29C68247a43B402e3d2b95F122c9a1f2E1e86A4');
+      // await erc20Locker.bindWithdrawQuota('0xb997a782f36256355206d928aAA217058d07A7a2', 500000000)
+      await erc20Locker.bindWithdrawQuota('0xb997a782f36256355206d928aAA217058d07A7a2', 500)
       await erc20Token.approve(erc20Locker.address,toWei('200'))
       await erc20Locker.adminPause(0)
       //blockHashes(bytes32)

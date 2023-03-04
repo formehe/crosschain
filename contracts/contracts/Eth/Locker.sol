@@ -19,6 +19,8 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
 
+    // uint private constant MAX_WITHDRAW_QUOTA = 1000; 
+
     ILimit public limit;
     //keccak256("BLACK.UN.LOCK.ROLE")
     bytes32 constant BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;
@@ -44,6 +46,11 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         address fromAssetHash,
         address toAssetHash,
         address peerLockProxyHash
+    );
+
+    event BindWithdrawQuota(
+        address asset,
+        uint256 withdrawQuota
     );
 
     struct ToAddressHash{
@@ -96,6 +103,7 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BLACK_UN_LOCK_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BLACK_LOCK_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(DAO_ADMIN_ROLE, ADMIN_ROLE);
 
         _grantRole(OWNER_ROLE,_owner);
         _grantRole(ADMIN_ROLE,msg.sender);
@@ -109,11 +117,20 @@ contract Locker is Initializable,AdminControlledUpgradeable{
         usedProofs[proofIndex] = true;
     }
 
-    function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external onlyRole(ADMIN_ROLE) {
+    function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external {
         require(_withdrawQuota != 0, "withdraw quota can not be 0");
+        // require(_withdrawQuota <= MAX_WITHDRAW_QUOTA, "withdraw quota is overflow");
         uint256 quota = withdrawQuotas[_asset];
-        require((quota == 0) || (_withdrawQuota < quota), "withdraw quota must be smaller");
-        withdrawQuotas[_asset] = _withdrawQuota;
+        require(_withdrawQuota != quota, "not modify the quota of withdraw");
+        if ((quota == 0) || (_withdrawQuota < quota)) {
+            require(hasRole(ADMIN_ROLE, msg.sender), "missing admin role");
+            withdrawQuotas[_asset] = _withdrawQuota;    
+        } else {
+            require(hasRole(DAO_ADMIN_ROLE, msg.sender), "Only dao admin can expand the quota of withdraw");
+            withdrawQuotas[_asset] = _withdrawQuota;    
+        }
+
+        emit BindWithdrawQuota(_asset, _withdrawQuota);
     }
 
     function _checkAndRefreshWithdrawTime(address _asset, uint256 amount) internal {

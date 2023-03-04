@@ -8,6 +8,7 @@ import "./verify/VerifierUpgradeable.sol";
 // import "hardhat/console.sol";
 
 contract ERC20MintProxy is VerifierUpgradeable {
+    // uint private constant MAX_WITHDRAW_QUOTA = 1000;
     event Burned (
         address indexed fromToken,
         address indexed toToken,
@@ -28,6 +29,11 @@ contract ERC20MintProxy is VerifierUpgradeable {
         address toAssetHash
     );
 
+    event BindWithdrawQuota(
+        address asset,
+        uint256 withdrawQuota
+    );
+
     struct ProxiedAsset{
         address assetHash;
         bool    existed;
@@ -43,36 +49,47 @@ contract ERC20MintProxy is VerifierUpgradeable {
 
     mapping(address => ProxiedAsset) public assets;
 
-    function bindAssetHash(
-        address localAssetHash, 
-        address peerAssetHash
-    ) external onlyRole(ADMIN_ROLE) returns (bool) {
-        require(Address.isContract(localAssetHash), "from proxy address are not to be contract address");
-        require(assets[localAssetHash].existed == false, "can not modify the bind asset");
-        assets[localAssetHash].assetHash = peerAssetHash;
-        assets[localAssetHash].existed = true;
-        emit AssetBound(localAssetHash, peerAssetHash);
-        return true;
-    }
-
     function initialize(
         IEthProver _prover,
         address _peerProxyHash,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
-        ILimit _limiter
+        ILimit _limiter,
+        address[]  memory _localAssetHashes,
+        address[]  memory _peerAssetHashes
     ) external initializer {
         require(_peerProxyHash != address(0), "peer proxy can not be zero");
         VerifierUpgradeable._VerifierUpgradeable_init(_prover, _peerProxyHash, _minBlockAcceptanceHeight, _limiter);
         AdminControlledUpgradeable._AdminControlledUpgradeable_init(msg.sender, UNPAUSED_ALL ^ 0xff);
+        require(_localAssetHashes.length == _peerAssetHashes.length, "from assets is not equal to to assets");
+        require(_localAssetHashes.length != 0, "from assets can not be 0");
+        for (uint256 i = 0; i < _localAssetHashes.length; i++){
+            _bindAssetHash(_localAssetHashes[i], _peerAssetHashes[i]);
+        }
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
 
         _setRoleAdmin(CONTROLLED_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BLACK_BURN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BLACK_MINT_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(DAO_ADMIN_ROLE, ADMIN_ROLE);
 
         _grantRole(OWNER_ROLE, _owner);
         _grantRole(ADMIN_ROLE, msg.sender);
+    }
+
+    function bindAssetHash(
+        address localAssetHash,
+        address peerAssetHash
+    ) external onlyRole(DAO_ADMIN_ROLE) {
+        _bindAssetHash(localAssetHash, peerAssetHash);
+    }
+
+    function _bindAssetHash(address _localAssetHash,address _peerAssetHash) internal{
+        require(Address.isContract(_localAssetHash), "from proxy address are not to be contract address");
+        require(assets[_localAssetHash].existed == false, "can not modify the bind asset");
+        assets[_localAssetHash].assetHash = _peerAssetHash;
+        assets[_localAssetHash].existed = true;
+        emit AssetBound(_localAssetHash, _peerAssetHash);
     }
 
     function conversionFromAssetAmount(uint8 fromDecimal, uint8 toDecimal, uint256 amount) internal pure returns(uint256 transferAmount){
@@ -87,11 +104,19 @@ contract ERC20MintProxy is VerifierUpgradeable {
         }
     }
     
-    function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external onlyRole(ADMIN_ROLE) {
+    function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external {
         require(_withdrawQuota != 0, "withdraw quota can not be 0");
+        // require(_withdrawQuota <= MAX_WITHDRAW_QUOTA, "withdraw quota is overflow");
         uint256 quota = withdrawQuotas[_asset];
-        require((quota == 0) || (_withdrawQuota < quota), "withdraw quota must be smaller");
-        withdrawQuotas[_asset] = _withdrawQuota;
+        require(_withdrawQuota != quota, "not modify the quota of withdraw");
+        if ((quota == 0) || (_withdrawQuota < quota)) {
+            require(hasRole(ADMIN_ROLE, msg.sender), "missing admin role");
+            withdrawQuotas[_asset] = _withdrawQuota;    
+        } else {
+            require(hasRole(DAO_ADMIN_ROLE, msg.sender), "Only dao admin can expand the quota of withdraw");
+            withdrawQuotas[_asset] = _withdrawQuota;    
+        }
+        emit BindWithdrawQuota(_asset, _withdrawQuota);
     }
 
     function _checkAndRefreshWithdrawTime(address _asset, uint256 amount) internal {

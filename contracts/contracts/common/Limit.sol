@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+
 //import "hardhat/console.sol";
 
 contract Limit is AccessControl{
@@ -11,6 +12,8 @@ contract Limit is AccessControl{
     bytes32 constant private FORBIDEN_ROLE = 0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d;
     //keccak256("ADMIN.ROLE");
     bytes32 constant ADMIN_ROLE = 0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c;
+    //keccak256("DAO.ADMIN.ROLE");
+    bytes32 constant DAO_ADMIN_ROLE = 0xba89994fffa21b6259d0e98b52260f21bc06a07249825a4125b51c20e48d06ff;
 
     struct Quota{
         uint256 maxTransferedToken;
@@ -27,6 +30,10 @@ contract Limit is AccessControl{
         bytes32 _forbiddenId
     );
 
+    event TxRecovered (
+        bytes32 _forbiddenId
+    );
+
     event FrozenBound (
         address indexed asset, 
         uint  frozenDuration
@@ -37,11 +44,59 @@ contract Limit is AccessControl{
     mapping(address => uint) public tokenFrozens; // unit is seconds
     uint private constant MAX_FROZEN_TIME = 15_552_000; //180 days
 
+    struct Voter {
+        address voter;
+        bool isvoted;
+    }
+
+    Voter[] public voters;
+    uint256 public lastAgreeOnTime;
+    uint256 private constant MAX_AGREE_DURING_TIME = 100;
+
+    function initVoters(address[] memory _voters) external{
+        require(_voters.length != 0, "number of voter can not be 0");
+        for (uint256 i = 0; i < _voters.length; i++){
+            require(_voters[i] != address(0), "voter can not be 0");
+            voters[i] = Voter(_voters[i], false);
+        }
+
+        lastAgreeOnTime = block.number;
+    }
+
+    function vote() external{
+        uint256 numberOfVote;
+        if ((lastAgreeOnTime + MAX_AGREE_DURING_TIME) <= block.number) {
+            _cleanVoters();
+        } 
+        
+        for (uint256 i = 0; i < voters.length; i++){
+            if (voters[i].voter == msg.sender) {
+                voters[i].isvoted = true;
+            }
+
+            if (voters[i].isvoted) {
+                numberOfVote++;
+            }
+        }
+
+        if (numberOfVote == voters.length) {
+            /* dosometing */
+            _cleanVoters();
+        }        
+    }
+
+    function _cleanVoters() internal{
+        for (uint256 i = 0; i < voters.length; i++){
+            voters[i].isvoted = false;
+        }
+
+        lastAgreeOnTime = block.number;
+    }
+    
     constructor(address owner){
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
-        
         _setRoleAdmin(FORBIDEN_ROLE, ADMIN_ROLE);
-
+        _setRoleAdmin(DAO_ADMIN_ROLE, ADMIN_ROLE);
         _grantRole(OWNER_ROLE, owner);
         _grantRole(ADMIN_ROLE,_msgSender());
     }
@@ -78,11 +133,19 @@ contract Limit is AccessControl{
     }
 
     function forbiden(
-        bytes32 _forbiddenId
+        bytes32 _receiptId
     ) external onlyRole(FORBIDEN_ROLE) {
-        require(forbiddens[_forbiddenId] == false, "id has been already forbidden");
-        forbiddens[_forbiddenId] = true;
-        emit TxForbidden(_forbiddenId);
+        require(forbiddens[_receiptId] == false, "id has been already forbidden");
+        forbiddens[_receiptId] = true;
+        emit TxForbidden(_receiptId);
+    }
+
+    function recover(
+        bytes32 _receiptId
+    ) public onlyRole(DAO_ADMIN_ROLE) {
+        require(forbiddens[_receiptId], "id has not been forbidden");
+        delete(forbiddens[_receiptId]);
+        emit TxRecovered(_receiptId);
     }
 
     function bindFrozen(
@@ -102,7 +165,7 @@ contract Limit is AccessControl{
         return block.timestamp >= _timestamp + tokenFrozens[_asset];
     }
 
-    function renounceRole(bytes32 role, address account) public pure override {
+    function renounceRole(bytes32 /*role*/, address /*account*/) public pure override {
         require(false, "not support");
     }
 }

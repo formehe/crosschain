@@ -36,8 +36,30 @@ describe("Limit", function () {
         limitContract = await limitCon.deploy(owner.address)
         //erc20Sample = await erc20SampleCon.attach("0xC66AB83418C20A65C3f8e83B3d11c8C3a6097b6F")
         await limitContract.deployed()
-        limitContract.grantRole("0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d", admin.address)
+        await limitContract.grantRole("0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d", admin.address)
         console.log("+++++++++++++Limit+++++++++++++++ ", limitContract.address)
+
+        //deploy time lock controller
+        timelockcontrollerCon = await ethers.getContractFactory("TimeController", deployer)
+        timelockcontroller = await timelockcontrollerCon.deploy(1,[],[])
+        await timelockcontroller.deployed()
+        console.log("+++++++++++++timelockcontroller+++++++++++++++ ", timelockcontroller.address)
+
+        //deploy TVotes
+        votesCon = await ethers.getContractFactory("ImmutableVotes", deployer)
+        votes = await votesCon.deploy([admin.address, user.address, user1.address])
+        await votes.deployed()
+        console.log("+++++++++++++ImmutableVotes+++++++++++++++ ", votes.address)
+
+        //deploy TDao
+        tdaoCon = await ethers.getContractFactory("TDao", deployer)
+        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, admin.address)
+        await tdao.deployed()
+        console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
+
+        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
+        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address)
+        await limitContract.grantRole("0xba89994fffa21b6259d0e98b52260f21bc06a07249825a4125b51c20e48d06ff", timelockcontroller.address)
     })
 
     it('bind transfered only for owner', async () => {
@@ -103,6 +125,36 @@ describe("Limit", function () {
         await limitContract.connect(admin).forbiden("0x1111111111111111111111111111111111111111111111111111111111111111")
         await expect(limitContract.connect(admin).forbiden("0x1111111111111111111111111111111111111111111111111111111111111111"))
             .to.be.revertedWith('id has been already forbidden')
+
+        await expect(limitContract.connect(admin).recover("0x1111111111111111111111111111111111111111111111111111111111111111"))
+        .to.be.revertedWith('is missing role')
+
+        let transferCalldata = limitContract.interface.encodeFunctionData('recover', ["0x1111111111111111111111111111111111111111111111111111111111111111"])
+        let tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([limitContract.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([limitContract.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+        await expect(tdao.connect(user).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await tdao.connect(user)["execute(uint256)"](tx.toBigInt())
+        await limitContract.connect(admin).forbiden("0x1111111111111111111111111111111111111111111111111111111111111111")
+
+        transferCalldata = limitContract.interface.encodeFunctionData('recover', ["0x1111111111111111111111111111111111111111111111111111111111111112"])
+        tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([limitContract.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([limitContract.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+        await expect(tdao.connect(user).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
     })
 
     it('black tx list, forbid tx success', async () => {

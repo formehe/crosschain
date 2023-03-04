@@ -172,26 +172,61 @@ describe("ERC20MintProxy", function () {
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
+        //deploy time lock controller
+        timelockcontrollerCon = await ethers.getContractFactory("TimeController", deployer)
+        timelockcontroller = await timelockcontrollerCon.deploy(1,[],[])
+        await timelockcontroller.deployed()
+        console.log("+++++++++++++timelockcontroller+++++++++++++++ ", timelockcontroller.address)
 
-        await mintContract.initialize(topProveContract.address, mintContract1.address, 1000, admin.address, limitContract.address)
-        await mintContract.connect(admin).adminPause(0)
-        await mintContract.connect(admin).adminPause(0)
-        await mintContract1.initialize(topProveContract.address, mintContract.address, 1000, admin.address, limitContract.address)
-        await mintContract1.connect(admin).adminPause(0)
-        await mintContract2.initialize(topProveContract.address, mintContract1.address, 1000, admin.address, limitContract.address)
-        await mintContract2.connect(admin).adminPause(0)
+        //deploy TVotes
+        votesCon = await ethers.getContractFactory("ImmutableVotes", deployer)
+        votes = await votesCon.deploy([admin.address, user.address, user1.address])
+        await votes.deployed()
+        console.log("+++++++++++++ImmutableVotes+++++++++++++++ ", votes.address)
+
+        //deploy TDao
+        tdaoCon = await ethers.getContractFactory("TDao", deployer)
+        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, deployer.address)
+        await tdao.deployed()
+        console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
+
+        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
+        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address)
+        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", deployer.address)
+        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", deployer.address)
+
+        transparentproxyCon = await ethers.getContractFactory("TransparentProxy", deployer)
+        transparentproxy = await transparentproxyCon.deploy(mintContract.address, tdao.address, admin.address)
+        transparentproxy1 = await transparentproxyCon.deploy(mintContract1.address, tdao.address, admin.address)
+        transparentproxy2 = await transparentproxyCon.deploy(mintContract2.address, tdao.address, admin.address)
+
+        transparentproxied = await mintContractCon.attach(transparentproxy.address);
+        transparentproxied1 = await mintContractCon.attach(transparentproxy1.address);
+        transparentproxied2 = await mintContractCon.attach(transparentproxy2.address);
+        
+        await transparentproxied.initialize(topProveContract.address, transparentproxy1.address, 1000, admin.address, limitContract.address, [erc20Sample.address], [erc20Sample1.address])
+        await transparentproxied.connect(admin).adminPause(0)
+        await transparentproxied.connect(admin).adminPause(0)
+        await transparentproxied1.initialize(topProveContract.address, transparentproxy.address, 1000, admin.address, limitContract.address, [erc20Sample1.address], [erc20Sample.address])
+        await transparentproxied1.connect(admin).adminPause(0)
+        await transparentproxied2.initialize(topProveContract.address, transparentproxy1.address, 1000, admin.address, limitContract.address, [limitContract.address], [erc20Sample.address])
+        await transparentproxied2.connect(admin).adminPause(0)
+
+        await transparentproxied.grantRole("0xba89994fffa21b6259d0e98b52260f21bc06a07249825a4125b51c20e48d06ff", timelockcontroller.address)
+        await transparentproxied1.grantRole("0xba89994fffa21b6259d0e98b52260f21bc06a07249825a4125b51c20e48d06ff", timelockcontroller.address)
+        await transparentproxied2.grantRole("0xba89994fffa21b6259d0e98b52260f21bc06a07249825a4125b51c20e48d06ff", timelockcontroller.address)
     })
 
     it('no admin user can not bind failed between local and peer asset', async () => {
         
-        await expect(mintContract.connect(deployer).bindAssetHash(erc20Sample.address, address))
+        await expect(transparentproxied.connect(deployer).bindAssetHash(erc20Sample.address, address))
             .to.be.revertedWith('is missing role')
     })
 
     it('modify owner role', async () => {
-        await mintContract.connect(admin).grantRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user.address)
+        await transparentproxied.connect(admin).grantRole('0xa8a2e59f1084c6f79901039dbbd994963a70b36ee6aff99b7e17b2ef4f0e395c', user.address)
         try {
-          result = await mintContract.connect(admin).grantRole('0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6', user.address)
+          result = await transparentproxied.connect(admin).grantRole('0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6', user.address)
         } catch (error) {
           expect(
             error.message.indexOf('missing role') > -1
@@ -201,74 +236,127 @@ describe("ERC20MintProxy", function () {
     })
 
     it('the local address can not be non-contract for binding', async () => {
-        await expect(mintContract.connect(admin).bindAssetHash(address, address))
-            .to.be.revertedWith('from proxy address are not to be contract address')
+        let transferCalldata = mintContract.interface.encodeFunctionData('bindAssetHash', [address, address])
+        let tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+        await expect(tdao.connect(user).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
+        // await expect(mintContract.connect(admin).bindAssetHash(address, address))
+        //     .to.be.revertedWith('from proxy address are not to be contract address')
     })
 
     it('the local address must be contract for binding', async () => {
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
+        let transferCalldata = mintContract.interface.encodeFunctionData('bindAssetHash', [erc20Sample1.address, address])
+        let tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+        await expect(tdao.connect(user).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await tdao.connect(user)["execute(uint256)"](tx.toBigInt())
     })
 
     it('the peer address can be zero', async () => {
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, zeroAccount)
+        let transferCalldata = mintContract.interface.encodeFunctionData('bindAssetHash', [erc20Sample1.address, zeroAccount])
+        let tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+        await expect(tdao.connect(user).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await tdao.connect(user)["execute(uint256)"](tx.toBigInt())
+        // await mintContract.connect(admin).bindAssetHash(erc20Sample.address, zeroAccount)
     })
 
     it('amount of burn cannot be zero', async () => {
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await expect(mintContract.burn(erc20Sample.address, 0, address))
+        await expect(transparentproxied.burn(erc20Sample.address, 0, address))
             .to.be.revertedWith('amount can not be 0')
     })
 
     it('rebind asset hash', async () => {
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
-        await expect(mintContract.connect(admin).bindAssetHash(erc20Sample.address, address))
-            .to.be.revertedWith('can not modify the bind asset')
+        // await expect(mintContract.connect(admin).bindAssetHash(erc20Sample.address, address))
+        //     .to.be.revertedWith('can not modify the bind asset')
+        let transferCalldata = mintContract.interface.encodeFunctionData('bindAssetHash', [erc20Sample.address, address])
+        let tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+        await expect(tdao.connect(user).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await expect(tdao.connect(user)["execute(uint256)"](tx.toBigInt())).to.be.revertedWith("TimelockController: underlying transaction reverted")
     })
 
     it('the asset contract of burn must be bound', async () => {
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
-        await expect(mintContract.burn(erc20Sample1.address, 2, address))
+        await expect(transparentproxied.burn(erc20Sample1.address, 2, address))
             .to.be.revertedWith('asset address must has been bound')
     })
 
     it('the receiver of burn can not be zero', async () => {
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
-        await expect(mintContract.burn(erc20Sample1.address, 1, zeroAccount))
+        await expect(transparentproxied.burn(erc20Sample1.address, 1, zeroAccount))
             .to.be.revertedWith('Transaction reverted without a reason string')
     })
 
     it('the owner must grant to mintContract enough allowance', async () => {
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
-        await erc20Sample.connect(deployer).approve(mintContract.address, 1)
-        await expect(mintContract.connect(deployer).burn(erc20Sample.address, 10, address))
+        await erc20Sample.connect(deployer).approve(transparentproxy.address, 1)
+        await expect(transparentproxied.connect(deployer).burn(erc20Sample.address, 10, address))
             .to.be.revertedWith('ERC20: insufficient allowance')
     })
 
     it('burn of mintContract success', async () => {
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
-        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
-        await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        await erc20Sample.connect(deployer).approve(transparentproxy.address, 1000)
+        await transparentproxied.connect(deployer).burn(erc20Sample.address, 10, address)
     })
 
     it('burn success, the mint asset must be bound', async () => {
         //burn
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
-        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
-        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
-        const rc = await tx.wait()
+        let transferCalldata = mintContract.interface.encodeFunctionData('bindAssetHash', [erc20Sample1.address, zeroAccount])
+        let tx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(tx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(tx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](tx.toBigInt())
+        await expect(tdao.connect(user).castVote(tx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await tdao.connect(user)["execute(uint256)"](tx.toBigInt())
+
+        await erc20Sample1.connect(deployer).approve(transparentproxy.address, 1000)
+        const txx = await transparentproxied.connect(deployer).burn(erc20Sample1.address, 10, address)
+        const rc = await txx.wait()
         const event = rc.events.find(event=>event.event === "Burned")
 
         // construct receipt proof
         getProof = new GetProof("http://127.0.0.1:8545")
-        proof = await getProof.receiptProof(tx.hash)
+        proof = await getProof.receiptProof(txx.hash)
         rpcInstance = new rpc("http://127.0.0.1:8545")
         const block = await rpcInstance.eth_getBlockByHash(rc.blockHash, false)
-        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(tx.hash)
+        let targetReceipt = await rpcInstance.eth_getTransactionReceipt(txx.hash)
         const re = Receipt.fromRpc(targetReceipt)
         const rlpLog = new LOGRLP(rc.logs[event.logIndex])
         const rlplog = Log.fromRpc(rlpLog)
@@ -279,16 +367,15 @@ describe("ERC20MintProxy", function () {
         const buffer = borsh.serialize(schema, value);
 
         //mint
-        await expect(mintContract1.connect(user).mint(buffer, 1))
+        await expect(transparentproxied1.connect(user).mint(buffer, 1))
             .to.be.revertedWith('asset address must has been bound')
     })
 
     it('burn success, the mint proxy must be bound', async () => {
         //burn
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
-        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
-        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        await erc20Sample.connect(deployer).approve(transparentproxy.address, 1000)
+        const tx = await transparentproxied.connect(deployer).burn(erc20Sample.address, 10, address)
         const rc = await tx.wait()
         const event = rc.events.find(event=>event.event === "Burned")
         // construct receipt proof
@@ -307,16 +394,15 @@ describe("ERC20MintProxy", function () {
         const buffer = borsh.serialize(schema, value);
 
         //mint
-        await expect(mintContract2.connect(user).mint(buffer, 1))
+        await expect(transparentproxied2.connect(user).mint(buffer, 1))
             .to.be.revertedWith('proxy is not bound')
     })
 
     it('burn success, repeat mint', async () => {
         //burn
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
-        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
-        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        await erc20Sample.connect(deployer).approve(transparentproxy.address, 1000)
+        const tx = await transparentproxied.connect(deployer).burn(erc20Sample.address, 10, address)
         const rc = await tx.wait()
 
         const event = rc.events.find(event=>event.event === "Burned")
@@ -337,20 +423,18 @@ describe("ERC20MintProxy", function () {
         const buffer = borsh.serialize(schema, value);
 
         //mint
-        await mintContract1.connect(admin).bindAssetHash(erc20Sample1.address, erc20Sample.address)
-        await mintContract1.connect(admin).bindWithdrawQuota(erc20Sample1.address, 1000000000000)
+        await transparentproxied1.connect(admin).bindWithdrawQuota(erc20Sample1.address, 1000)
         // await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
-        await mintContract1.connect(user).mint(buffer, 1)
-        await expect(mintContract1.connect(user).mint(buffer, 1))
+        await transparentproxied1.connect(user).mint(buffer, 1)
+        await expect(transparentproxied1.connect(user).mint(buffer, 1))
             .to.be.revertedWith('The burn event proof cannot be reused')
     })
 
     it('burn and mint success', async () => {
         //burn
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, erc20Sample1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
-        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
-        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        await erc20Sample.connect(deployer).approve(transparentproxy.address, 1000)
+        const tx = await transparentproxied.connect(deployer).burn(erc20Sample.address, 10, address)
         const rc = await tx.wait()
         const event = rc.events.find(event=>event.event === "Burned")
 
@@ -370,10 +454,9 @@ describe("ERC20MintProxy", function () {
         const buffer = borsh.serialize(schema, value);
 
         //mint
-        await mintContract1.connect(admin).bindAssetHash(erc20Sample1.address, erc20Sample.address)
-        await mintContract1.connect(admin).bindWithdrawQuota(erc20Sample1.address, 100000000000000)
+        await transparentproxied1.connect(admin).bindWithdrawQuota(erc20Sample1.address, 100000000000000)
         // await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
-        await mintContract1.connect(user).mint(buffer, 1)
+        await transparentproxied1.connect(user).mint(buffer, 1)
 
         expect(await erc20Sample1.balanceOf(address))
             .to.equal(10)
@@ -389,10 +472,21 @@ describe("ERC20MintProxy", function () {
         // await ERC20Mint.deployed()
 
         //burn
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, ERC20Mint.address)
+        let transferCalldata = mintContract.interface.encodeFunctionData('bindAssetHash', [erc20Sample1.address, ERC20Mint.address])
+        let txxx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([transparentproxy.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(txxx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(txxx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(txxx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(txxx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(txxx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](txxx.toBigInt())
+        await expect(tdao.connect(user).castVote(txxx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await tdao.connect(user)["execute(uint256)"](txxx.toBigInt())
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
-        await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
-        const tx = await mintContract.connect(deployer).burn(erc20Sample.address, 10, address)
+        await erc20Sample1.connect(deployer).approve(transparentproxy.address, 1000)
+        const tx = await transparentproxied.connect(deployer).burn(erc20Sample1.address, 10, address)
         const rc = await tx.wait()
         const event = rc.events.find(event=>event.event === "Burned")
 
@@ -412,10 +506,22 @@ describe("ERC20MintProxy", function () {
         const buffer = borsh.serialize(schema, value);
 
         //mint
-        await mintContract1.connect(admin).bindAssetHash(ERC20Mint.address, erc20Sample.address)
-        await mintContract1.connect(admin).bindWithdrawQuota(ERC20Mint.address, 100000000000000)
+        transferCalldata = mintContract1.interface.encodeFunctionData('bindAssetHash', [ERC20Mint.address, erc20Sample1.address])
+        txxx = await tdao.connect(user).callStatic["propose(address[],uint256[],bytes[],string)"]([transparentproxy1.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await tdao.connect(user)["propose(address[],uint256[],bytes[],string)"]([transparentproxy1.address], [0], [transferCalldata], "Proposal #1: Give grant to team")
+        await expect(tdao.connect(user1).castVote(txxx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await expect(tdao.connect(admin).castVote(txxx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await tdao.connect(user).castVote(txxx.toBigInt(), 1)
+        await tdao.connect(user1).castVote(txxx.toBigInt(), 1)
+        await tdao.connect(admin).castVote(txxx.toBigInt(), 1)
+        await tdao.connect(user)["queue(uint256)"](txxx.toBigInt())
+        await expect(tdao.connect(user).castVote(txxx.toBigInt(), 1)).to.be.revertedWith("Governor: vote not currently active")
+        await new Promise(r => setTimeout(r, 1000));
+        await tdao.connect(user)["execute(uint256)"](txxx.toBigInt())
+
+        await transparentproxied1.connect(admin).bindWithdrawQuota(ERC20Mint.address, 10000000000000)
         // await mintContract1.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
-        await mintContract1.connect(user).mint(buffer, 1)
+        await transparentproxied1.connect(user).mint(buffer, 1)
 
         expect(await ERC20Mint.balanceOf(address))
             .to.equal(10000000000000)
@@ -487,6 +593,29 @@ describe("TRC20", function () {
         mintContract = await mintContractCon.deploy()
         console.log("+++++++++++++mintContract+++++++++++++++ ", mintContract.address)
         await mintContract.deployed()
+
+        //deploy time lock controller
+        timelockcontrollerCon = await ethers.getContractFactory("TimeController", deployer)
+        timelockcontroller = await timelockcontrollerCon.deploy(1,[],[])
+        await timelockcontroller.deployed()
+        console.log("+++++++++++++timelockcontroller+++++++++++++++ ", timelockcontroller.address)
+
+        //deploy TVotes
+        votesCon = await ethers.getContractFactory("ImmutableVotes", deployer)
+        votes = await votesCon.deploy([admin.address, user.address, user1.address])
+        await votes.deployed()
+        console.log("+++++++++++++ImmutableVotes+++++++++++++++ ", votes.address)
+
+        //deploy TDao
+        tdaoCon = await ethers.getContractFactory("TDao", deployer)
+        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, deployer.address)
+        await tdao.deployed()
+        console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
+
+        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
+        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address)
+        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", deployer.address)
+        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", deployer.address)
     })
 
     it('burn success, the mint asset must be bound', async () => {
@@ -503,9 +632,8 @@ describe("TRC20", function () {
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address, [erc20Sample.address], [TRC20Contract1.address])
         await mintContract.connect(admin).adminPause(0)
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
@@ -547,9 +675,8 @@ describe("TRC20", function () {
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address, [erc20Sample.address], [TRC20Contract1.address])
         await mintContract.connect(admin).adminPause(0)
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         await erc20Sample.connect(deployer).approve(mintContract.address, 1000)
@@ -589,9 +716,8 @@ describe("TRC20", function () {
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address, [erc20Sample.address], [TRC20Contract1.address])
         await mintContract.connect(admin).adminPause(0)
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
@@ -635,9 +761,8 @@ describe("TRC20", function () {
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address, [erc20Sample.address], [TRC20Contract1.address])
         await mintContract.connect(admin).adminPause(0)
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
@@ -684,9 +809,8 @@ describe("TRC20", function () {
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address, [erc20Sample.address], [TRC20Contract1.address])
         await mintContract.connect(admin).adminPause(0)
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn
@@ -725,15 +849,14 @@ describe("TRC20", function () {
             // }
         })
         TRC20Contract1 = await TRC20ContractCon1.deploy(topProveContract.address, mintContract.address, erc20Sample.address, 1, "hhh", "hhh", admin.address, limitContract.address)
-        await limitContract.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
+        await limitContract.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000)
         console.log("+++++++++++++MintContract1+++++++++++++++ ", TRC20Contract1.address)
         await TRC20Contract1.deployed()
         await TRC20Contract1.connect(admin).adminPause(0)
         // await TRC20Contract1.connect(admin).bindTransferedQuota(TRC20Contract1.address, 1, 1000000000)
 
-        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address)
+        await mintContract.initialize(topProveContract.address, TRC20Contract1.address, 1000, admin.address, limitContract.address, [erc20Sample.address], [TRC20Contract1.address])
         await mintContract.connect(admin).adminPause(0)
-        await mintContract.connect(admin).bindAssetHash(erc20Sample.address, TRC20Contract1.address)
         // await mintContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
 
         //burn

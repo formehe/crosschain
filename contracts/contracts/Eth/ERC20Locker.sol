@@ -6,19 +6,32 @@ import "./Locker.sol";
 
 contract ERC20Locker is IRC20Locker,Locker{
     using SafeERC20 for IERC20;
+    address public peerProxyHash;
 
     function _ERC20Locker_initialize(
         ITopProver _prover,
         uint64 _minBlockAcceptanceHeight,
         address _owner,
-        ILimit limit
+        ILimit _limit,
+        address _peerProxyHash,
+        address[]  memory _localAssetHashes,
+        address[]  memory _peerAssetHashes
     ) external initializer {
-        Locker._Locker_initialize(_prover,_minBlockAcceptanceHeight,_owner,limit);
+        Locker._Locker_initialize(_prover, _minBlockAcceptanceHeight, _owner, _limit);
+        require(_localAssetHashes.length == _peerAssetHashes.length, "from assets is not equal to to assets");
+        require(_localAssetHashes.length != 0, "from assets can not be 0");
+        require(_peerProxyHash != address(0), "peer proxy hash can not be 0");
+        peerProxyHash = _peerProxyHash;
+        for (uint256 i = 0; i < _localAssetHashes.length; i++){
+            require(_localAssetHashes[i] != address(0), "from asset can not be 0");
+            require(_peerAssetHashes[i] != address(0), "from asset can not be 0");
+            _bindAssetHash(_localAssetHashes[i], _peerAssetHashes[i], _peerProxyHash);
+        }
     }
 
-    function bindAssetHash(address _fromAssetHash, address _toAssetHash, address _peerLockProxyHash) external onlyRole(ADMIN_ROLE) {
-        require(_fromAssetHash != address(0) && _toAssetHash != address(0) && _peerLockProxyHash != address(0), "both asset addresses are not to be 0");
-        _bindAssetHash(_fromAssetHash,_toAssetHash,_peerLockProxyHash);
+    function bindAssetHash(address _fromAssetHash, address _toAssetHash) external onlyRole(DAO_ADMIN_ROLE) {
+        require(_fromAssetHash != address(0) && _toAssetHash != address(0), "both asset addresses are not to be 0");
+        _bindAssetHash(_fromAssetHash, _toAssetHash, peerProxyHash);
     }
     
     function lockToken(address fromAssetHash, uint256 amount, address receiver)
