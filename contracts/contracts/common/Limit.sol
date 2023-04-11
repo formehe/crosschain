@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 //import "hardhat/console.sol";
 
-contract Limit is AccessControl{
+contract Limit is Initializable, AccessControl{
     //keccak256("OWNER.ROLE");
     bytes32 constant private OWNER_ROLE = 0x0eddb5b75855602b7383774e54b0f5908801044896417c7278d8b72cd62555b6;
     //keccak256("FORBIDEN.ROLE");
@@ -44,56 +44,17 @@ contract Limit is AccessControl{
     mapping(address => uint) public tokenFrozens; // unit is seconds
     uint private constant MAX_FROZEN_TIME = 15_552_000; //180 days
 
-    struct Voter {
-        address voter;
-        bool isvoted;
-    }
+    // constructor(address owner){
+    //     _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
+    //     _setRoleAdmin(FORBIDEN_ROLE, ADMIN_ROLE);
+    //     _setRoleAdmin(DAO_ADMIN_ROLE, ADMIN_ROLE);
+    //     _grantRole(OWNER_ROLE, owner);
+    //     _grantRole(ADMIN_ROLE,_msgSender());
+    // }
 
-    Voter[] public voters;
-    uint256 public lastAgreeOnTime;
-    uint256 private constant MAX_AGREE_DURING_TIME = 100;
-
-    function initVoters(address[] memory _voters) external{
-        require(_voters.length != 0, "number of voter can not be 0");
-        for (uint256 i = 0; i < _voters.length; i++){
-            require(_voters[i] != address(0), "voter can not be 0");
-            voters[i] = Voter(_voters[i], false);
-        }
-
-        lastAgreeOnTime = block.number;
-    }
-
-    function vote() external{
-        uint256 numberOfVote;
-        if ((lastAgreeOnTime + MAX_AGREE_DURING_TIME) <= block.number) {
-            _cleanVoters();
-        } 
-        
-        for (uint256 i = 0; i < voters.length; i++){
-            if (voters[i].voter == msg.sender) {
-                voters[i].isvoted = true;
-            }
-
-            if (voters[i].isvoted) {
-                numberOfVote++;
-            }
-        }
-
-        if (numberOfVote == voters.length) {
-            /* dosometing */
-            _cleanVoters();
-        }        
-    }
-
-    function _cleanVoters() internal{
-        for (uint256 i = 0; i < voters.length; i++){
-            voters[i].isvoted = false;
-        }
-
-        lastAgreeOnTime = block.number;
-    }
-    
-    constructor(address owner){
+    function _Limit_initialize(
+        address owner
+    ) external initializer {
         _setRoleAdmin(ADMIN_ROLE, OWNER_ROLE);
         _setRoleAdmin(FORBIDEN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(DAO_ADMIN_ROLE, ADMIN_ROLE);

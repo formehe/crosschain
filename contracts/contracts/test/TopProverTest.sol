@@ -5,14 +5,19 @@ import "../Eth/prover/TopProver.sol";
 import "../common/codec/TopProofDecoder.sol";
 import "../common/Deserialize.sol";
 
-contract TopProverTest is TopProver{
+contract TopProverTest is TopProver {
     using Borsh for Borsh.Data;
     using TopProofDecoder for Borsh.Data;
     using MPT for MPT.MerkleProof;
 
+    constructor(address _bridgeLight) {
+        _TopProverTest_initialize(_bridgeLight);
+    }
 
-    constructor(address _bridgeLight)
-    TopProver(_bridgeLight) {
+    function _TopProverTest_initialize(
+        address _bridgeLight
+    ) public initializer {
+        _Prover_initialize(_bridgeLight);
     }
 
     function verifyHash(bytes32 hash) public returns(bool valid, string memory reason){

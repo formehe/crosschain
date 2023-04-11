@@ -33,7 +33,9 @@ describe("Limit", function () {
 
         //deploy ERC20
         limitCon = await ethers.getContractFactory("Limit", admin)
-        limitContract = await limitCon.deploy(owner.address)
+        limitContract = await limitCon.deploy()
+        await limitContract._Limit_initialize(owner.address)
+        await expect(limitContract._Limit_initialize(owner.address)).to.be.revertedWith("Initializable: contract is already initialized")
         //erc20Sample = await erc20SampleCon.attach("0xC66AB83418C20A65C3f8e83B3d11c8C3a6097b6F")
         await limitContract.deployed()
         await limitContract.grantRole("0x3ae7ceea3d592ba264a526759c108b4d8d582ba37810bbb888fcee6f32bbf04d", admin.address)

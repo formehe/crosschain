@@ -19,8 +19,6 @@ contract Locker is Initializable,AdminControlledUpgradeable{
     uint constant PAUSED_LOCK = 1 << 0;
     uint constant PAUSED_UNLOCK = 1 << 1;
 
-    // uint private constant MAX_WITHDRAW_QUOTA = 1000; 
-
     ILimit public limit;
     //keccak256("BLACK.UN.LOCK.ROLE")
     bytes32 constant BLACK_UN_LOCK_ROLE = 0xc3af44b98af11d4a60c1cc6766bcc712210de97241b8cbefd5c9a0ff23992219;

@@ -123,9 +123,11 @@ describe("ERC20MintProxy", function () {
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
         topProveContractCon = await ethers.getContractFactory("EthProver", deployer)
 
-        topProveContract = await topProveContractCon.deploy(headerMock.address)
+        topProveContract = await topProveContractCon.deploy()
         console.log("+++++++++++++EthProver+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
+        await topProveContract._EthProver_initialize(headerMock.address)
+        await expect(topProveContract._EthProver_initialize(bridge.address)).to.be.revertedWith("Initializable: contract is already initialized")
 
         //deploy mint contract
         try {
@@ -165,9 +167,10 @@ describe("ERC20MintProxy", function () {
         await mintContract2.deployed()
 
         limitCon = await ethers.getContractFactory("Limit", admin)
-        limitContract = await limitCon.deploy(admin.address)
+        limitContract = await limitCon.deploy()
         console.log("+++++++++++++limitContract+++++++++++++++ ", limitContract.address)
         await limitContract.deployed()
+        await limitContract._Limit_initialize(admin.address)
 
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
@@ -571,14 +574,16 @@ describe("TRC20", function () {
 		address = "0xa4bA11f3f36b12C71f2AEf775583b306A3cF784a"
         topProveContractCon = await ethers.getContractFactory("EthProver", deployer)
 
-        topProveContract = await topProveContractCon.deploy(headerMock.address)
+        topProveContract = await topProveContractCon.deploy()
         console.log("+++++++++++++EthProver+++++++++++++++ ", topProveContract.address)
         await topProveContract.deployed()
+        await topProveContract._EthProver_initialize(headerMock.address)
 
         limitCon = await ethers.getContractFactory("Limit", admin)
-        limitContract = await limitCon.deploy(admin.address)
+        limitContract = await limitCon.deploy()
         console.log("+++++++++++++limitContract+++++++++++++++ ", limitContract.address)
         await limitContract.deployed()
+        await limitContract._Limit_initialize(admin.address)
 
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample.address, 1, 1000000000)
         await limitContract.connect(admin).bindTransferedQuota(erc20Sample1.address, 1, 1000000000)

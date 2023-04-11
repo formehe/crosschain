@@ -5,15 +5,22 @@ import "../codec/EthProofDecoder.sol";
 import "../Deserialize.sol";
 import "../../../lib/lib/MPT.sol";
 import "../../../lib/external_lib/RLPEncode.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 //import "hardhat/console.sol";
 
-contract Prover{
+contract Prover is Initializable{
     using MPT for MPT.MerkleProof;
     address public bridgeLight;
 
-    constructor(address _bridgeLight) {
+    // constructor(address _bridgeLight) {
+    //     bridgeLight = _bridgeLight;
+    // }
+
+    function _Prover_initialize(
+        address _bridgeLight
+    ) internal onlyInitializing{
         bridgeLight = _bridgeLight;
-    }
+    } 
 
     function _verify(
         bytes memory logEntryData, 

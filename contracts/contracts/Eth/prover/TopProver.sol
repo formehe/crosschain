@@ -8,8 +8,14 @@ import "../../common/Deserialize.sol";
 
 contract TopProver is Prover, ITopProver{
     using MPT for MPT.MerkleProof;
-    constructor(address _bridgeLight)
-    Prover(_bridgeLight) {}
+
+    // constructor(address _bridgeLight)
+    // Prover(_bridgeLight) {}
+    function _TopProver_initialize(
+        address _bridgeLight
+    ) external initializer {
+        _Prover_initialize(_bridgeLight);
+    }
 
     function verify(
         TopProofDecoder.Proof calldata proof, 

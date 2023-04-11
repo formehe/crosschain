@@ -6,9 +6,13 @@ import "../../common/prover/Prover.sol";
 //import "hardhat/console.sol";
 
 contract EthProver is Prover, IEthProver{
-    constructor(address _bridgeLight)
-    Prover(_bridgeLight) {}
-      
+    // constructor(address _bridgeLight)
+    // Prover(_bridgeLight) {}
+    function _EthProver_initialize(
+        address _bridgeLight
+    ) external initializer {
+        _Prover_initialize(_bridgeLight);
+    }
     using MPT for MPT.MerkleProof;
     function verify(
         EthProofDecoder.Proof calldata proof, 

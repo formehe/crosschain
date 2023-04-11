@@ -45,10 +45,12 @@ describe('EthLocker', () => {
     bridge = await deployMockContract(wallet, TopBridge.abi, overrides)
 
     const TopProver = await hre.ethers.getContractFactory("TopProver", wallet, overrides)
-    prover = await TopProver.deploy(bridge.address)
+    prover = await TopProver.deploy()
+    await prover._TopProver_initialize(bridge.address)
 
     const Limit = await hre.ethers.getContractFactory("Limit", wallet, overrides)
-    limit = await Limit.deploy(wallet.address)
+    limit = await Limit.deploy()
+    await limit._Limit_initialize(wallet.address)
 
     console.log("wallet>>>> "  + wallet.address)
     console.log("wallet2>>>> "  + wallet2.address)

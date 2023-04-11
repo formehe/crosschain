@@ -8,7 +8,6 @@ import "./verify/VerifierUpgradeable.sol";
 // import "hardhat/console.sol";
 
 contract ERC20MintProxy is VerifierUpgradeable {
-    // uint private constant MAX_WITHDRAW_QUOTA = 1000;
     event Burned (
         address indexed fromToken,
         address indexed toToken,
@@ -106,7 +105,6 @@ contract ERC20MintProxy is VerifierUpgradeable {
     
     function bindWithdrawQuota(address _asset, uint256 _withdrawQuota) external {
         require(_withdrawQuota != 0, "withdraw quota can not be 0");
-        // require(_withdrawQuota <= MAX_WITHDRAW_QUOTA, "withdraw quota is overflow");
         uint256 quota = withdrawQuotas[_asset];
         require(_withdrawQuota != quota, "not modify the quota of withdraw");
         if ((quota == 0) || (_withdrawQuota < quota)) {
