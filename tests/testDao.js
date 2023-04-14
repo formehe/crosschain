@@ -35,7 +35,7 @@ describe("TDao", function () {
 
         //deploy time lock controller
         timelockcontrollerCon = await ethers.getContractFactory("TimeController", deployer)
-        timelockcontroller = await timelockcontrollerCon.deploy(1,[],[])
+        timelockcontroller = await timelockcontrollerCon.deploy(1)
         await timelockcontroller.deployed()
         console.log("+++++++++++++timelockcontroller+++++++++++++++ ", timelockcontroller.address)
 
@@ -47,18 +47,19 @@ describe("TDao", function () {
 
         //deploy TDao
         tdaoCon = await ethers.getContractFactory("TDao", deployer)
-        await expect(tdaoCon.deploy(votes.address, 0, 3, 70, timelockcontroller.address, admin.address)).to.be.revertedWith("vote delay")
-        await expect(tdaoCon.deploy(votes.address, 1, 0, 70, timelockcontroller.address, admin.address)).to.be.revertedWith("voting period ")
-        await expect(tdaoCon.deploy(votes.address, 1, 3, 120, timelockcontroller.address, admin.address)).to.be.revertedWith("quorumNumerator over quorumDenominator")
-        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, admin.address)
+        await expect(tdaoCon.deploy(votes.address, 0, 3, 70, timelockcontroller.address, admin.address, 1,5,1,7)).to.be.revertedWith("vote delay")
+        await expect(tdaoCon.deploy(votes.address, 1, 0, 70, timelockcontroller.address, admin.address, 1,5,1,7)).to.be.revertedWith("voting period ")
+        await expect(tdaoCon.deploy(votes.address, 1, 3, 120, timelockcontroller.address, admin.address, 1,5,1,7)).to.be.revertedWith("quorumNumerator over quorumDenominator")
+        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, admin.address, 1,5,1,7)
         await tdao.deployed()
         console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
 
-        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
-        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address)
-        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", deployer.address)
-        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", deployer.address)
+        await expect(timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address))
+        .to.be.revertedWith("is missing role")
+        await expect(timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address))
+        .to.be.revertedWith("is missing role")
 
+        await timelockcontroller._TimeController_initialize(tdao.address, 1, 100)
         erc20SampleCon = await ethers.getContractFactory("ERC20TokenSample", user)
         erc20Sample = await erc20SampleCon.deploy()
         await erc20Sample.deployed()
@@ -236,46 +237,58 @@ describe("TDao", function () {
     })
 
     it('time controller', async () => {
-        await expect(timelockcontrollerCon.deploy(1,[AddressZero],[])).to.be.revertedWith("proposer can not be zero")
-        await expect(timelockcontrollerCon.deploy(1,[],[AddressZero])).to.be.revertedWith("executor can not be zero")
-        await expect(timelockcontroller.updateDelay(2)).to.be.revertedWith("TimelockController: caller must be timelock")
-        const transferCalldata = timelockcontroller.interface.encodeFunctionData('updateDelay', [1])
-        await expect(timelockcontroller.executeBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        timelockcontrollerCon1 = await ethers.getContractFactory("TimeControllerTest", deployer)
+        timelockcontract = await timelockcontrollerCon1.deploy(1)
+        await timelockcontract.deployed()
+        await expect(timelockcontract._TimeController_initialize(deployer.address, 1, 100)).to.be.revertedWith("invalid address")
+        await expect(timelockcontract._TimeController_initialize(timelockcontract.address, 0, 100)).to.be.revertedWith("invalid the lower of delay")
+        await expect(timelockcontract._TimeController_initialize(timelockcontract.address, 1, 0)).to.be.revertedWith("the uppder of delay must larger than the lower")
+        await timelockcontract._TimeControllerTest_initialize(deployer.address, 1, 100)
+        await expect(timelockcontract.updateDelay(2)).to.be.revertedWith("TimelockController: caller must be timelock")
+
+        let transferCalldata = timelockcontract.interface.encodeFunctionData('updateDelay', [101])
+        await timelockcontract.scheduleBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000006", 2)
+        await new Promise(r => setTimeout(r, 2100))
+        await expect(timelockcontract.executeBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000006"))
+        .to.be.revertedWith("TimelockController: underlying transaction reverted")
+        
+        transferCalldata = timelockcontract.interface.encodeFunctionData('updateDelay', [1])
+        await expect(timelockcontract.executeBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("TimelockController: operation is not ready")
-        await expect(timelockcontroller.connect(user).executeBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        await expect(timelockcontract.connect(user).executeBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("is missing role")
-        await expect(timelockcontroller.executeBatch([], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        await expect(timelockcontract.executeBatch([], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("TimelockController: length mismatch")
-        await expect(timelockcontroller.executeBatch([], [], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        await expect(timelockcontract.executeBatch([], [], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("TimelockController: length mismatch")
 
-        await expect(timelockcontroller.scheduleBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 0)).
+        await expect(timelockcontract.scheduleBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 0)).
         to.be.revertedWith("TimelockController: insufficient delay")
 
-        await timelockcontroller.scheduleBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 2)
-        await expect(timelockcontroller.executeBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        await timelockcontract.scheduleBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 2)
+        await expect(timelockcontract.executeBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("TimelockController: operation is not ready")
-        await expect(timelockcontroller.executeBatch([timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address], [0,0,0,0,0,0,0,0,0,0,0], [transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        await expect(timelockcontract.executeBatch([timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address], [0,0,0,0,0,0,0,0,0,0,0], [transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("actions")
-        await expect(timelockcontroller.executeBatch([timelockcontroller.address, AddressZero], [0, 0], [transferCalldata, transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        await expect(timelockcontract.executeBatch([timelockcontract.address, AddressZero], [0, 0], [transferCalldata, transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("invalid contract")
-        await expect(timelockcontroller.executeBatch([timelockcontroller.address, user.address], [0, 0], [transferCalldata, transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        await expect(timelockcontract.executeBatch([timelockcontract.address, user.address], [0, 0], [transferCalldata, transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("invalid contract")
-        await expect(timelockcontroller.scheduleBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
+        await expect(timelockcontract.scheduleBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
         to.be.revertedWith("TimelockController: operation already scheduled")
-        await expect(timelockcontroller.scheduleBatch([timelockcontroller.address,  AddressZero], [0,0], [transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
+        await expect(timelockcontract.scheduleBatch([timelockcontract.address,  AddressZero], [0,0], [transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
         to.be.revertedWith("invalid contract")
-        await expect(timelockcontroller.scheduleBatch([timelockcontroller.address,  user.address], [0,0], [transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
+        await expect(timelockcontract.scheduleBatch([timelockcontract.address,  user.address], [0,0], [transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
         to.be.revertedWith("invalid contract")
-        await expect(timelockcontroller.scheduleBatch([timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address, timelockcontroller.address], [0,0,0,0,0,0,0,0,0,0,0], [transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
+        await expect(timelockcontract.scheduleBatch([timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address, timelockcontract.address], [0,0,0,0,0,0,0,0,0,0,0], [transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata,transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)).
         to.be.revertedWith("actions")
         await new Promise(r => setTimeout(r, 1000))
-        await timelockcontroller.executeBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")
-        const tx = await timelockcontroller.hashOperationBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")
-        await expect(timelockcontroller.cancel(tx)).to.be.revertedWith("TimelockController: operation cannot be cancelled")
-        await timelockcontroller.scheduleBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)
+        await timelockcontract.executeBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")
+        const tx = await timelockcontract.hashOperationBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000002")
+        await expect(timelockcontract.cancel(tx)).to.be.revertedWith("TimelockController: operation cannot be cancelled")
+        await timelockcontract.scheduleBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000000000000000000000000000002", 1)
         await new Promise(r => setTimeout(r, 1000))
-        await expect(timelockcontroller.executeBatch([timelockcontroller.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000000000000000000000000000002")).
+        await expect(timelockcontract.executeBatch([timelockcontract.address], [0], [transferCalldata], "0x0000000000000000000000000000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000000000000000000000000000002")).
         to.be.revertedWith("TimelockController: missing dependency")
     })
 

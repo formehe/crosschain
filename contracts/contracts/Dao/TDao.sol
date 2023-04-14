@@ -17,12 +17,19 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
     uint256 constant PAUSED_EXECUTE = 1 << 2;
     uint256 constant PAUSED_CANCEL = 1 << 3;
     uint256 constant PAUSED_VOTE = 1 << 4;
-
     uint256 constant public proposalMaxOperations = 10; // 10 actions
-    uint public constant MIN_VOTING_DELAY = 1;
-    uint public constant MIN_VOTING_PERIOD = 1;
+    // uint256 public constant MIN_VOTING_DELAY = 1;
+    // uint256 public constant MAX_VOTING_DELAY = 1;//40320, About 1 week
+    // uint256 public constant MIN_VOTING_PERIOD = 1;
+    // uint256 public constant MAX_VOTING_PERIOD = 1;//80640; About 2 weeks
+    uint256 public constant MIN_QUORUM_NUMERATOR = 50;
+    uint256 public minVoteDelay;
+    uint256 public maxVoteDelay;
+    uint256 public minVotePeriod;
+    uint256 public maxVotePeriod;
 
-    constructor(IVotes vote_, uint256 voteDelay_, uint256 votePeriod_, uint256 quorumNumerator_, TimelockController timelock_, address owner_)
+    constructor(IVotes vote_, uint256 voteDelay_, uint256 votePeriod_, uint256 quorumNumerator_, TimelockController timelock_, 
+        address owner_, uint256 minVoteDelay_, uint256 maxVoteDelay_, uint256 minVotePeriod_, uint256 maxVotePeriod_)
         Governor("TDao")
         GovernorVotes(vote_)
         GovernorSettings(voteDelay_, votePeriod_, 1)
@@ -31,11 +38,17 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
         initializer
     {
         require(Address.isContract(address(vote_)), "voter token must be existed");
-        require(voteDelay_ >= MIN_VOTING_DELAY, "vote delay can not less than MIN_VOTING_DELAY");
-        // require(votePeriod_ >= MIN_VOTING_PERIOD, "vote period can not not less than MIN_VOTING_PERIOD");
         require(quorumNumerator_ != 0, " quorum numerator can not be 0");
         require(Address.isContract(address(timelock_)), "time clock controller must be existed");
-        
+        require(maxVoteDelay_ >= minVoteDelay_, "min of vote delay must less than max of vote delay");
+        require(voteDelay_ >= minVoteDelay_ && voteDelay_ <= maxVoteDelay_, "invalid vote delay");
+        require(maxVotePeriod_ >= minVotePeriod_, "min of vote period must less than max of vote period");
+        require(votePeriod_ >= minVotePeriod_ && votePeriod_ <= maxVotePeriod_, "invalid vote period");
+        minVoteDelay = minVoteDelay_;
+        maxVoteDelay = maxVoteDelay_;
+        minVotePeriod = minVotePeriod_;
+        maxVotePeriod = maxVotePeriod_;
+
         _setRoleAdmin(CONTROLLED_ROLE, OWNER_ROLE);
         _setRoleAdmin(BLACK_ROLE, ADMIN_ROLE);
 
@@ -71,7 +84,8 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
         public 
         override onlyGovernance 
     {
-        require(newVotingDelay >= MIN_VOTING_DELAY, " vote delay can not less than MIN_VOTING_DELAY");
+        // require(newVotingDelay >= MIN_VOTING_DELAY && newVotingDelay <= MAX_VOTING_DELAY, "vote delay is out of range");
+        require(newVotingDelay >= minVoteDelay && newVotingDelay <= maxVoteDelay, "vote delay is out of range");
         _setVotingDelay(newVotingDelay);
     }
 
@@ -84,7 +98,8 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
         public 
         override onlyGovernance 
     {
-        // require(newVotingPeriod >= MIN_VOTING_PERIOD, " vote period can not not less than MIN_VOTING_PERIOD");
+        //require(newVotingPeriod >= MIN_VOTING_PERIOD && newVotingPeriod <= MAX_VOTING_PERIOD, "vote period is out of range");
+        require(newVotingPeriod >= minVotePeriod && newVotingPeriod <= maxVotePeriod, "vote period is out of range");
         _setVotingPeriod(newVotingPeriod);
     }
 
@@ -92,7 +107,7 @@ contract TDao is GovernorCompatibilityBravo, GovernorVotes, GovernorVotesQuorumF
         external
         override onlyGovernance 
     {
-        require(newQuorumNumerator != 0, "quorumNumerator can not be 0");
+        require(newQuorumNumerator >= MIN_QUORUM_NUMERATOR, "quorumNumerator is too small");
         _updateQuorumNumerator(newQuorumNumerator);
     }
 

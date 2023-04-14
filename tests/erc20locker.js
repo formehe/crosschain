@@ -72,7 +72,7 @@ describe('ERC20Locker', () => {
 
     //deploy time lock controller
     timelockcontrollerCon = await ethers.getContractFactory("TimeController", wallet)
-    timelockcontroller = await timelockcontrollerCon.deploy(1,[],[])
+    timelockcontroller = await timelockcontrollerCon.deploy(1)
     await timelockcontroller.deployed()
     console.log("+++++++++++++timelockcontroller+++++++++++++++ ", timelockcontroller.address)
 
@@ -84,16 +84,13 @@ describe('ERC20Locker', () => {
 
     //deploy TDao
     tdaoCon = await ethers.getContractFactory("TDao", wallet)
-    tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, wallet2.address)
+    tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, wallet2.address, 1,5,1,7)
     await tdao.deployed()
     console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
 
     await erc20Locker._ERC20Locker_initialize(prover.address, 0, wallet.address, limit.address, erc20Token2.address, [erc20Token.address, "0xb997a782f36256355206d928aAA217058d07A7a2"], [erc20Token2.address, "0x5A29872525901E632CBfd0c4671263AF2ca52b25"])
 
-    await timelockcontroller.connect(wallet).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
-    await timelockcontroller.connect(wallet).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address)
-    await timelockcontroller.connect(wallet).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", wallet.address)
-    await timelockcontroller.connect(wallet).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", wallet.address)
+    await timelockcontroller._TimeController_initialize(tdao.address, 1, 100)
 
     await erc20Locker.connect(wallet).grantRole("0xba89994fffa21b6259d0e98b52260f21bc06a07249825a4125b51c20e48d06ff", timelockcontroller.address)
     await erc20Locker.adminPause(0)

@@ -177,7 +177,7 @@ describe("ERC20MintProxy", function () {
 
         //deploy time lock controller
         timelockcontrollerCon = await ethers.getContractFactory("TimeController", deployer)
-        timelockcontroller = await timelockcontrollerCon.deploy(1,[],[])
+        timelockcontroller = await timelockcontrollerCon.deploy(1)
         await timelockcontroller.deployed()
         console.log("+++++++++++++timelockcontroller+++++++++++++++ ", timelockcontroller.address)
 
@@ -189,14 +189,11 @@ describe("ERC20MintProxy", function () {
 
         //deploy TDao
         tdaoCon = await ethers.getContractFactory("TDao", deployer)
-        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, deployer.address)
+        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, deployer.address, 1,5,1,7)
         await tdao.deployed()
         console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
 
-        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
-        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address)
-        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", deployer.address)
-        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", deployer.address)
+        await timelockcontroller._TimeController_initialize(tdao.address, 1, 100)
 
         transparentproxyCon = await ethers.getContractFactory("TransparentProxy", deployer)
         transparentproxy = await transparentproxyCon.deploy(mintContract.address, tdao.address, admin.address)
@@ -601,7 +598,7 @@ describe("TRC20", function () {
 
         //deploy time lock controller
         timelockcontrollerCon = await ethers.getContractFactory("TimeController", deployer)
-        timelockcontroller = await timelockcontrollerCon.deploy(1,[],[])
+        timelockcontroller = await timelockcontrollerCon.deploy(1)
         await timelockcontroller.deployed()
         console.log("+++++++++++++timelockcontroller+++++++++++++++ ", timelockcontroller.address)
 
@@ -613,14 +610,11 @@ describe("TRC20", function () {
 
         //deploy TDao
         tdaoCon = await ethers.getContractFactory("TDao", deployer)
-        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, deployer.address)
+        tdao = await tdaoCon.deploy(votes.address, 2, 3, 70, timelockcontroller.address, deployer.address, 1,5,1,7)
         await tdao.deployed()
         console.log("+++++++++++++TDao+++++++++++++++ ", tdao.address)
 
-        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", tdao.address)
-        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", tdao.address)
-        await timelockcontroller.connect(deployer).grantRole("0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1", deployer.address)
-        await timelockcontroller.connect(deployer).grantRole("0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63", deployer.address)
+        await timelockcontroller._TimeController_initialize(tdao.address, 1, 100)
     })
 
     it('burn success, the mint asset must be bound', async () => {
